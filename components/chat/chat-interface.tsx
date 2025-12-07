@@ -61,66 +61,71 @@ const MessageComponent = memo(
     const contentToShow = isUser ? message.content : displayedContent;
 
     return (
-      <div
-        className={cn(
-          "w-full py-2.5",
-          // Match floating input container padding EXACTLY
-          "px-4 md:px-8 lg:px-12"
-        )}
-      >
-        <div
-          className={cn(
-            "flex w-full",
-            isUser ? "justify-end" : "justify-start"
-          )}
-        >
-          <div
-            className={cn(
-              "flex flex-col max-w-[85%] md:max-w-[75%] lg:max-w-[70%]",
-              isUser ? "items-end" : "items-start"
-            )}
-          >
+      <div className="w-full">
+        {/* Outer wrapper with EXACT same padding as floating input */}
+        <div className="px-4 md:px-8 lg:px-12 py-2.5">
+          {/* Inner container with same max-width as input */}
+          <div className="max-w-4xl mx-auto">
+            {/* Message alignment wrapper */}
             <div
               className={cn(
-                "rounded-2xl px-5 py-3.5 text-sm shadow-md",
-                "max-w-full overflow-hidden",
-                isUser
-                  ? "bg-primary text-primary-foreground rounded-tr-md"
-                  : "bg-muted text-foreground rounded-tl-md border border-border/50"
+                "flex w-full",
+                isUser ? "justify-end" : "justify-start"
               )}
             >
-              {isUser ? (
-                <div className="whitespace-pre-wrap break-words">
-                  {contentToShow}
-                </div>
-              ) : (
-                <div className="w-full max-w-full">
-                  <div className="prose dark:prose-invert prose-sm max-w-full prose-p:m-0 prose-p:leading-relaxed">
-                    <div className="overflow-x-auto">
-                      <div className="[&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_td]:p-2 [&_th]:p-2 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_code]:text-xs [&_code]:break-words">
-                        <Response>{preprocessMarkdown(contentToShow)}</Response>
+              {/* Message bubble container */}
+              <div
+                className={cn(
+                  "flex flex-col max-w-[85%] md:max-w-[75%] lg:max-w-[65%]",
+                  isUser ? "items-end" : "items-start"
+                )}
+              >
+                {/* Message bubble */}
+                <div
+                  className={cn(
+                    "rounded-2xl px-5 py-3.5 text-sm shadow-md",
+                    "break-words overflow-hidden",
+                    isUser
+                      ? "bg-primary text-primary-foreground rounded-tr-md"
+                      : "bg-muted text-foreground rounded-tl-md border border-border/50"
+                  )}
+                >
+                  {isUser ? (
+                    <div className="whitespace-pre-wrap break-words">
+                      {contentToShow}
+                    </div>
+                  ) : (
+                    <div className="w-full">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-li:my-1">
+                        <div className="[&_table]:w-full [&_table]:my-4 [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted/50 [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_pre]:my-3 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_code]:text-xs [&_code]:break-words [&_ul]:my-2 [&_ol]:my-2">
+                          <Response>
+                            {preprocessMarkdown(contentToShow)}
+                          </Response>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            {!isUser && (
-              <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
-                  onClick={() => onCopy(message.content)}
-                >
-                  {copied ? (
-                    <CheckIcon className="size-3.5" />
-                  ) : (
-                    <CopyIcon className="size-3.5" />
                   )}
-                </Button>
+                </div>
+
+                {/* Copy button */}
+                {!isUser && (
+                  <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
+                      onClick={() => onCopy(message.content)}
+                    >
+                      {copied ? (
+                        <CheckIcon className="size-3.5" />
+                      ) : (
+                        <CopyIcon className="size-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
