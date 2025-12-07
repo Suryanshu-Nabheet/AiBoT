@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const TITLE = "All-in-one AI Platform";
+const TITLE = "AiBoT";
 const DESCRIPTION =
   "AiBoT is a platform that allows you to chat with different LLMs via a unified interface.";
 
