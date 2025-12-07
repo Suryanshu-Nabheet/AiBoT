@@ -1,4 +1,5 @@
-# AiBoT 🤖
+<image src="./public/favicon.svg" alt="AiBoT" />
+# AiBoT
 
 <div align="center">
 
