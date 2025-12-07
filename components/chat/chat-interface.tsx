@@ -190,9 +190,10 @@ export default function ChatInterface({
   const { conversation, loading: conversationLoading } = useConversationById(
     initialConversationId
   );
-  const { refreshExecutions } = useExecutionContext();
+  const { refreshExecutions, addExecution } = useExecutionContext();
 
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [executionCreated, setExecutionCreated] = useState(false);
 
   useEffect(() => {
     if (persistedModelId !== model) {
@@ -338,6 +339,23 @@ export default function ChatInterface({
     setMessages((prev) => [...prev, userMessage]);
     setQuery("");
     setIsLoading(true);
+
+    // Create execution entry in sidebar on first message
+    if (!executionCreated && conversationId) {
+      const title =
+        currentQuery.length > 50
+          ? currentQuery.substring(0, 50) + "..."
+          : currentQuery;
+
+      addExecution({
+        id: conversationId,
+        title,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        type: "CONVERSATION" as any,
+      });
+      setExecutionCreated(true);
+    }
 
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();

@@ -1,21 +1,26 @@
 "use client";
 
-import React, { createContext, useContext, ReactNode } from "react";
-import { Execution, useExecution } from "@/hooks/useExecution";
+import React, { createContext, useContext } from "react";
+import { useExecution, type Execution } from "@/hooks/useExecution";
 
 interface ExecutionContextType {
   executions: Execution[];
   loading: boolean;
-  error: string | null;
+  addExecution: (execution: Execution) => void;
+  removeExecution: (id: string) => void;
+  updateExecution: (id: string, updates: Partial<Execution>) => void;
   refreshExecutions: () => void;
-  createNewExecution: () => string;
 }
 
 const ExecutionContext = createContext<ExecutionContextType | undefined>(
   undefined
 );
 
-export function ExecutionProvider({ children }: { children: ReactNode }) {
+export const ExecutionProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const executionData = useExecution();
 
   return (
@@ -23,14 +28,14 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
       {children}
     </ExecutionContext.Provider>
   );
-}
+};
 
-export function useExecutionContext() {
+export const useExecutionContext = () => {
   const context = useContext(ExecutionContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error(
-      "useExecutionContext must be used within a ExecutionProvider"
+      "useExecutionContext must be used within ExecutionProvider"
     );
   }
   return context;
-}
+};

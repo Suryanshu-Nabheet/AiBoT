@@ -1,55 +1,92 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export interface Execution {
-    id: string;
-    title: string;
-    createdAt: string;
-    updatedAt: string;
-    type: ExecutionType;
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  type: ExecutionType;
 }
-  
+
 enum ExecutionType {
-    CONVERSATION = "CONVERSATION"
+  CONVERSATION = "CONVERSATION",
 }
-  
-export function useExecution() {
-    const [executions, setExecutions] = useState<Execution[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
-    const createNewExecution = () => {
-        const id = crypto.randomUUID();
-        const now = new Date().toISOString();
-        const newExecution: Execution = {
-            id,
-            title: "New Chat",
-            createdAt: now,
-            updatedAt: now,
-            type: ExecutionType.CONVERSATION
-        };
-        
-        const updated = [newExecution, ...executions];
-        setExecutions(updated);
-        localStorage.setItem("executions", JSON.stringify(updated));
-        return id;
-    }
+export const useExecution = () => {
+  const [executions, setExecutions] = useState<Execution[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-    const fetchExecutions = () => {
-        const stored = localStorage.getItem("executions");
+  const loadExecutions = useCallback(() => {
+    try {
+      // Use sessionStorage instead of localStorage - clears on browser refresh/close
+      if (typeof window !== "undefined") {
+        const stored = sessionStorage.getItem("chat-sessions");
         if (stored) {
-            try {
-                setExecutions(JSON.parse(stored));
-            } catch (e) {
-                console.error("Failed to parse executions", e);
-            }
+          const parsed = JSON.parse(stored) as Execution[];
+          setExecutions(parsed);
+        } else {
+          setExecutions([]);
         }
+      }
+    } catch (error) {
+      console.error("Error loading chat sessions:", error);
+      setExecutions([]);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    const refreshExecutions = fetchExecutions;
+  const saveExecutions = useCallback((newExecutions: Execution[]) => {
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("chat-sessions", JSON.stringify(newExecutions));
+        setExecutions(newExecutions);
+      }
+    } catch (error) {
+      console.error("Error saving chat sessions:", error);
+    }
+  }, []);
 
-    useEffect(() => {
-        fetchExecutions();
-    }, []);
+  const addExecution = useCallback(
+    (execution: Execution) => {
+      const newExecutions = [execution, ...executions];
+      saveExecutions(newExecutions);
+    },
+    [executions, saveExecutions]
+  );
 
-    return { executions, loading, error, refreshExecutions, createNewExecution };
-}
+  const removeExecution = useCallback(
+    (id: string) => {
+      const newExecutions = executions.filter((e) => e.id !== id);
+      saveExecutions(newExecutions);
+    },
+    [executions, saveExecutions]
+  );
+
+  const updateExecution = useCallback(
+    (id: string, updates: Partial<Execution>) => {
+      const newExecutions = executions.map((e) =>
+        e.id === id ? { ...e, ...updates } : e
+      );
+      saveExecutions(newExecutions);
+    },
+    [executions, saveExecutions]
+  );
+
+  useEffect(() => {
+    loadExecutions();
+  }, [loadExecutions]);
+
+  const refreshExecutions = useCallback(() => {
+    loadExecutions();
+  }, [loadExecutions]);
+
+  return {
+    executions,
+    loading,
+    addExecution,
+    removeExecution,
+    updateExecution,
+    refreshExecutions,
+  };
+};

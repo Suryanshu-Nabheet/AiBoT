@@ -1,62 +1,80 @@
 "use client";
+
 import {
-  Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuButton,
+  Sidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "./button";
+import { Button } from "@/components/ui/button";
+import { Execution, useExecution } from "@/hooks/useExecution";
+import { Trash as TrashIcon, PencilSimple } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { TrashIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
-import { useExecutionContext } from "@/contexts/execution-context";
-import { Execution } from "@/hooks/useExecution";
-import { cn } from "@/lib/utils";
 
-export function UIStructure() {
-  const [uiExecutions, setUiExecutions] = useState<Execution[]>([]);
-  const [hoverChatId, setHoverChatId] = useState<string>("");
-  const { executions, loading, refreshExecutions } = useExecutionContext();
+export const UIStructure = () => {
+  const { executions, loading, refreshExecutions } = useExecution();
+  const [hoverChatId, setHoverChatId] = useState("");
+  const [editingId, setEditingId] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+
   const router = useRouter();
 
   const pathname = usePathname();
-  const currentConversationId = pathname.split("/").pop();
-
-  useEffect(() => {
-    if (executions) {
-      setUiExecutions(executions);
-    }
-  }, [executions]);
+  const currentConversationId = pathname?.includes("/ask/")
+    ? pathname.split("/ask/")[1]
+    : null;
 
   const handleDeleteExecution = (executionId: string) => {
     try {
-      const stored = localStorage.getItem("executions");
+      const stored = sessionStorage.getItem("chat-sessions");
       if (stored) {
         const parsed = JSON.parse(stored) as Execution[];
         const updated = parsed.filter((e) => e.id !== executionId);
-        localStorage.setItem("executions", JSON.stringify(updated));
+        sessionStorage.setItem("chat-sessions", JSON.stringify(updated));
         refreshExecutions();
         if (executionId === currentConversationId) {
           router.push("/");
         }
-        toast.success("Chat deleted locally");
+        toast.success("Chat deleted");
       }
     } catch (error) {
       console.error("Error deleting chat:", error);
     }
   };
 
+  const handleSaveTitle = (id: string) => {
+    try {
+      const stored = sessionStorage.getItem("chat-sessions");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const updated = parsed.map((e: any) =>
+          e.id === id
+            ? { ...e, title: editTitle, updatedAt: new Date().toISOString() }
+            : e
+        );
+        sessionStorage.setItem("chat-sessions", JSON.stringify(updated));
+        refreshExecutions();
+        setEditingId("");
+        toast.success("Title updated");
+      }
+    } catch (error) {
+      console.error("Error updating title:", error);
+      toast.error("Failed to update title");
+    }
+  };
+
   return (
-    <Sidebar className="border-r border-border bg-sidebar h-full hidden md:flex">
-      <SidebarContent className="h-full justify-between">
-        <SidebarGroup className="flex flex-col gap-4">
-          <SidebarHeader className="sticky top-0 !p-0 bg-sidebar z-30">
+    <Sidebar>
+      <SidebarContent className="w-full">
+        <SidebarGroup>
+          <SidebarHeader className="border-b border-border/40 px-2 pb-3">
             <div className="flex w-full flex-col items-center gap-2 rounded-lg p-3">
               <div className="flex w-full items-center gap-2 rounded-lg p-1 text-lg justify-start">
                 <h1 className="text-xl font-bold text-foreground tracking-tight">
@@ -67,10 +85,10 @@ export function UIStructure() {
                 <Button
                   onClick={(e) => {
                     e.preventDefault();
-                    // Navigate to home (root)
                     router.push(`/`);
-                    // Force a refresh to ensure clean state
-                    router.refresh();
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 100);
                   }}
                   className="w-full justify-start font-medium shadow-none hover:bg-muted/80"
                   size="lg"
@@ -90,7 +108,7 @@ export function UIStructure() {
                       className="bg-muted h-9 w-full animate-pulse rounded-md"
                     />
                   ))
-                : uiExecutions.map((execution: Execution) => (
+                : executions.map((execution: Execution) => (
                     <SidebarMenuItem key={execution.id}>
                       <SidebarMenuButton
                         className={cn(
@@ -104,23 +122,59 @@ export function UIStructure() {
                         onClick={() => router.push(`/ask/${execution.id}`)}
                       >
                         <div className="flex w-full items-center justify-between overflow-hidden">
-                          <span
-                            className="truncate w-full pr-6"
-                            title={execution.title}
-                          >
-                            {execution.title}
-                          </span>
+                          {editingId === execution.id ? (
+                            <input
+                              type="text"
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              onBlur={() => handleSaveTitle(execution.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleSaveTitle(execution.id);
+                                } else if (e.key === "Escape") {
+                                  setEditingId("");
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                              className="flex-1 bg-transparent border-b border-primary outline-none pr-6"
+                            />
+                          ) : (
+                            <span
+                              className="truncate w-full pr-12"
+                              title={execution.title}
+                            >
+                              {execution.title}
+                            </span>
+                          )}
 
                           {(execution.id === hoverChatId ||
                             execution.id === currentConversationId) && (
-                            <div
-                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-md p-1 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteExecution(execution.id);
-                              }}
-                            >
-                              <TrashIcon weight="bold" className="size-3.5" />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                              {editingId !== execution.id && (
+                                <div
+                                  className="flex items-center justify-center rounded-md p-1 hover:bg-muted transition-colors cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingId(execution.id);
+                                    setEditTitle(execution.title);
+                                  }}
+                                >
+                                  <PencilSimple
+                                    weight="bold"
+                                    className="size-3.5"
+                                  />
+                                </div>
+                              )}
+                              <div
+                                className="flex items-center justify-center rounded-md p-1 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteExecution(execution.id);
+                                }}
+                              >
+                                <TrashIcon weight="bold" className="size-3.5" />
+                              </div>
                             </div>
                           )}
                         </div>
@@ -130,13 +184,7 @@ export function UIStructure() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        <SidebarFooter className="sticky bottom-0 flex flex-col gap-2 w-full p-3 bg-sidebar z-30 border-t border-border/50">
-          <div className="text-xs text-muted-foreground text-center">
-            Local History • No Auth
-          </div>
-        </SidebarFooter>
       </SidebarContent>
     </Sidebar>
   );
-}
+};
