@@ -9,6 +9,9 @@ export interface Conversation {
   updatedAt: string;
 }
 
+// In-memory storage ONLY - no persistence
+const memoryConversations: Record<string, Conversation> = {};
+
 export function useConversationById(id: string | undefined) {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,13 +28,9 @@ export function useConversationById(id: string | undefined) {
       setError(null);
 
       try {
-        const stored = localStorage.getItem("conversations");
-        const conversations: Record<string, Conversation> = stored
-          ? JSON.parse(stored)
-          : {};
-
-        if (conversations[id]) {
-          setConversation(conversations[id]);
+        // Load from memory only
+        if (memoryConversations[id]) {
+          setConversation(memoryConversations[id]);
         } else {
           setConversation(null);
         }
@@ -47,4 +46,17 @@ export function useConversationById(id: string | undefined) {
   }, [id]);
 
   return { conversation, loading, error };
+}
+
+// Helper function to save conversation IN MEMORY ONLY
+export function saveConversation(conversation: Conversation) {
+  try {
+    // Save to memory object - NO storage
+    memoryConversations[conversation.id] = {
+      ...conversation,
+      updatedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("Error saving conversation:", error);
+  }
 }

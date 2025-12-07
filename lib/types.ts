@@ -113,13 +113,6 @@ export const MODELS: ModelFull[] = [
       "2B effective (6B arch) multimodal. MatFormer with nested submodels. Low-resource deployment. 32K context.",
   },
   {
-    id: "openai/gpt-oss-120b:free",
-    name: "GPT-OSS-120B (Free)",
-    isPremium: false,
-    summary:
-      "117B MoE (5.1B active). High-reasoning with configurable depth, tool use, and native function calling. 131K context.",
-  },
-  {
     id: "google/gemma-3n-4b:free",
     name: "Gemma 3n 4B (Free)",
     isPremium: false,
@@ -160,13 +153,6 @@ export const MODELS: ModelFull[] = [
     isPremium: false,
     summary:
       "12B model developed with NVIDIA. Excellent for reasoning, coding, and multilingual tasks. 128K context.",
-  },
-  {
-    id: "microsoft/phi-3-medium-128k-instruct:free",
-    name: "Phi-3 Medium 128K Instruct (Free)",
-    isPremium: false,
-    summary:
-      "14B compact model. Strong reasoning and coding capabilities with 128K context. Efficient inference.",
   },
   {
     id: "microsoft/phi-3-mini-128k-instruct:free",

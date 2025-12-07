@@ -20,7 +20,7 @@ import { Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
-import { useConversationById } from "@/hooks/useConversation";
+import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { useMarkdown } from "@/hooks/useMarkdown";
@@ -73,34 +73,37 @@ const MessageComponent = memo(
                 isUser ? "justify-end" : "justify-start"
               )}
             >
-              {/* Message bubble container */}
+              {/* Message bubble container with max-width */}
               <div
                 className={cn(
                   "flex flex-col max-w-[85%] md:max-w-[75%] lg:max-w-[65%]",
                   isUser ? "items-end" : "items-start"
                 )}
               >
-                {/* Message bubble */}
+                {/* Message bubble with overflow protection */}
                 <div
                   className={cn(
                     "rounded-2xl px-5 py-3.5 text-sm shadow-md",
-                    "break-words overflow-hidden",
+                    "w-full max-w-full overflow-hidden break-words",
                     isUser
                       ? "bg-primary text-primary-foreground rounded-tr-md"
                       : "bg-muted text-foreground rounded-tl-md border border-border/50"
                   )}
                 >
                   {isUser ? (
-                    <div className="whitespace-pre-wrap break-words">
+                    <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere">
                       {contentToShow}
                     </div>
                   ) : (
-                    <div className="w-full">
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-li:my-1">
-                        <div className="[&_table]:w-full [&_table]:my-4 [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted/50 [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_pre]:my-3 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_code]:text-xs [&_code]:break-words [&_ul]:my-2 [&_ol]:my-2">
-                          <Response>
-                            {preprocessMarkdown(contentToShow)}
-                          </Response>
+                    <div className="w-full max-w-full min-w-0">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-li:my-1 prose-pre:my-3 prose-pre:max-w-full prose-code:break-words">
+                        <div className="w-full max-w-full overflow-hidden">
+                          {/* Critical overflow container */}
+                          <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
+                            <Response>
+                              {preprocessMarkdown(contentToShow)}
+                            </Response>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -304,9 +307,27 @@ export default function ChatInterface({
       }
 
       // Final update to ensure we display everything
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...m, content: accumulated } : m))
-      );
+      setMessages((prev) => {
+        const updatedMessages = prev.map((m) =>
+          m.id === tempId ? { ...m, content: accumulated } : m
+        );
+
+        // Save conversation to sessionStorage
+        if (conversationId) {
+          saveConversation({
+            id: conversationId,
+            title:
+              updatedMessages
+                .find((m) => m.role === Role.User)
+                ?.content.substring(0, 50) || "New Chat",
+            createdAt: new Date().toISOString(),
+            messages: updatedMessages,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        return updatedMessages;
+      });
     } catch (e) {
       console.error("Stream error", e);
       setMessages((prev) => [
@@ -377,17 +398,52 @@ export default function ChatInterface({
 
       if (!res.ok) {
         let errorMessage = "An unexpected error occurred.";
+        let errorTitle = "Error";
+
         try {
           // Try to parse as JSON first
           const errorData = await res.json();
-          errorMessage = errorData.message || JSON.stringify(errorData);
+
+          // Handle specific error cases
+          if (res.status === 429) {
+            errorTitle = "⏱️ Rate Limit Reached";
+            errorMessage =
+              errorData.error?.message ||
+              "You've sent too many requests. Please wait a moment and try again.";
+          } else if (res.status === 400) {
+            errorTitle = "⚠️ Invalid Request";
+            if (errorData.error?.message?.includes("not a valid model")) {
+              errorMessage =
+                "The selected AI model is not available. Please try a different model from the dropdown.";
+            } else {
+              errorMessage =
+                errorData.error?.message ||
+                errorData.message ||
+                "Bad request. Please check your input.";
+            }
+          } else if (res.status === 401) {
+            errorTitle = "🔐 Authentication Failed";
+            errorMessage =
+              "API key is invalid or missing. Please check your configuration.";
+          } else if (res.status === 500) {
+            errorTitle = "🔧 Server Error";
+            errorMessage =
+              "The AI service is temporarily unavailable. Please try again in a moment.";
+          } else {
+            errorMessage =
+              errorData.error?.message ||
+              errorData.message ||
+              JSON.stringify(errorData);
+          }
         } catch {
           // Fallback to text (e.g. for HTML 500 pages)
-          errorMessage = await res.text();
-          if (errorMessage.includes("<!DOCTYPE html>")) {
-            errorMessage = "Service unavailable (500). Please try again later.";
+          const textError = await res.text();
+          if (textError.includes("<!DOCTYPE html>")) {
+            errorTitle = "🔧 Service Error";
+            errorMessage =
+              "Service temporarily unavailable. Please try again later.";
           } else {
-            errorMessage = errorMessage.substring(0, 100); // Truncate long text
+            errorMessage = textError.substring(0, 200); // Truncate long text
           }
         }
 
@@ -398,7 +454,7 @@ export default function ChatInterface({
           {
             id: `error-${Date.now()}`,
             role: Role.Agent,
-            content: `**Error (${res.status}):** ${errorMessage}`,
+            content: `**${errorTitle}**\n\n${errorMessage}`,
           },
         ]);
         setIsLoading(false);

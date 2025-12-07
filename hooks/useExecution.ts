@@ -12,55 +12,29 @@ enum ExecutionType {
   CONVERSATION = "CONVERSATION",
 }
 
+// In-memory storage ONLY - no persistence
+let memoryExecutions: Execution[] = [];
+
 export const useExecution = () => {
-  const [executions, setExecutions] = useState<Execution[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const loadExecutions = useCallback(() => {
-    try {
-      // Use sessionStorage instead of localStorage - clears on browser refresh/close
-      if (typeof window !== "undefined") {
-        const stored = sessionStorage.getItem("chat-sessions");
-        if (stored) {
-          const parsed = JSON.parse(stored) as Execution[];
-          setExecutions(parsed);
-        } else {
-          setExecutions([]);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading chat sessions:", error);
-      setExecutions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const saveExecutions = useCallback((newExecutions: Execution[]) => {
-    try {
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("chat-sessions", JSON.stringify(newExecutions));
-        setExecutions(newExecutions);
-      }
-    } catch (error) {
-      console.error("Error saving chat sessions:", error);
-    }
-  }, []);
+  const [executions, setExecutions] = useState<Execution[]>(memoryExecutions);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const addExecution = useCallback(
     (execution: Execution) => {
       const newExecutions = [execution, ...executions];
-      saveExecutions(newExecutions);
+      memoryExecutions = newExecutions;
+      setExecutions(newExecutions);
     },
-    [executions, saveExecutions]
+    [executions]
   );
 
   const removeExecution = useCallback(
     (id: string) => {
       const newExecutions = executions.filter((e) => e.id !== id);
-      saveExecutions(newExecutions);
+      memoryExecutions = newExecutions;
+      setExecutions(newExecutions);
     },
-    [executions, saveExecutions]
+    [executions]
   );
 
   const updateExecution = useCallback(
@@ -68,18 +42,15 @@ export const useExecution = () => {
       const newExecutions = executions.map((e) =>
         e.id === id ? { ...e, ...updates } : e
       );
-      saveExecutions(newExecutions);
+      memoryExecutions = newExecutions;
+      setExecutions(newExecutions);
     },
-    [executions, saveExecutions]
+    [executions]
   );
 
-  useEffect(() => {
-    loadExecutions();
-  }, [loadExecutions]);
-
   const refreshExecutions = useCallback(() => {
-    loadExecutions();
-  }, [loadExecutions]);
+    setExecutions([...memoryExecutions]);
+  }, []);
 
   return {
     executions,

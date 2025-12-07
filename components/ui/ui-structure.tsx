@@ -19,7 +19,13 @@ import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
 
 export const UIStructure = () => {
-  const { executions, loading, refreshExecutions } = useExecution();
+  const {
+    executions,
+    loading,
+    refreshExecutions,
+    removeExecution,
+    updateExecution,
+  } = useExecution();
   const [hoverChatId, setHoverChatId] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editTitle, setEditTitle] = useState("");
@@ -32,42 +38,17 @@ export const UIStructure = () => {
     : null;
 
   const handleDeleteExecution = (executionId: string) => {
-    try {
-      const stored = sessionStorage.getItem("chat-sessions");
-      if (stored) {
-        const parsed = JSON.parse(stored) as Execution[];
-        const updated = parsed.filter((e) => e.id !== executionId);
-        sessionStorage.setItem("chat-sessions", JSON.stringify(updated));
-        refreshExecutions();
-        if (executionId === currentConversationId) {
-          router.push("/");
-        }
-        toast.success("Chat deleted");
-      }
-    } catch (error) {
-      console.error("Error deleting chat:", error);
+    removeExecution(executionId);
+    if (executionId === currentConversationId) {
+      router.push("/");
     }
+    toast.success("Chat deleted");
   };
 
   const handleSaveTitle = (id: string) => {
-    try {
-      const stored = sessionStorage.getItem("chat-sessions");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const updated = parsed.map((e: any) =>
-          e.id === id
-            ? { ...e, title: editTitle, updatedAt: new Date().toISOString() }
-            : e
-        );
-        sessionStorage.setItem("chat-sessions", JSON.stringify(updated));
-        refreshExecutions();
-        setEditingId("");
-        toast.success("Title updated");
-      }
-    } catch (error) {
-      console.error("Error updating title:", error);
-      toast.error("Failed to update title");
-    }
+    updateExecution(id, { title: editTitle });
+    setEditingId("");
+    toast.success("Title updated");
   };
 
   return (
