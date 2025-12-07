@@ -67,8 +67,8 @@ export function UIStructure() {
                 <Button
                   onClick={(e) => {
                     e.preventDefault();
-                    // Navigate to home and reset state
-                    router.push(`/ask`);
+                    // Navigate to home (root)
+                    router.push(`/`);
                     // Force a refresh to ensure clean state
                     router.refresh();
                   }}

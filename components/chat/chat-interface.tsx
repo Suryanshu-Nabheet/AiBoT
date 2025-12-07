@@ -488,9 +488,9 @@ export default function ChatInterface({
         <div className="max-w-4xl mx-auto w-full">
           <form
             onSubmit={handleCreateChat}
-            className="relative flex w-full flex-col gap-3 rounded-2xl border border-border/20 dark:border-border/10 bg-background/95 dark:bg-background/95 backdrop-blur-xl p-4 md:p-5 shadow-2xl ring-1 ring-border/10 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30 focus-within:shadow-primary/10 focus-within:border-primary/30"
+            className="relative flex w-full flex-col gap-3 rounded-2xl bg-background/95 dark:bg-background/95 backdrop-blur-xl p-4 md:p-5 shadow-2xl ring-1 ring-border/10 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30 focus-within:shadow-primary/10 focus-within:border-primary/30"
           >
-            <div className="relative px-2 pt-2">
+            <div className="relative px-2">
               <Textarea
                 ref={textareaRef}
                 value={query}
@@ -507,7 +507,7 @@ export default function ChatInterface({
               />
             </div>
 
-            <div className="flex items-center justify-between pt-1 px-1">
+            <div className="flex items-center justify-between px-1">
               <div className="flex-1 max-w-[200px] md:max-w-xs">
                 <ModelSelector
                   value={model}
