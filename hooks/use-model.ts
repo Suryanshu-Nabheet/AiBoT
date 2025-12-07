@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
+
 export const FREE_MODELS = [
   // GPT Models
+  {
+    id: "openai/gpt-oss-20b:free",
+    name: "GPT-OSS 20B (Free)",
+    provider: "OpenAI",
+    description: "Efficient and powerful open-source model",
+  },
   {
     id: "openai/gpt-3.5-turbo",
     name: "GPT-3.5 Turbo",
@@ -69,7 +76,7 @@ export const FREE_MODELS = [
   },
 ];
 
-const DEFAULT_MODEL_ID = FREE_MODELS[0].id;
+const DEFAULT_MODEL_ID = "openai/gpt-oss-20b:free";
 
 interface UseModelOptions {
   initialModel?: string;

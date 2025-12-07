@@ -52,10 +52,10 @@ export const UIStructure = () => {
   };
 
   return (
-    <Sidebar>
+    <Sidebar className="border-r-2 border-blue-100 bg-blue-50/50">
       <SidebarContent className="w-full">
         <SidebarGroup>
-          <SidebarHeader className="border-b border-border/40 px-2 pb-3">
+          <SidebarHeader className="border-b border-blue-100 px-2 pb-3">
             <div className="flex w-full flex-col items-center gap-2 rounded-lg p-3">
               <div className="flex w-full items-center gap-2 rounded-lg p-1 text-lg justify-start">
                 <h1 className="text-xl font-bold text-foreground tracking-tight">
