@@ -9,8 +9,7 @@ export interface Conversation {
   updatedAt: string;
 }
 
-// In-memory storage ONLY - no persistence
-const memoryConversations: Record<string, Conversation> = {};
+// In-memory storage was removed. Now using sessionStorage directly in hooks/helpers.
 
 export function useConversationById(id: string | undefined) {
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -28,11 +27,17 @@ export function useConversationById(id: string | undefined) {
       setError(null);
 
       try {
-        // Load from memory only
-        if (memoryConversations[id]) {
-          setConversation(memoryConversations[id]);
-        } else {
-          setConversation(null);
+        if (typeof window !== "undefined") {
+          const stored = sessionStorage.getItem("conversations");
+          const conversations: Record<string, Conversation> = stored
+            ? JSON.parse(stored)
+            : {};
+
+          if (conversations[id]) {
+            setConversation(conversations[id]);
+          } else {
+            setConversation(null);
+          }
         }
       } catch (error) {
         console.error("Error fetching conversation:", error);
@@ -48,14 +53,22 @@ export function useConversationById(id: string | undefined) {
   return { conversation, loading, error };
 }
 
-// Helper function to save conversation IN MEMORY ONLY
+// Helper function to save conversation to sessionStorage
 export function saveConversation(conversation: Conversation) {
   try {
-    // Save to memory object - NO storage
-    memoryConversations[conversation.id] = {
-      ...conversation,
-      updatedAt: new Date().toISOString(),
-    };
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem("conversations");
+      const conversations: Record<string, Conversation> = stored
+        ? JSON.parse(stored)
+        : {};
+
+      conversations[conversation.id] = {
+        ...conversation,
+        updatedAt: new Date().toISOString(),
+      };
+
+      sessionStorage.setItem("conversations", JSON.stringify(conversations));
+    }
   } catch (error) {
     console.error("Error saving conversation:", error);
   }

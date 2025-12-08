@@ -11,7 +11,8 @@ import {
   Sidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Execution, useExecution } from "@/hooks/useExecution";
+import { useExecutionContext } from "@/contexts/execution-context";
+import { Execution } from "@/hooks/useExecution";
 import { Trash as TrashIcon, PencilSimple } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -25,7 +26,7 @@ export const UIStructure = () => {
     refreshExecutions,
     removeExecution,
     updateExecution,
-  } = useExecution();
+  } = useExecutionContext();
   const [hoverChatId, setHoverChatId] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editTitle, setEditTitle] = useState("");
