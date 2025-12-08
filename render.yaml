@@ -3,8 +3,8 @@ services:
     name: aibot
     env: node
     plan: free
-    buildCommand: npm install --legacy-peer-deps && npm run build
-    startCommand: npm start
+    buildCommand: pnpm install --frozen-lockfile; pnpm run build
+    startCommand: pnpm start
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false
