@@ -4,7 +4,7 @@ const TITLE = "AiBoT";
 const DESCRIPTION =
   "AiBoT is a platform that allows you to chat with different LLMs via a unified interface.";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3002";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const siteConfig: Metadata = {
   title: {

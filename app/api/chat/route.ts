@@ -5,7 +5,7 @@ import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 // or just use standard fetch since we are in Next.js App Router.
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const SITE_NAME = "AiBoT";
 
 // export const runtime = "edge"; // Switched to Node.js for better stability/logging

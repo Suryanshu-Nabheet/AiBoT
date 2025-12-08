@@ -14,7 +14,7 @@ import {
   MagicWandIcon,
   MicrophoneIcon,
 } from "@phosphor-icons/react";
-import { Response } from "@/components/ai-elements/response";
+import ReactMarkdown from "react-markdown";
 import Image from "next/image";
 import { Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -46,7 +46,12 @@ const MessageComponent = memo(
     copied: boolean;
   }) => {
     // Simplified Markdown usage for now, ensuring robustness
-    const { preprocessMarkdown } = useMarkdown({
+    const {
+      preprocessMarkdown,
+      markdownComponents,
+      remarkPlugins,
+      rehypePlugins,
+    } = useMarkdown({
       onCopy,
       copied,
       isWrapped: false,
@@ -95,14 +100,18 @@ const MessageComponent = memo(
                       {contentToShow}
                     </div>
                   ) : (
-                    <div className="w-full max-w-full min-w-0">
+                    <div className="w-full max-w-full">
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-li:my-1 prose-pre:my-3 prose-pre:max-w-full prose-code:break-words">
                         <div className="w-full max-w-full overflow-hidden">
                           {/* Critical overflow container */}
                           <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
-                            <Response>
+                            <ReactMarkdown
+                              remarkPlugins={remarkPlugins}
+                              rehypePlugins={rehypePlugins}
+                              components={markdownComponents}
+                            >
                               {preprocessMarkdown(contentToShow)}
-                            </Response>
+                            </ReactMarkdown>
                           </div>
                         </div>
                       </div>

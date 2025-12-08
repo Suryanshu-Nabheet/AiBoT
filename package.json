@@ -1,7 +1,10 @@
 {
-  "name": "AiBoT",
+  "name": "aibot",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
@@ -11,7 +14,7 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
-    "start": "next start --port 3000",
+    "start": "next start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
