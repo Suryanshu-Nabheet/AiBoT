@@ -2,13 +2,11 @@ services:
   - type: web
     name: aibot
     env: node
-    plan: free # or starter
-    buildCommand: pnpm install && pnpm build
-    startCommand: pnpm start
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: NEXT_PUBLIC_APP_URL
-        sync: false
-      - key: NODE_ENV
-        value: production
+      - key: NODE_VERSION
+        value: 20
