@@ -13,10 +13,13 @@ import {
   ArrowDownIcon,
   MagicWandIcon,
   MicrophoneIcon,
+  PaperclipIcon,
+  X as XIcon,
 } from "@phosphor-icons/react";
 import ReactMarkdown from "react-markdown";
 import Image from "next/image";
 import { Geist_Mono } from "next/font/google";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
@@ -222,8 +225,16 @@ export default function ChatInterface({
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Enterprise Features State
+  const [attachments, setAttachments] = useState<
+    { name: string; content: string; type: string }[]
+  >([]);
+  const [isListening, setIsListening] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -295,6 +306,109 @@ export default function ChatInterface({
     disabled: isLoading,
     loading: isLoading,
   });
+
+  // --- Enterprise Feature Handlers ---
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const newAttachments: { name: string; content: string; type: string }[] =
+        [];
+
+      for (const file of files) {
+        // Simple text extraction for now.
+        // In a real enterprise app backend OCR/parsing would be better for PDFs etc.
+        try {
+          const text = await file.text();
+          newAttachments.push({
+            name: file.name,
+            content: text,
+            type: file.type,
+          });
+        } catch (err) {
+          toast.error(`Failed to read ${file.name}`);
+        }
+      }
+
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSpeech = useCallback(() => {
+    if (isListening) {
+      setIsListening(false);
+      // Logic to stop recognition would go here if we had a persistent reference
+      return;
+    }
+
+    if (!("webkitSpeechRecognition" in window)) {
+      toast.error("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new (window as any).webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      toast.info("Listening...");
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech error", event.error);
+      setIsListening(false);
+      toast.error("Speech recognition error");
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setQuery((prev) => (prev ? prev + " " + transcript : transcript));
+    };
+
+    recognition.start();
+  }, [isListening]);
+
+  const handleEnhance = async () => {
+    if (!query.trim()) {
+      toast.warning("Please type something to enhance first.");
+      return;
+    }
+
+    setIsEnhancing(true);
+    try {
+      const res = await fetch("/api/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: query }),
+      });
+
+      if (!res.ok) throw new Error("Enhancement failed");
+
+      const data = await res.json();
+      if (data.enhanced) {
+        setQuery(data.enhanced);
+        toast.success("Prompt enhanced!");
+      }
+    } catch (error) {
+      toast.error("Failed to enhance prompt");
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  // -----------------------------------
 
   const processStream = async (response: globalThis.Response) => {
     if (!response.ok || !response.body) {
@@ -391,14 +505,28 @@ export default function ChatInterface({
 
     setShowWelcome(false);
     const currentQuery = query.trim();
+
+    // Construct message content with attachments if any
+    let finalContent = currentQuery;
+    if (attachments.length > 0) {
+      const fileContext = attachments
+        .map(
+          (a) =>
+            `<details><summary>Reference File: ${a.name}</summary>\n\n\`\`\`\n${a.content}\n\`\`\`\n</details>`
+        )
+        .join("\n\n");
+      finalContent = `${fileContext}\n\n${currentQuery}`;
+    }
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: Role.User,
-      content: currentQuery,
+      content: finalContent,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setQuery("");
+    setAttachments([]); // Clear attachments after sending
     setIsLoading(true);
 
     // Create execution entry in sidebar on first message
@@ -608,6 +736,37 @@ export default function ChatInterface({
             onSubmit={handleCreateChat}
             className="relative flex w-full flex-col gap-3 rounded-2xl bg-background/95 dark:bg-background/95 backdrop-blur-xl p-4 md:p-5 shadow-2xl ring-1 ring-border/10 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30 focus-within:shadow-primary/10 focus-within:border-primary/30"
           >
+            {/* File Upload Hidden Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              multiple
+              onChange={handleFileSelect}
+            />
+
+            {/* File Preview Chips */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 px-2 pb-2">
+                {attachments.map((file, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground border border-border"
+                  >
+                    <PaperclipIcon className="size-3" />
+                    <span className="max-w-[100px] truncate">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(i)}
+                      className="ml-1 rounded-full p-0.5 hover:bg-background text-muted-foreground hover:text-foreground"
+                    >
+                      <XIcon className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="relative px-2">
               <Textarea
                 ref={textareaRef}
@@ -633,7 +792,50 @@ export default function ChatInterface({
                   disabled={isLoading}
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                {/* Enterprise Tools Toolbar */}
+                <div className="flex items-center gap-0.5 mr-2 pr-2 border-r border-border/40">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-full"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach File"
+                  >
+                    <PaperclipIcon className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8 text-muted-foreground hover:text-foreground rounded-full",
+                      isListening && "text-red-500 animate-pulse bg-red-500/10"
+                    )}
+                    onClick={handleSpeech}
+                    title="Voice Input"
+                  >
+                    <MicrophoneIcon
+                      className={cn("size-4", isListening && "weight-fill")}
+                    />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8 text-muted-foreground hover:text-foreground rounded-full",
+                      isEnhancing && "animate-spin text-primary"
+                    )}
+                    onClick={handleEnhance}
+                    disabled={isEnhancing || !query.trim()}
+                    title="Enhance Prompt (AI)"
+                  >
+                    <MagicWandIcon className="size-4" />
+                  </Button>
+                </div>
+
                 {isLoading ? (
                   <Button
                     type="button"
