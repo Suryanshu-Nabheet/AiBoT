@@ -25,7 +25,7 @@ import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
-import { Message, Role } from "@/lib/types";
+import { Message, Role, MODELS } from "@/lib/types";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -40,10 +40,12 @@ const MessageComponent = memo(
     message,
     onCopy,
     copied,
+    onModelSelect,
   }: {
     message: Message;
     onCopy: (content: string) => void;
     copied: boolean;
+    onModelSelect?: (modelId: string) => void;
   }) => {
     // Simplified Markdown usage for now, ensuring robustness
     const {
@@ -140,6 +142,32 @@ const MessageComponent = memo(
             </div>
           </div>
         </div>
+
+        {/* Error / Rate Limit Interactive Actions */}
+        {message.isError &&
+          message.errorType === "rate_limit" &&
+          onModelSelect && (
+            <div className="px-4 md:px-8 lg:px-12 py-2">
+              <div className="max-w-4xl mx-auto flex flex-col gap-2">
+                <p className="text-xs text-muted-foreground font-medium ml-1">
+                  Recommended alternatives:
+                </p>
+                <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                  {MODELS.map((m) => (
+                    <Button
+                      key={m.id}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-[10px] md:text-xs bg-background/50 hover:bg-background border-primary/10 hover:border-primary/50 whitespace-nowrap"
+                      onClick={() => onModelSelect(m.id)}
+                    >
+                      {m.name.replace(" (Free)", "")}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
       </div>
     );
   }
@@ -151,10 +179,12 @@ const MessagesList = memo(
     messages,
     onCopy,
     copied,
+    onModelSelect,
   }: {
     messages: Array<Message>;
     onCopy: (content: string) => void;
     copied: boolean;
+    onModelSelect: (modelId: string) => void;
   }) => {
     return (
       <div className="flex flex-col gap-2 pb-4">
@@ -164,6 +194,7 @@ const MessagesList = memo(
             message={message}
             onCopy={onCopy}
             copied={copied}
+            onModelSelect={onModelSelect}
           />
         ))}
       </div>
@@ -428,6 +459,7 @@ export default function ChatInterface({
               errorMessage =
                 errorData.error?.message ||
                 errorData.message ||
+                errorData.message ||
                 "Bad request. Please check your input.";
             }
           } else if (res.status === 401) {
@@ -464,6 +496,8 @@ export default function ChatInterface({
             id: `error-${Date.now()}`,
             role: Role.Agent,
             content: `**${errorTitle}**\n\n${errorMessage}`,
+            isError: true,
+            errorType: res.status === 429 ? "rate_limit" : "general",
           },
         ]);
         setIsLoading(false);
@@ -529,6 +563,7 @@ export default function ChatInterface({
                 messages={messages}
                 onCopy={handleCopy}
                 copied={copied}
+                onModelSelect={handleModelChange}
               />
               {isLoading && (
                 <div className="flex items-center gap-2 px-4 text-muted-foreground py-3">

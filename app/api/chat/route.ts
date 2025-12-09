@@ -11,11 +11,38 @@ const SITE_NAME = "AiBoT";
 // export const runtime = "edge"; // Switched to Node.js for better stability/logging
 
 const MODELS = [
-  "openai/gpt-oss-20b:free", // User requested default
+  "openai/gpt-4o-mini", // High stability fallback
+  "google/gemini-flash-1.5", // High stability fallback
+  "amazon/nova-2-lite-v1:free",
+  "arcee-ai/trinity-mini:free",
+  "tngtech/tng-r1t-chimera:free",
+  "allenai/olmo-3-32b-think:free",
+  "kwaipilot/kat-coder-pro:free",
+  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "alibaba/tongyi-deepresearch-30b-a3b:free",
+  "meituan/longcat-flash-chat:free",
+  "nvidia/nemotron-nano-9b-v2:free",
+  "openai/gpt-oss-120b:free",
+  "openai/gpt-oss-20b:free",
+  "z-ai/glm-4.5-air:free",
+  "qwen/qwen3-coder:free",
+  "moonshotai/kimi-k2:free",
+  "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+  "google/gemma-3n-e2b-it:free",
+  "tngtech/deepseek-r1t2-chimera:free",
+  "google/gemma-3n-e4b-it:free",
+  "qwen/qwen3-4b:free",
+  "qwen/qwen3-235b-a22b:free",
+  "tngtech/deepseek-r1t-chimera:free",
+  "mistralai/mistral-small-3.1-24b-instruct:free",
+  "google/gemma-3-4b-it:free",
+  "google/gemma-3-12b-it:free",
+  "google/gemma-3-27b-it:free",
   "google/gemini-2.0-flash-exp:free",
-  "google/gemini-2.0-flash-thinking-exp:free",
-  "meta-llama/llama-3.2-11b-vision-instruct:free",
-  "huggingfaceh4/zephyr-7b-beta:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "nousresearch/hermes-3-llama-3.1-405b:free",
+  "mistralai/mistral-7b-instruct:free",
 ];
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,87 +75,71 @@ export async function POST(req: NextRequest) {
   // For simplicity: We will ALWAYS try the list if the first one fails,
   // assuming the user wants *any* answer rather than no answer.
 
-  const candidateModels = requestedModel
-    ? [requestedModel, ...MODELS.filter((m) => m !== requestedModel)]
-    : MODELS;
+  // No auto-switching: Try ONLY the requested model
+  const targetModel = requestedModel || MODELS[0];
 
-  let lastError = null;
-  let lastStatus = 500;
+  try {
+    console.log(`API: Attempting model ${targetModel}...`);
 
-  for (const model of candidateModels) {
-    try {
-      console.log(`API: Attempting model ${model}...`);
-
-      const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${OPENROUTER_KEY}`,
-            "HTTP-Referer": SITE_URL,
-            "X-Title": SITE_NAME,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              { role: "system", content: AIBOT_SYSTEM_PROMPT },
-              ...messages,
-            ],
-            stream: true,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        console.log(`API: Success with model ${model}`);
-        // Proxy the stream directly
-        return new Response(response.body, {
-          headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          },
-        });
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_KEY}`,
+          "HTTP-Referer": SITE_URL,
+          "X-Title": SITE_NAME,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: targetModel,
+          messages: [
+            { role: "system", content: AIBOT_SYSTEM_PROMPT },
+            ...messages,
+          ],
+          stream: true,
+        }),
       }
+    );
 
-      // Handle Error via Retry
-      const errorText = await response.text();
-      console.warn(
-        `API: Failed with model ${model} (${response.status}):`,
-        errorText
-      );
-
-      lastStatus = response.status;
-      try {
-        const parsed = JSON.parse(errorText);
-        lastError =
-          parsed?.error?.metadata?.raw || parsed?.error?.message || errorText;
-      } catch {
-        lastError = errorText;
-      }
-
-      // If it's a rate limit (429) or Server Error (5xx), wait and retry next model
-      if (response.status === 429 || response.status >= 500) {
-        await delay(1000); // 1s backoff
-        continue;
-      }
-
-      // If it's a 400/401 (client error), don't retry, just break and return error
-      break;
-    } catch (error) {
-      console.error(`API: Network error with model ${model}:`, error);
-      lastError = String(error);
-      await delay(1000);
+    if (response.ok) {
+      console.log(`API: Success with model ${targetModel}`);
+      // Proxy the stream directly
+      return new Response(response.body, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
     }
-  }
 
-  // If we get here, all retries failed
-  return NextResponse.json(
-    {
-      message: lastError || "All models failed. Please try again later.",
-      code: lastStatus,
-    },
-    { status: lastStatus }
-  );
+    // Handle Error
+    const errorText = await response.text();
+    console.warn(
+      `API: Failed with model ${targetModel} (${response.status}):`,
+      errorText
+    );
+
+    let errorMessage = "Provider returned error";
+    try {
+      const parsed = JSON.parse(errorText);
+      errorMessage =
+        parsed?.error?.metadata?.raw || parsed?.error?.message || errorText;
+    } catch {
+      errorMessage = errorText;
+    }
+
+    return NextResponse.json(
+      {
+        message: errorMessage,
+        code: response.status,
+        isRateLimit: response.status === 429,
+      },
+      { status: response.status }
+    );
+  } catch (error) {
+    console.error(`API: Network error with model ${targetModel}:`, error);
+    return NextResponse.json({ message: String(error) }, { status: 500 });
+  }
 }

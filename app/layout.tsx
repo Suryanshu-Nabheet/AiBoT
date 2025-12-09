@@ -25,7 +25,7 @@ export default function RootLayout({
             <SidebarProvider>
               <UIStructure />
               <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-                <div className="absolute top-4 left-4 z-50 md:hidden">
+                <div className="absolute top-4 left-4 z-50">
                   <SidebarToggle />
                 </div>
                 {children}
