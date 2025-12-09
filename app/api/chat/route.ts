@@ -47,6 +47,54 @@ const MODELS = [
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Helper to optimize image tokens
+const formatMessagesForOpenRouter = (messages: any[]) => {
+  return messages.map((msg) => {
+    if (typeof msg.content !== "string") return msg;
+
+    // Check for markdown image syntax: ![alt](data:image/...)
+    const imageRegex = /!\[.*?\]\((data:image\/.*?;base64,.*?)\)/g;
+    if (!msg.content.match(imageRegex)) return msg;
+
+    const contentParts = [];
+    let lastIndex = 0;
+    let match;
+
+    // Reset regex state
+    imageRegex.lastIndex = 0;
+
+    while ((match = imageRegex.exec(msg.content)) !== null) {
+      // Add text before image
+      if (match.index > lastIndex) {
+        const text = msg.content.substring(lastIndex, match.index).trim();
+        if (text) contentParts.push({ type: "text", text });
+      }
+
+      // Add image
+      const imageUrl = match[1];
+      contentParts.push({
+        type: "image_url",
+        image_url: {
+          url: imageUrl,
+        },
+      });
+
+      lastIndex = imageRegex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < msg.content.length) {
+      const text = msg.content.substring(lastIndex).trim();
+      if (text) contentParts.push({ type: "text", text });
+    }
+
+    return {
+      ...msg,
+      content: contentParts,
+    };
+  });
+};
+
 export async function POST(req: NextRequest) {
   if (!OPENROUTER_KEY) {
     console.error("API: OpenRouter API Key missing");
@@ -65,21 +113,14 @@ export async function POST(req: NextRequest) {
 
   const { messages, model: requestedModel } = body;
 
-  // Use requested model if it's NOT the default free one (user selected specific),
-  // otherwise start with our list.
-  // Actually, to robustly handle "free" users, we should treat the requested
-  // model as the first candidate if strictly provided, or default to our list.
-
-  // Strategy: If user explicitly chose a model in UI, try that first.
-  // If it fails, failover to others ONLY if it was one of our default free ones.
-  // For simplicity: We will ALWAYS try the list if the first one fails,
-  // assuming the user wants *any* answer rather than no answer.
-
   // No auto-switching: Try ONLY the requested model
   const targetModel = requestedModel || MODELS[0];
 
   try {
     console.log(`API: Attempting model ${targetModel}...`);
+
+    // Optimize messages for Vision API
+    const optimizedMessages = formatMessagesForOpenRouter(messages);
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -95,9 +136,10 @@ export async function POST(req: NextRequest) {
           model: targetModel,
           messages: [
             { role: "system", content: AIBOT_SYSTEM_PROMPT },
-            ...messages,
+            ...optimizedMessages,
           ],
           stream: true,
+          transforms: ["middle-out"], // Compress logic if still too large
         }),
       }
     );

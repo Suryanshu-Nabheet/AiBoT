@@ -90,7 +90,38 @@ const MessageComponent = memo(
                   isUser ? "items-end" : "items-start"
                 )}
               >
-                {/* Message bubble with overflow protection */}
+                {/* Attachments Rendering */}
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {message.attachments.map((att, i) =>
+                      att.type.startsWith("image/") ? (
+                        <div
+                          key={i}
+                          className="relative rounded-lg overflow-hidden border border-border/50 max-w-full"
+                        >
+                          <img
+                            src={att.content}
+                            alt={att.name}
+                            className="max-h-[300px] w-auto object-contain rounded-lg"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50 text-xs"
+                        >
+                          <PaperclipIcon className="size-3" />
+                          <span className="font-medium truncate max-w-[150px]">
+                            {att.name}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* Message Content */}
                 <div
                   className={cn(
                     "rounded-2xl px-5 py-3.5 text-sm shadow-md",
@@ -235,6 +266,7 @@ export default function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null); // Store recognition instance
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -316,15 +348,32 @@ export default function ChatInterface({
         [];
 
       for (const file of files) {
-        // Simple text extraction for now.
-        // In a real enterprise app backend OCR/parsing would be better for PDFs etc.
         try {
-          const text = await file.text();
-          newAttachments.push({
-            name: file.name,
-            content: text,
-            type: file.type,
-          });
+          // Check if it's an image
+          if (file.type.startsWith("image/")) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            await new Promise<void>((resolve) => {
+              reader.onload = () => {
+                if (typeof reader.result === "string") {
+                  newAttachments.push({
+                    name: file.name,
+                    content: reader.result, // This is the base64 data URL
+                    type: file.type, // "image/png", etc.
+                  });
+                }
+                resolve();
+              };
+            });
+          } else {
+            // Text based files
+            const text = await file.text();
+            newAttachments.push({
+              name: file.name,
+              content: text,
+              type: file.type,
+            });
+          }
         } catch (err) {
           toast.error(`Failed to read ${file.name}`);
         }
@@ -341,9 +390,9 @@ export default function ChatInterface({
   };
 
   const handleSpeech = useCallback(() => {
-    if (isListening) {
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
       setIsListening(false);
-      // Logic to stop recognition would go here if we had a persistent reference
       return;
     }
 
@@ -357,6 +406,8 @@ export default function ChatInterface({
     recognition.interimResults = false;
     recognition.lang = "en-US";
 
+    recognitionRef.current = recognition;
+
     recognition.onstart = () => {
       setIsListening(true);
       toast.info("Listening...");
@@ -364,12 +415,14 @@ export default function ChatInterface({
 
     recognition.onend = () => {
       setIsListening(false);
+      recognitionRef.current = null;
     };
 
     recognition.onerror = (event: any) => {
       console.error("Speech error", event.error);
       setIsListening(false);
-      toast.error("Speech recognition error");
+      recognitionRef.current = null;
+      // toast.error("Speech recognition error"); // Optional: suppress trivial errors
     };
 
     recognition.onresult = (event: any) => {
@@ -506,27 +559,46 @@ export default function ChatInterface({
     setShowWelcome(false);
     const currentQuery = query.trim();
 
-    // Construct message content with attachments if any
-    let finalContent = currentQuery;
+    // Construct API payload content (Text + Attachments Context)
+    // We do NOT clutter the visible user message with huge base64 strings anymore.
+    // Instead dependencies are handled via the `attachments` property on the message object (which we will add).
+
+    // For the API capability, we still need to send the context.
+    let apiContent = currentQuery;
     if (attachments.length > 0) {
       const fileContext = attachments
-        .map(
-          (a) =>
-            `<details><summary>Reference File: ${a.name}</summary>\n\n\`\`\`\n${a.content}\n\`\`\`\n</details>`
+        .map((a) =>
+          a.type.startsWith("image/")
+            ? `[Image Uploaded: ${a.name}]` // Placeholder for text history if needed
+            : `<details><summary>Reference File: ${a.name}</summary>\n\n\`\`\`\n${a.content}\n\`\`\`\n</details>`
         )
         .join("\n\n");
-      finalContent = `${fileContext}\n\n${currentQuery}`;
+
+      // However, for the AI to "see" it, we must include the data.
+      // For this "Pro" fix, we will simply append the data for the API only,
+      // but keep the user UI clean.
+
+      const aiContext = attachments
+        .map((a) =>
+          a.type.startsWith("image/")
+            ? `![${a.name}](${a.content})`
+            : `\n\nFile: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``
+        )
+        .join("\n");
+
+      apiContent = `${aiContext}\n\n${currentQuery}`;
     }
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: Role.User,
-      content: finalContent,
+      content: currentQuery, // Clean text only for UI
+      attachments: attachments, // Store full attachments here for UI rendering
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setQuery("");
-    setAttachments([]); // Clear attachments after sending
+    setAttachments([]);
     setIsLoading(true);
 
     // Create execution entry in sidebar on first message
@@ -554,10 +626,12 @@ export default function ChatInterface({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
+          messages: [...messages, { ...userMessage, content: apiContent }].map(
+            (m) => ({
+              role: m.role,
+              content: m.content,
+            })
+          ),
           model,
           conversationId,
         }),

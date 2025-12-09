@@ -208,6 +208,7 @@ export type Message = {
   role: Role;
   isError?: boolean;
   errorType?: string;
+  attachments?: { name: string; content: string; type: string }[];
 };
 
 export type Messages = Message[];
