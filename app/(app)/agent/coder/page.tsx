@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   PaperPlaneRight,
   Code,
@@ -10,6 +10,11 @@ import {
   ArrowsClockwise,
   PencilSimple,
   FloppyDisk,
+  TerminalWindow,
+  X,
+  Minus,
+  Square,
+  Warning,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -17,23 +22,397 @@ import { cn } from "@/lib/utils";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import {
+  FileItem,
+  FolderItem,
+  FolderTrigger,
+  FolderPanel,
+  Files,
+  SubFiles,
+} from "@/components/ui/file-tree";
+import { FileJson, FileCode, FileType, File } from "lucide-react";
+import dynamic from "next/dynamic";
+
+import { useWebContainer } from "@/hooks/use-web-container";
+import { WebContainer } from "@webcontainer/api";
+
+const Terminal = dynamic(() => import("@/components/editor/terminal"), {
+  ssr: false,
+});
+
+// Map VFS to WebContainer FileSystemTree
+const convertNodesToTree = (nodes: FileNode[]) => {
+  const tree: any = {};
+  nodes.forEach((node) => {
+    if (node.type === "file") {
+      tree[node.name] = {
+        file: {
+          contents: node.content || "",
+        },
+      };
+    } else if (node.type === "folder" && node.children) {
+      tree[node.name] = {
+        directory: convertNodesToTree(node.children),
+      };
+    }
+  });
+  console.log("Tree", tree);
+  return tree;
+};
+
+// VFS Types
+type FileNode = {
+  name: string;
+  type: "file" | "folder";
+  content?: string;
+  children?: FileNode[];
+  isOpen?: boolean;
+  path: string;
+};
+
+// Helper to determine icon
+const getFileIcon = (name: string) => {
+  if (name.endsWith(".tsx") || name.endsWith(".ts")) return FileCode;
+  if (name.endsWith(".css")) return FileType;
+  if (name.endsWith(".json")) return FileJson;
+  return File;
+};
 
 export default function CoderAgentPage() {
   const [activeTab, setActiveTab] = useState<"code" | "preview">("code");
   const [isToolsOpen, setIsToolsOpen] = useState(true);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [code, setCode] = useState(`// Your AI generated code will appear here
-import React from 'react';
+  const [terminalCommand, setTerminalCommand] = useState<string | null>(null);
 
-export default function App() {
+  // Initial prompt
+  useEffect(() => {
+    if (!prompt) {
+      setPrompt("Create a next.js dashboard with a sidebar and charts");
+    }
+  }, []);
+
+  const { webContainer, error: bootError } = useWebContainer();
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+
+  // Listen for preview server
+  useEffect(() => {
+    if (webContainer) {
+      const unsubscribe = webContainer.on("server-ready", (port, url) => {
+        console.log("Server ready:", url);
+        setIframeUrl(url);
+        setActiveTab("preview");
+        toast.success(`Server ready on port ${port}`);
+      });
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [webContainer]);
+
+  // Sync VFS to WebContainer
+  useState(() => {
+    if (webContainer) {
+      const tree = convertNodesToTree(files);
+      webContainer.mount(tree);
+    }
+  }); // This runs too often. Better to buffer or use explicit sync.
+  // For now, let's keep it simple: initial mount + update on specific actions.
+  // Actually, 'files' changes on every edit. Re-mounting entire tree is safe but might be slow?
+  // WebContainer mount is fast for diffs.
+  // Let's use useEffect
+
+  /* 
+     useEffect(() => {
+        if (webContainer && files.length > 0) {
+            webContainer.mount(convertNodesToTree(files));
+        }
+     }, [webContainer, files]);
+     
+     // Listen for preview server
+     useEffect(() => {
+         if (webContainer) {
+             webContainer.on('server-ready', (port, url) => {
+                 setIframeUrl(url);
+                 toast.success(`Server ready at ${url}`);
+             });
+         }
+     }, [webContainer]);
+  */
+
+  // VFS State
+  const [files, setFiles] = useState<FileNode[]>([
+    {
+      name: "app",
+      type: "folder",
+      path: "app",
+      isOpen: true,
+      children: [
+        {
+          name: "page.tsx",
+          type: "file",
+          path: "app/page.tsx",
+          content: `export default function Home() {
   return (
-    <div className="p-4">
-      <h1>Hello World</h1>
+    <div className="flex min-h-screen flex-col items-center justify-center p-24 bg-slate-950 text-white">
+      <h1 className="text-4xl font-bold mb-4">Hello World 🚀</h1>
+      <p className="text-slate-400">
+        Start building your Next.js app by typing a prompt!
+      </p>
     </div>
   );
-}`);
+}`,
+        },
+        {
+          name: "layout.tsx",
+          type: "file",
+          path: "app/layout.tsx",
+          content: `import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>{children}</body>
+    </html>
+  );
+}`,
+        },
+        {
+          name: "globals.css",
+          type: "file",
+          path: "app/globals.css",
+          content: `@tailwind base;
+@tailwind components;
+@tailwind utilities;`,
+        },
+      ],
+    },
+    {
+      name: "package.json",
+      type: "file",
+      path: "package.json",
+      content: `{
+  "name": "ai-project",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "next": "14.1.0",
+    "lucide-react": "^0.300.0"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.0"
+  }
+}`,
+    },
+    {
+      name: "postcss.config.js",
+      type: "file",
+      path: "postcss.config.js",
+      content: `module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};`,
+    },
+    {
+      name: "tailwind.config.ts",
+      type: "file",
+      path: "tailwind.config.ts",
+      content: `import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-conic":
+          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+      },
+    },
+  },
+  plugins: [],
+};
+export default config;`,
+    },
+  ]);
+  const [activeFile, setActiveFile] = useState<string>("app/page.tsx");
+  const [code, setCode] = useState(`// Select a file to view its content`);
+
+  // Initialize code from default active file
+  useState(() => {
+    const findContent = (
+      nodes: FileNode[],
+      path: string
+    ): string | undefined => {
+      for (const node of nodes) {
+        if (node.path === path && node.type === "file") return node.content;
+        if (node.children) {
+          const found = findContent(node.children, path);
+          if (found) return found;
+        }
+      }
+    };
+    const initial = findContent(files, "app/page.tsx");
+    if (initial) setCode(initial);
+  });
+
+  // Helper to update file content in the VFS
+  const updateFileContent = (path: string, newContent: string) => {
+    const updateNodes = (nodes: FileNode[]): FileNode[] => {
+      return nodes.map((node) => {
+        if (node.path === path) {
+          return { ...node, content: newContent };
+        }
+        if (node.children) {
+          return { ...node, children: updateNodes(node.children) };
+        }
+        return node;
+      });
+    };
+    setFiles((prev) => updateNodes(prev));
+
+    // Sync to WebContainer
+    if (webContainer) {
+      webContainer.fs
+        .writeFile(path, newContent)
+        .catch((err) => console.error("Failed to sync file to container", err));
+    }
+  };
+
+  const handleEditorChange = (value: string) => {
+    setCode(value);
+    if (activeFile) {
+      updateFileContent(activeFile, value);
+    }
+  };
+
+  const parseAIOutput = (generatedText: string) => {
+    // Regex to find file markers: // === filename === or similar
+    // Also strictly handles cases without markers (single file)
+    const fileRegex = /\/\/ === (.*?) ===[\s\S]*?(?=(\/\/ === |$))/g;
+    const matches = [...generatedText.matchAll(fileRegex)];
+
+    if (matches.length === 0) {
+      // treat as single file or generic update
+      return;
+    }
+
+    const newRoot: FileNode[] = []; // We can rebuild or merge. Rebuilding is safer for "new project".
+
+    const insertNode = (
+      root: FileNode[],
+      pathParts: string[],
+      content: string,
+      fullPath: string
+    ) => {
+      if (pathParts.length === 0) return;
+      const [current, ...rest] = pathParts;
+
+      if (rest.length === 0) {
+        // It's a file
+        root.push({ name: current, type: "file", path: fullPath, content });
+      } else {
+        // It's a folder
+        let folder = root.find(
+          (n) => n.name === current && n.type === "folder"
+        );
+        if (!folder) {
+          folder = {
+            name: current,
+            type: "folder",
+            path: fullPath.split(current)[0] + current,
+            children: [],
+            isOpen: true,
+          };
+          root.push(folder);
+        }
+        insertNode(folder.children!, rest, content, fullPath);
+      }
+    };
+
+    matches.forEach((match) => {
+      // match[0] is the full block, match[1] is filename
+      const header = match[0].split("\n")[0];
+      const content = match[0].substring(header.length).trim();
+      const filepath = match[1].trim();
+
+      // Clean filepath (remove ./ or leading /)
+      const cleanPath = filepath.replace(/^\.\//, "").replace(/^\//, "");
+      const parts = cleanPath.split("/");
+
+      insertNode(newRoot, parts, content, cleanPath);
+    });
+
+    setFiles(newRoot);
+
+    // Sync new files to WebContainer
+    if (webContainer) {
+      const tree = convertNodesToTree(newRoot);
+      webContainer.mount(tree).then(() => {
+        console.log("Mounted AI generated files");
+        if (newRoot.some((n) => n.name === "package.json")) {
+          toast.info(
+            "New project detected. You may need to install dependencies."
+          );
+        }
+      });
+    }
+
+    // Open first file found
+    const firstFile = findFirstFile(newRoot);
+    if (firstFile) {
+      setActiveFile(firstFile.path);
+      setCode(firstFile.content || "");
+    }
+  };
+
+  const findFirstFile = (nodes: FileNode[]): FileNode | null => {
+    for (const node of nodes) {
+      if (node.type === "file") return node;
+      if (node.children) {
+        const found = findFirstFile(node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -51,7 +430,15 @@ export default function App() {
       }
 
       const data = await response.json();
-      setCode(data.code);
+
+      // Parse multi-file output
+      if (data.code.includes("// ===")) {
+        parseAIOutput(data.code);
+      } else {
+        // Fallback for single response
+        setCode(data.code);
+      }
+
       setActiveTab("preview");
       toast.success("Code generated successfully!");
     } catch (error) {
@@ -61,6 +448,7 @@ export default function App() {
       setIsGenerating(false);
     }
   };
+
   const handleExport = () => {
     const blob = new Blob([code], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
@@ -151,115 +539,207 @@ export default function App() {
         </div>
 
         {/* Right: Code / Preview Area */}
-        <div className="flex-1 flex flex-col bg-muted/20">
-          {/* Tabs */}
-          <div className="flex items-center gap-1 p-2 border-b bg-background">
-            <button
-              onClick={() => setActiveTab("code")}
-              className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-                activeTab === "code"
-                  ? "bg-blue-100 text-blue-700"
-                  : "hover:bg-muted text-muted-foreground"
-              )}
-            >
-              <Code className="size-4" />
-              Code
-            </button>
-            <button
-              onClick={() => setActiveTab("preview")}
-              className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-                activeTab === "preview"
-                  ? "bg-blue-100 text-blue-700"
-                  : "hover:bg-muted text-muted-foreground"
-              )}
-            >
-              <Desktop className="size-4" />
-              Preview
-            </button>
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "h-7 text-xs gap-1.5",
-                  isEditing && "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                )}
-                onClick={() => {
-                  if (isEditing) {
-                    toast.success("Code saved successfully!");
-                  }
-                  setIsEditing(!isEditing);
-                }}
-              >
-                {isEditing ? (
-                  <>
-                    <FloppyDisk className="size-3.5" />
-                    Save
-                  </>
-                ) : (
-                  <>
-                    <PencilSimple className="size-3.5" />
-                    Edit
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs gap-1.5"
-                onClick={handleExport}
-              >
-                <DownloadSimple className="size-3.5" />
-                Export
-              </Button>
+        <div className="flex-1 flex h-full overflow-hidden bg-background">
+          {/* File Explorer Sidebar */}
+          <div className="w-64 border-r border-border/40 bg-muted/10 flex flex-col hidden md:flex shrink-0">
+            <div className="h-[45px] px-4 border-b border-border/40 flex items-center">
+              <span className="text-xs font-bold tracking-wider text-muted-foreground/80 uppercase">
+                Explorer
+              </span>
+            </div>
+            {/* Boot Error Banner */}
+            {bootError && (
+              <div className="bg-red-900/20 border-b border-red-500/30 p-2 px-4 flex items-start gap-2 text-xs text-red-400">
+                <Warning className="size-4 shrink-0 mt-0.5" />
+                <span>{bootError}</span>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-auto">
+              <Files className="w-full" defaultOpen={["app"]}>
+                {renderFileTree(files)}
+              </Files>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 relative overflow-hidden">
-            {activeTab === "code" ? (
-              <div className="absolute inset-0 overflow-auto bg-[#1e1e1e]">
-                {isEditing ? (
-                  <textarea
-                    className="w-full h-full bg-[#1e1e1e] text-blue-100 font-mono text-sm leading-relaxed p-6 outline-none resize-none"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    spellCheck={false}
-                  />
-                ) : (
-                  <SyntaxHighlighter
-                    language="javascript"
-                    style={vscDarkPlus}
-                    customStyle={{
-                      margin: 0,
-                      padding: "1.5rem",
-                      height: "100%",
-                      fontSize: "0.875rem",
+          <div className="flex-1 flex flex-col min-w-0 bg-background">
+            {/* Content Container (Tabs + Editor) */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Tabs */}
+              <div className="h-[45px] flex items-center gap-1 px-2 border-b border-border/40 bg-background/50 backdrop-blur-sm shrink-0">
+                <button
+                  onClick={() => setActiveTab("code")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    activeTab === "code"
+                      ? "bg-blue-100 text-blue-700"
+                      : "hover:bg-muted text-muted-foreground"
+                  )}
+                >
+                  <Code className="size-4" />
+                  Code
+                </button>
+                <button
+                  onClick={() => setActiveTab("preview")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    activeTab === "preview"
+                      ? "bg-blue-100 text-blue-700"
+                      : "hover:bg-muted text-muted-foreground"
+                  )}
+                >
+                  <Desktop className="size-4" />
+                  Preview
+                </button>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-7 text-xs gap-1.5",
+                      isEditing && "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    )}
+                    onClick={() => {
+                      if (isEditing) {
+                        toast.success("Code saved successfully!");
+                      }
+                      setIsEditing(!isEditing);
                     }}
-                    showLineNumbers={true}
                   >
-                    {code}
-                  </SyntaxHighlighter>
+                    {isEditing ? (
+                      <>
+                        <FloppyDisk className="size-3.5" />
+                        Save
+                      </>
+                    ) : (
+                      <>
+                        <PencilSimple className="size-3.5" />
+                        Edit
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1.5"
+                    onClick={handleExport}
+                  >
+                    <DownloadSimple className="size-3.5" />
+                    Export
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-7 text-xs gap-1.5",
+                      isTerminalOpen && "bg-muted"
+                    )}
+                    onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+                    title="Toggle Terminal"
+                  >
+                    <TerminalWindow className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Editor/Preview Area */}
+              <div className="flex-1 relative overflow-hidden">
+                {activeTab === "code" ? (
+                  <div className="absolute inset-0 overflow-auto bg-[#1e1e1e]">
+                    {isEditing ? (
+                      <textarea
+                        className="w-full h-full bg-[#1e1e1e] text-blue-100 font-mono text-sm leading-relaxed p-6 outline-none resize-none"
+                        value={code}
+                        onChange={(e) => handleEditorChange(e.target.value)}
+                        spellCheck={false}
+                      />
+                    ) : (
+                      <SyntaxHighlighter
+                        language="javascript"
+                        style={vscDarkPlus}
+                        customStyle={{
+                          margin: 0,
+                          padding: "1.5rem",
+                          height: "100%",
+                          fontSize: "0.875rem",
+                        }}
+                        showLineNumbers={true}
+                      >
+                        {code}
+                      </SyntaxHighlighter>
+                    )}
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white">
+                    {iframeUrl ? (
+                      <iframe
+                        src={iframeUrl}
+                        className="w-full h-full border-none"
+                      />
+                    ) : (
+                      <div className="w-full h-full p-4 overflow-auto border-4 border-dashed border-gray-100 m-4 rounded-lg flex items-center justify-center">
+                        <p className="text-gray-400 italic">
+                          {webContainer
+                            ? "Loading preview..."
+                            : "Booting WebContainer..."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-white">
-                <div className="w-full h-full p-4 overflow-auto border-4 border-dashed border-gray-100 m-4 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-400 italic">
-                    {code.includes("GeneratedApp") ? (
-                      // Just a visual representation since we can't run React code dynamically easily here without a sandbox
-                      <div className="text-center p-8 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl shadow-xl">
-                        <h1 className="text-3xl font-bold mb-2">
-                          AI Generated App
-                        </h1>
-                        <p>Interactive preview would live here.</p>
-                      </div>
-                    ) : (
-                      "Preview Area"
-                    )}
-                  </p>
+            </div>
+
+            {/* Terminal Panel */}
+            {isTerminalOpen && (
+              <div className="h-48 border-t border-border/40 bg-[#1e1e1e] flex flex-col shrink-0">
+                <div className="h-9 border-b border-white/10 px-4 flex items-center justify-between bg-[#252526]">
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <TerminalWindow className="size-3.5" />
+                    <span className="font-medium uppercase tracking-wide">
+                      Terminal
+                    </span>
+                    {/* Terminal Actions */}
+                    <div className="ml-4 flex items-center gap-2">
+                      <button
+                        className="px-2 py-0.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded text-[10px] transition-colors"
+                        onClick={() => {
+                          if (webContainer) {
+                            toast.loading("Starting project...");
+                            setTerminalCommand("npm install && npm run dev");
+                            // Reset command after trigger to allow re-running
+                            setTimeout(() => setTerminalCommand(null), 500);
+                          }
+                        }}
+                      >
+                        Run Project
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="p-1 hover:bg-white/10 rounded"
+                      onClick={() => setIsTerminalOpen(false)}
+                    >
+                      <Minus className="size-3 text-gray-400" />
+                    </button>
+                    <button className="p-1 hover:bg-white/10 rounded">
+                      <Square className="size-3 text-gray-400" />
+                    </button>
+                    <button
+                      className="p-1 hover:bg-white/10 rounded"
+                      onClick={() => setIsTerminalOpen(false)}
+                    >
+                      <X className="size-3 text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 w-full overflow-hidden bg-[#1e1e1e]">
+                  {/* @ts-ignore - dynamic component prop types */}
+                  <Terminal
+                    webContainer={webContainer}
+                    commandToRun={terminalCommand}
+                  />
                 </div>
               </div>
             )}
@@ -268,4 +748,42 @@ export default function App() {
       </div>
     </div>
   );
+
+  function renderFileTree(nodes: FileNode[]) {
+    return nodes.map((node) => {
+      if (node.type === "folder") {
+        return (
+          <FolderItem key={node.path} value={node.path}>
+            <FolderTrigger className="w-full flex items-center justify-between">
+              {node.name}
+            </FolderTrigger>
+            <FolderPanel>
+              <SubFiles>
+                {node.children && renderFileTree(node.children)}
+              </SubFiles>
+            </FolderPanel>
+          </FolderItem>
+        );
+      } else {
+        return (
+          <FileItem
+            key={node.path}
+            icon={getFileIcon(node.name)}
+            className="cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveFile(node.path);
+              // Save current file before switching?
+              // We decided to 'updateFileContent' on change, so 'files' is already up to date.
+              // But 'code' state might be ahead of 'files' if we only update on debounce?
+              // Current impl updates 'files' on every change. So safe to just load new content.
+              if (node.content !== undefined) setCode(node.content);
+            }}
+          >
+            {node.name}
+          </FileItem>
+        );
+      }
+    });
+  }
 }
