@@ -37,7 +37,9 @@ import dynamic from "next/dynamic";
 import { useWebContainer } from "@/hooks/use-web-container";
 import { WebContainer } from "@webcontainer/api";
 import { TerminalRef } from "@/components/editor/terminal";
-import { Sparkle, Loader2 } from "lucide-react";
+import { Sparkle, Loader2, User } from "lucide-react";
+import { ThinkingOverlay } from "@/components/ui/thinking-overlay";
+import ReactMarkdown from "react-markdown";
 
 const TerminalComponent = dynamic(
   () => import("@/components/editor/terminal"),
@@ -96,9 +98,9 @@ const initialFiles: FileNode[] = [
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
+    "dev": "next dev -p 8080 -H 0.0.0.0",
     "build": "next build",
-    "start": "next start -H 0.0.0.0",
+    "start": "next start -p 8080 -H 0.0.0.0",
     "lint": "next lint"
   },
   "dependencies": {
@@ -542,22 +544,28 @@ export default function CoderAgentPage() {
               component you want to build, and I'll generate the code for you.
             </div>
             {/* Chat Messages */}
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 ${msg.role === Role.User ? "items-end" : "items-start"}`}
-              >
+            <div className="flex flex-col gap-4">
+              {messages.map((msg) => (
                 <div
-                  className={`p-3 rounded-2xl max-w-[85%] text-sm ${
-                    msg.role === Role.User
-                      ? "bg-blue-600 text-white rounded-tr-sm"
-                      : "bg-muted rounded-tl-sm"
-                  }`}
+                  key={msg.id}
+                  className={cn(
+                    "flex w-full animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    msg.role === Role.User ? "justify-end" : "justify-start"
+                  )}
                 >
-                  {msg.content}
+                  <div
+                    className={cn(
+                      "relative max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm transition-all",
+                      msg.role === Role.User
+                        ? "bg-blue-600 text-white rounded-br-sm"
+                        : "bg-[#27272a] border border-white/5 text-gray-100 rounded-bl-sm"
+                    )}
+                  >
+                    {msg.content}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <div className="p-4 border-t bg-muted/10">
@@ -729,36 +737,10 @@ export default function CoderAgentPage() {
                       </SyntaxHighlighter>
                     )}
                     {/* Generation Overlay */}
-                    {isGenerating && (
-                      <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 animate-in fade-in duration-300">
-                        <div className="bg-[#1e1e1e] border border-white/10 text-white p-6 rounded-xl shadow-2xl flex flex-col gap-4 items-center max-w-sm w-full mx-4 relative overflow-hidden">
-                          {/* Background Gradient */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 via-purple-500/10 to-transparent" />
-
-                          <div className="relative flex items-center justify-center">
-                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
-                            <Loader2 className="animate-spin size-8 text-blue-400 relative z-10" />
-                          </div>
-
-                          <div className="flex flex-col items-center gap-1 relative z-10">
-                            <span className="font-semibold text-lg bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-                              AI is Thinking...
-                            </span>
-                            <span className="text-xs text-gray-400 text-center">
-                              Analyzing terminal output, fixing bugs, and
-                              writing code.
-                            </span>
-                          </div>
-
-                          <button
-                            onClick={() => setIsGenerating(false)}
-                            className="mt-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 rounded-full text-xs text-gray-400 hover:text-white transition-colors border border-white/5"
-                          >
-                            Cancel Generation
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <ThinkingOverlay
+                      isVisible={isGenerating}
+                      onCancel={() => setIsGenerating(false)}
+                    />
                   </div>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-white">
@@ -786,12 +768,14 @@ export default function CoderAgentPage() {
             {/* Terminal Panel */}
             {isTerminalOpen && (
               <div className="h-48 border-t border-border/40 bg-[#1e1e1e] flex flex-col shrink-0">
-                <div className="h-9 border-b border-white/10 px-4 flex items-center justify-between bg-[#252526]">
+                <div className="h-9 border-b border-white/5 px-4 flex items-center justify-between bg-[#18181b]">
                   <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <TerminalWindow className="size-3.5" />
-                    <span className="font-medium uppercase tracking-wide">
-                      Terminal
-                    </span>
+                    <div className="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-white/5">
+                      <TerminalWindow className="size-3 text-blue-400" />
+                      <span className="font-medium text-gray-300">
+                        Terminal
+                      </span>
+                    </div>
                     <div className="ml-4 flex items-center gap-2">
                       <button
                         className="px-2 py-0.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded text-[10px] transition-colors"
