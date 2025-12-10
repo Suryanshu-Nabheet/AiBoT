@@ -74,9 +74,10 @@ export default function AssignmentSummarizerPage() {
 
       <div className="flex-1 overflow-auto p-8 max-w-5xl mx-auto w-full">
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight mb-3 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-extrabold tracking-tight mb-3 text-blue-600">
             Summarizer
           </h1>
+
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Upload your lectures, notes, or assignments (PDF, DOCX, PPT, TXT)
             and let our AI summarize, extract key points, or answer questions.

@@ -8,6 +8,8 @@ import {
   DownloadSimple,
   SidebarSimple,
   ArrowsClockwise,
+  PencilSimple,
+  FloppyDisk,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -19,6 +21,7 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 export default function CoderAgentPage() {
   const [activeTab, setActiveTab] = useState<"code" | "preview">("code");
   const [isToolsOpen, setIsToolsOpen] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [code, setCode] = useState(`// Your AI generated code will appear here
@@ -179,6 +182,32 @@ export default function App() {
               <Button
                 variant="ghost"
                 size="sm"
+                className={cn(
+                  "h-7 text-xs gap-1.5",
+                  isEditing && "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                )}
+                onClick={() => {
+                  if (isEditing) {
+                    toast.success("Code saved successfully!");
+                  }
+                  setIsEditing(!isEditing);
+                }}
+              >
+                {isEditing ? (
+                  <>
+                    <FloppyDisk className="size-3.5" />
+                    Save
+                  </>
+                ) : (
+                  <>
+                    <PencilSimple className="size-3.5" />
+                    Edit
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 className="h-7 text-xs gap-1.5"
                 onClick={handleExport}
               >
@@ -192,19 +221,28 @@ export default function App() {
           <div className="flex-1 relative overflow-hidden">
             {activeTab === "code" ? (
               <div className="absolute inset-0 overflow-auto bg-[#1e1e1e]">
-                <SyntaxHighlighter
-                  language="javascript"
-                  style={vscDarkPlus}
-                  customStyle={{
-                    margin: 0,
-                    padding: "1.5rem",
-                    height: "100%",
-                    fontSize: "0.875rem",
-                  }}
-                  showLineNumbers={true}
-                >
-                  {code}
-                </SyntaxHighlighter>
+                {isEditing ? (
+                  <textarea
+                    className="w-full h-full bg-[#1e1e1e] text-blue-100 font-mono text-sm leading-relaxed p-6 outline-none resize-none"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    spellCheck={false}
+                  />
+                ) : (
+                  <SyntaxHighlighter
+                    language="javascript"
+                    style={vscDarkPlus}
+                    customStyle={{
+                      margin: 0,
+                      padding: "1.5rem",
+                      height: "100%",
+                      fontSize: "0.875rem",
+                    }}
+                    showLineNumbers={true}
+                  >
+                    {code}
+                  </SyntaxHighlighter>
+                )}
               </div>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-white">
