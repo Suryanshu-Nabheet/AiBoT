@@ -2,20 +2,21 @@
 
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { ColumnsIcon } from "lucide-react";
+import { SidebarSimple } from "@phosphor-icons/react";
 
 export function SidebarToggle({ className }: { className?: string }) {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className={cn("h-7 w-7", className)}
+    <div
+      className={cn(
+        "p-2 rounded-md bg-blue-100/50 text-blue-600 cursor-pointer hover:bg-blue-100 transition-colors",
+        className
+      )}
       onClick={toggleSidebar}
+      title="Toggle Sidebar"
     >
-      <ColumnsIcon className="h-4 w-4" />
-    </Button>
+      <SidebarSimple className="size-5" />
+    </div>
   );
 }

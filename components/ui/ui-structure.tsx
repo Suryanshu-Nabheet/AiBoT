@@ -12,7 +12,15 @@ import {
   SidebarInput,
   SidebarSeparator,
   Sidebar,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { Execution } from "@/hooks/useExecution";
@@ -21,6 +29,9 @@ import {
   PencilSimple,
   MagnifyingGlass,
   Code,
+  FileText,
+  TerminalWindow,
+  CaretDown,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -39,6 +50,7 @@ export const UIStructure = () => {
   const [editingId, setEditingId] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAgentModeOpen, setIsAgentModeOpen] = useState(false);
 
   const router = useRouter();
 
@@ -67,8 +79,11 @@ export const UIStructure = () => {
         <SidebarGroup>
           <SidebarHeader className="border-b border-blue-100 px-2 pb-3">
             <div className="flex w-full flex-col items-center gap-4 rounded-lg p-3">
-              <div className="flex w-full items-center justify-center rounded-lg p-2 text-lg">
-                <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
+              <div
+                className="flex w-full items-center justify-center rounded-lg p-2 text-lg cursor-pointer hover:bg-blue-50/50 transition-colors group"
+                onClick={() => router.push("/")}
+              >
+                <h1 className="text-3xl font-extrabold text-foreground tracking-tight group-hover:scale-105 transition-transform duration-200">
                   Ai<span className="text-primary">BoT</span>
                 </h1>
               </div>
@@ -98,22 +113,65 @@ export const UIStructure = () => {
                   Chat
                 </Button>
 
-                <Button
-                  className="w-full justify-start gap-3 bg-gradient-to-r from-blue-600/5 to-cyan-600/5 hover:from-blue-600/10 hover:to-cyan-600/10 text-blue-700 hover:text-blue-800 border border-blue-200/60 shadow-none h-14 relative overflow-hidden group"
-                  variant="outline"
-                  onClick={() => toast.info("Agent Mode coming soon!")}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  <div className="bg-blue-100/50 p-1.5 rounded-md text-blue-600">
-                    <Code className="size-5" weight="duotone" />
-                  </div>
-                  <div className="flex flex-col items-start text-xs">
-                    <span className="font-bold text-sm">Agent Mode</span>
-                    <span className="text-[10px] opacity-70 font-medium">
-                      Coming Soon
-                    </span>
-                  </div>
-                </Button>
+                <div className="w-full">
+                  <Collapsible
+                    open={isAgentModeOpen}
+                    onOpenChange={setIsAgentModeOpen}
+                    className="w-full"
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        className={cn(
+                          "w-full justify-between h-11 px-3 bg-background hover:bg-muted border border-input shadow-sm transition-all",
+                          isAgentModeOpen &&
+                            "bg-muted font-medium text-primary border-primary/20"
+                        )}
+                        variant="outline"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Code
+                            className={cn(
+                              "size-4",
+                              isAgentModeOpen
+                                ? "text-primary"
+                                : "text-muted-foreground"
+                            )}
+                            weight={isAgentModeOpen ? "bold" : "regular"}
+                          />
+                          <span className="text-sm">Agent Mode</span>
+                        </div>
+                        <CaretDown
+                          className={cn(
+                            "size-3.5 text-muted-foreground transition-transform duration-200",
+                            isAgentModeOpen && "rotate-180 text-primary"
+                          )}
+                        />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub className="border-l-blue-200/50 ml-6">
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            className="hover:bg-blue-50/50 text-blue-700 h-9"
+                            onClick={() => router.push("/agent/summarizer")}
+                          >
+                            <FileText className="size-4" />
+                            <span>Summarizer</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            className="hover:bg-blue-50/50 text-blue-700 h-9"
+                            onClick={() => router.push("/agent/coder")}
+                          >
+                            <TerminalWindow className="size-4" />
+                            <span>Coder</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </div>
             </div>
           </SidebarHeader>
@@ -212,6 +270,13 @@ export const UIStructure = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t border-blue-100 p-4">
+        <div className="w-full text-center">
+          <p className="text-[10px] text-blue-400 font-medium">
+            Made by <span className="font-bold">Suryanshu Nabheet</span>
+          </p>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 };

@@ -5,7 +5,6 @@ import { siteConfig } from "@/config/site";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import { UIStructure } from "@/components/ui/ui-structure";
-import { SidebarToggle } from "@/app/_components/sidebar-toggle";
 import { SidebarProvider } from "@/components/ui/sidebar";
 export const metadata: Metadata = siteConfig;
 
@@ -25,9 +24,6 @@ export default function RootLayout({
             <SidebarProvider>
               <UIStructure />
               <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-                <div className="absolute top-4 left-4 z-50">
-                  <SidebarToggle />
-                </div>
                 {children}
               </main>
             </SidebarProvider>
