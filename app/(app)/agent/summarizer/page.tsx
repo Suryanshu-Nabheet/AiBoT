@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { extractTextFromFile } from "@/lib/file-utils";
+import ReactMarkdown from "react-markdown";
 
 export default function AssignmentSummarizerPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -38,16 +40,37 @@ export default function AssignmentSummarizerPage() {
     setIsProcessing(true);
 
     try {
-      // In a real app, we would upload files via FormData.
-      // Here, we'll send the task to the AI to simulate the "Agent" response
-      // or assuming the text is extracted.
-      // For this demo, we'll send the task and file names.
+      // Extract text from all files
+      const filesData = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const content = await extractTextFromFile(file);
+            return { name: file.name, content };
+          } catch (err) {
+            console.error(`Error reading file ${file.name}:`, err);
+            toast.error(`Could not read ${file.name}`);
+            return null;
+          }
+        })
+      );
+
+      // Filter out any failed files
+      const validFiles = filesData.filter(
+        (f): f is { name: string; content: string } => f !== null
+      );
+
+      if (validFiles.length === 0) {
+        toast.error("No valid files to process");
+        setIsProcessing(false);
+        return;
+      }
+
       const response = await fetch("/api/agent/summarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           task,
-          fileNames: files.map((f) => f.name),
+          filesData: validFiles,
         }),
       });
 
@@ -79,8 +102,9 @@ export default function AssignmentSummarizerPage() {
           </h1>
 
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Upload your lectures, notes, or assignments (PDF, DOCX, PPT, TXT)
-            and let our AI summarize, extract key points, or answer questions.
+            Upload your documents (PDF, DOCX, TXT) and let AiBoT analyze them
+            for you. Summarize content, extract key data, or ask specific
+            questions.
           </p>
         </div>
 
@@ -97,7 +121,7 @@ export default function AssignmentSummarizerPage() {
                 multiple
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.json"
               />
               <div className="bg-blue-50 rounded-full p-4 group-hover:scale-110 transition-transform duration-300">
                 <Upload className="size-8 text-blue-600" weight="duotone" />
@@ -107,7 +131,7 @@ export default function AssignmentSummarizerPage() {
                   Drop files here or click to upload
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Support for PDF, Docs, Slides, Text
+                  Supports PDF, DOCX, TXT, MD
                 </p>
               </div>
             </div>
@@ -157,11 +181,16 @@ export default function AssignmentSummarizerPage() {
             className="flex flex-col gap-4"
           >
             <div className="bg-card border rounded-xl p-6 h-full flex flex-col shadow-sm">
-              <h3 className="font-semibold text-lg mb-4">What should I do?</h3>
+              <h3 className="font-semibold text-lg mb-4">
+                How can I help you?
+              </h3>
               <div className="flex-1">
                 <textarea
                   className="w-full h-full min-h-[200px] p-4 bg-muted/30 rounded-lg border-0 resize-none focus:ring-2 focus:ring-primary/20 outline-none placeholder:text-muted-foreground/50"
-                  placeholder="E.g., Summarize these lectures into bullet points, or Find all deadlines mentioned in these documents..."
+                  placeholder="Examples:
+- Summarize the main arguments in this paper
+- Extract all dates and deadlines mentioned
+- Explain the key concepts in simple terms"
                   value={task}
                   onChange={(e) => setTask(e.target.value)}
                 />
@@ -193,10 +222,8 @@ export default function AssignmentSummarizerPage() {
                 <div className="size-2 rounded-full bg-green-500" />
                 Result
               </h3>
-              <div className="prose prose-blue max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-sm text-foreground/80 leading-relaxed bg-muted/20 p-4 rounded-lg">
-                  {result}
-                </pre>
+              <div className="prose prose-blue dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:border">
+                <ReactMarkdown>{result}</ReactMarkdown>
               </div>
             </motion.div>
           )}
