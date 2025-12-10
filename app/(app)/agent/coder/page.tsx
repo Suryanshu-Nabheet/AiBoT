@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   PaperPlaneRight,
   Code,
@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Message, Role } from "@/lib/types";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -35,10 +36,15 @@ import dynamic from "next/dynamic";
 
 import { useWebContainer } from "@/hooks/use-web-container";
 import { WebContainer } from "@webcontainer/api";
+import { TerminalRef } from "@/components/editor/terminal";
+import { Sparkle, Loader2 } from "lucide-react";
 
-const Terminal = dynamic(() => import("@/components/editor/terminal"), {
-  ssr: false,
-});
+const TerminalComponent = dynamic(
+  () => import("@/components/editor/terminal"),
+  {
+    ssr: false,
+  }
+);
 
 // Map VFS to WebContainer FileSystemTree
 const convertNodesToTree = (nodes: FileNode[]) => {
@@ -61,14 +67,7 @@ const convertNodesToTree = (nodes: FileNode[]) => {
 };
 
 // VFS Types
-type FileNode = {
-  name: string;
-  type: "file" | "folder";
-  content?: string;
-  children?: FileNode[];
-  isOpen?: boolean;
-  path: string;
-};
+// FileNode type replaced by interface below
 
 // Helper to determine icon
 const getFileIcon = (name: string) => {
@@ -78,6 +77,131 @@ const getFileIcon = (name: string) => {
   return File;
 };
 
+interface FileNode {
+  name: string;
+  type: "file" | "folder";
+  path: string;
+  isOpen?: boolean;
+  content?: string;
+  children?: FileNode[];
+}
+
+const initialFiles: FileNode[] = [
+  {
+    name: "package.json",
+    type: "file",
+    path: "package.json",
+    content: `{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "next": "14.2.16",
+    "lucide-react": "^0.460.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8",
+    "tailwindcss": "^3",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.16"
+  }
+}`,
+  },
+  {
+    name: "app",
+    type: "folder",
+    path: "app",
+    isOpen: true,
+    children: [
+      {
+        name: "page.tsx",
+        type: "file",
+        path: "app/page.tsx",
+        content: `import React from 'react';
+
+export default function Home() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-between p-24">
+      <h1 className="text-4xl font-bold">Hello World</h1>
+    </div>
+  );
+}`,
+      },
+      {
+        name: "layout.tsx",
+        type: "file",
+        path: "app/layout.tsx",
+        content: `import "./globals.css";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}`,
+      },
+      {
+        name: "globals.css",
+        type: "file",
+        path: "app/globals.css",
+        content: `@tailwind base;
+@tailwind components;
+@tailwind utilities;`,
+      },
+    ],
+  },
+  {
+    name: "postcss.config.js",
+    type: "file",
+    path: "postcss.config.js",
+    content: `module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};`,
+  },
+  {
+    name: "tailwind.config.ts",
+    type: "file",
+    path: "tailwind.config.ts",
+    content: `import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+export default config;`,
+  },
+];
+
 export default function CoderAgentPage() {
   const [activeTab, setActiveTab] = useState<"code" | "preview">("code");
   const [isToolsOpen, setIsToolsOpen] = useState(true);
@@ -86,13 +210,31 @@ export default function CoderAgentPage() {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [terminalCommand, setTerminalCommand] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const terminalRef = useRef<TerminalRef>(null);
 
-  // Initial prompt
+  // VFS State
+  const [files, setFiles] = useState<FileNode[]>(initialFiles);
+  const [activeFile, setActiveFile] = useState<string>("app/page.tsx");
+  const [code, setCode] = useState(`// Select a file to view its content`);
+
+  // Persistence
   useEffect(() => {
-    if (!prompt) {
-      setPrompt("Create a next.js dashboard with a sidebar and charts");
+    const saved = localStorage.getItem("vfs");
+    if (saved) {
+      try {
+        setFiles(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load VFS", e);
+      }
     }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("vfs", JSON.stringify(files));
+  }, [files]);
+
+  // Initial prompt removed as requested - user starts empty state.
 
   const { webContainer, error: bootError } = useWebContainer();
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
@@ -141,139 +283,6 @@ export default function CoderAgentPage() {
          }
      }, [webContainer]);
   */
-
-  // VFS State
-  const [files, setFiles] = useState<FileNode[]>([
-    {
-      name: "app",
-      type: "folder",
-      path: "app",
-      isOpen: true,
-      children: [
-        {
-          name: "page.tsx",
-          type: "file",
-          path: "app/page.tsx",
-          content: `export default function Home() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-24 bg-slate-950 text-white">
-      <h1 className="text-4xl font-bold mb-4">Hello World 🚀</h1>
-      <p className="text-slate-400">
-        Start building your Next.js app by typing a prompt!
-      </p>
-    </div>
-  );
-}`,
-        },
-        {
-          name: "layout.tsx",
-          type: "file",
-          path: "app/layout.tsx",
-          content: `import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Create Next App",
-  description: "Generated by create next app",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
-    </html>
-  );
-}`,
-        },
-        {
-          name: "globals.css",
-          type: "file",
-          path: "app/globals.css",
-          content: `@tailwind base;
-@tailwind components;
-@tailwind utilities;`,
-        },
-      ],
-    },
-    {
-      name: "package.json",
-      type: "file",
-      path: "package.json",
-      content: `{
-  "name": "ai-project",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "react": "^18",
-    "react-dom": "^18",
-    "next": "14.1.0",
-    "lucide-react": "^0.300.0"
-  },
-  "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.0.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.3.0",
-    "eslint": "^8",
-    "eslint-config-next": "14.1.0"
-  }
-}`,
-    },
-    {
-      name: "postcss.config.js",
-      type: "file",
-      path: "postcss.config.js",
-      content: `module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-};`,
-    },
-    {
-      name: "tailwind.config.ts",
-      type: "file",
-      path: "tailwind.config.ts",
-      content: `import type { Config } from "tailwindcss";
-
-const config: Config = {
-  content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
-  theme: {
-    extend: {
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-      },
-    },
-  },
-  plugins: [],
-};
-export default config;`,
-    },
-  ]);
-  const [activeFile, setActiveFile] = useState<string>("app/page.tsx");
-  const [code, setCode] = useState(`// Select a file to view its content`);
 
   // Initialize code from default active file
   useState(() => {
@@ -335,6 +344,7 @@ export default config;`,
     }
 
     const newRoot: FileNode[] = []; // We can rebuild or merge. Rebuilding is safer for "new project".
+    let hasPackageJson = false;
 
     const insertNode = (
       root: FileNode[],
@@ -347,7 +357,14 @@ export default config;`,
 
       if (rest.length === 0) {
         // It's a file
-        root.push({ name: current, type: "file", path: fullPath, content });
+        const existing = root.find(
+          (n) => n.name === current && n.type === "file"
+        );
+        if (existing) {
+          existing.content = content;
+        } else {
+          root.push({ name: current, type: "file", path: fullPath, content });
+        }
       } else {
         // It's a folder
         let folder = root.find(
@@ -370,11 +387,20 @@ export default config;`,
     matches.forEach((match) => {
       // match[0] is the full block, match[1] is filename
       const header = match[0].split("\n")[0];
-      const content = match[0].substring(header.length).trim();
+      let content = match[0].substring(header.length).trim();
+
+      // Clean Markdown code blocks if present
+      // Remove opening block (e.g. ```typescript, ```json, or just ```)
+      content = content.replace(/^```[^\n]*\n/, "");
+      // Remove closing block
+      content = content.replace(/\n```$/, "");
+      content = content.trim();
+
       const filepath = match[1].trim();
 
       // Clean filepath (remove ./ or leading /)
       const cleanPath = filepath.replace(/^\.\//, "").replace(/^\//, "");
+      if (cleanPath === "package.json") hasPackageJson = true;
       const parts = cleanPath.split("/");
 
       insertNode(newRoot, parts, content, cleanPath);
@@ -387,10 +413,16 @@ export default config;`,
       const tree = convertNodesToTree(newRoot);
       webContainer.mount(tree).then(() => {
         console.log("Mounted AI generated files");
-        if (newRoot.some((n) => n.name === "package.json")) {
+        // Auto-run if package.json exists
+        if (hasPackageJson) {
           toast.info(
-            "New project detected. You may need to install dependencies."
+            "Project created! Installing dependencies & starting server..."
           );
+          // Delay slightly to ensure mount is stable
+          setTimeout(() => {
+            setTerminalCommand("npm install && npm run dev");
+            setTimeout(() => setTerminalCommand(null), 1000);
+          }, 500);
         }
       });
     }
@@ -416,20 +448,32 @@ export default config;`,
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
+
+    // Add User Message
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: Role.User,
+      content: prompt,
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
     setIsGenerating(true);
 
     try {
-      const response = await fetch("/api/agent/code", {
+      const termOutput = terminalRef.current?.getOutput() || "";
+      const fullPrompt = `User Request: ${prompt}\n\nTechnical Context:\nTerminal Output (last lines):\n${termOutput.slice(-2000)}`;
+
+      const res = await fetch("/api/agent/code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: fullPrompt }),
       });
 
-      if (!response.ok) {
+      if (!res.ok) {
         throw new Error("Failed to generate code");
       }
 
-      const data = await response.json();
+      const data = await res.json();
 
       // Parse multi-file output
       if (data.code.includes("// ===")) {
@@ -441,6 +485,16 @@ export default config;`,
 
       setActiveTab("preview");
       toast.success("Code generated successfully!");
+
+      // Add Assistant Message
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: Role.Agent,
+          content: "I've generated the code for you. Check the preview tab!",
+        },
+      ]);
     } catch (error) {
       toast.error("Error generating code");
       console.error(error);
@@ -487,17 +541,23 @@ export default config;`,
               Hi! I'm your AI coding assistant. Describe the application or
               component you want to build, and I'll generate the code for you.
             </div>
-            {/* Simulated Interaction History */}
-            {code !== "" && !code.startsWith("// Your AI") && (
-              <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2">
-                <div className="self-end bg-blue-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[85%] text-sm">
-                  {prompt}
-                </div>
-                <div className="self-start bg-muted p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-sm">
-                  I've generated the code for you. Check the preview tab!
+            {/* Chat Messages */}
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 ${msg.role === Role.User ? "items-end" : "items-start"}`}
+              >
+                <div
+                  className={`p-3 rounded-2xl max-w-[85%] text-sm ${
+                    msg.role === Role.User
+                      ? "bg-blue-600 text-white rounded-tr-sm"
+                      : "bg-muted rounded-tl-sm"
+                  }`}
+                >
+                  {msg.content}
                 </div>
               </div>
-            )}
+            ))}
           </div>
 
           <div className="p-4 border-t bg-muted/10">
@@ -668,9 +728,42 @@ export default config;`,
                         {code}
                       </SyntaxHighlighter>
                     )}
+                    {/* Generation Overlay */}
+                    {isGenerating && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 animate-in fade-in duration-300">
+                        <div className="bg-[#1e1e1e] border border-white/10 text-white p-6 rounded-xl shadow-2xl flex flex-col gap-4 items-center max-w-sm w-full mx-4 relative overflow-hidden">
+                          {/* Background Gradient */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 via-purple-500/10 to-transparent" />
+
+                          <div className="relative flex items-center justify-center">
+                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
+                            <Loader2 className="animate-spin size-8 text-blue-400 relative z-10" />
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1 relative z-10">
+                            <span className="font-semibold text-lg bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                              AI is Thinking...
+                            </span>
+                            <span className="text-xs text-gray-400 text-center">
+                              Analyzing terminal output, fixing bugs, and
+                              writing code.
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => setIsGenerating(false)}
+                            className="mt-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 rounded-full text-xs text-gray-400 hover:text-white transition-colors border border-white/5"
+                          >
+                            Cancel Generation
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-white">
+                    {/* ... preview ... */}
+
                     {iframeUrl ? (
                       <iframe
                         src={iframeUrl}
@@ -699,7 +792,6 @@ export default config;`,
                     <span className="font-medium uppercase tracking-wide">
                       Terminal
                     </span>
-                    {/* Terminal Actions */}
                     <div className="ml-4 flex items-center gap-2">
                       <button
                         className="px-2 py-0.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded text-[10px] transition-colors"
@@ -707,7 +799,6 @@ export default config;`,
                           if (webContainer) {
                             toast.loading("Starting project...");
                             setTerminalCommand("npm install && npm run dev");
-                            // Reset command after trigger to allow re-running
                             setTimeout(() => setTerminalCommand(null), 500);
                           }
                         }}
@@ -721,22 +812,14 @@ export default config;`,
                       className="p-1 hover:bg-white/10 rounded"
                       onClick={() => setIsTerminalOpen(false)}
                     >
-                      <Minus className="size-3 text-gray-400" />
-                    </button>
-                    <button className="p-1 hover:bg-white/10 rounded">
-                      <Square className="size-3 text-gray-400" />
-                    </button>
-                    <button
-                      className="p-1 hover:bg-white/10 rounded"
-                      onClick={() => setIsTerminalOpen(false)}
-                    >
                       <X className="size-3 text-gray-400" />
                     </button>
                   </div>
                 </div>
                 <div className="flex-1 w-full overflow-hidden bg-[#1e1e1e]">
-                  {/* @ts-ignore - dynamic component prop types */}
-                  <Terminal
+                  {/* @ts-ignore */}
+                  <TerminalComponent
+                    ref={terminalRef}
                     webContainer={webContainer}
                     commandToRun={terminalCommand}
                   />
@@ -773,10 +856,6 @@ export default config;`,
             onClick={(e) => {
               e.stopPropagation();
               setActiveFile(node.path);
-              // Save current file before switching?
-              // We decided to 'updateFileContent' on change, so 'files' is already up to date.
-              // But 'code' state might be ahead of 'files' if we only update on debounce?
-              // Current impl updates 'files' on every change. So safe to just load new content.
               if (node.content !== undefined) setCode(node.content);
             }}
           >

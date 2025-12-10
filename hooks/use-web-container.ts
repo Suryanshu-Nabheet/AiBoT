@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { WebContainer } from "@webcontainer/api";
 
 let webContainerInstance: WebContainer | null = null;
+let bootPromise: Promise<WebContainer> | null = null;
 
 export const useWebContainer = () => {
   const [webContainer, setWebContainer] = useState<WebContainer | null>(null);
@@ -9,18 +10,21 @@ export const useWebContainer = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Singleton pattern to avoid booting multiple instances
     if (webContainerInstance) {
       setWebContainer(webContainerInstance);
       setIsLoading(false);
       return;
     }
 
-    const boot = async () => {
+    if (!bootPromise) {
+      bootPromise = WebContainer.boot();
+    }
+
+    const handleBoot = async () => {
       try {
-        setIsLoading(true);
-        webContainerInstance = await WebContainer.boot();
-        setWebContainer(webContainerInstance);
+        const instance = await bootPromise;
+        webContainerInstance = instance;
+        setWebContainer(instance);
       } catch (e: any) {
         console.error("Failed to boot WebContainer:", e);
         if (
@@ -39,7 +43,7 @@ export const useWebContainer = () => {
       }
     };
 
-    boot();
+    handleBoot();
   }, []);
 
   return { webContainer, isLoading, error };
