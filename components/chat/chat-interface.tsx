@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { v4 } from "uuid";
@@ -61,13 +60,13 @@ const MessageComponent = memo(
       copied,
       isWrapped: false,
       toggleWrap: () => {},
-      resolvedTheme: "dark", // Defaulting to dark/system for stability
+      resolvedTheme: "dark",
       geistMono,
     });
 
     const isUser = message.role === Role.User;
 
-    const displayedContent = useSmoothTyping(message.content, 5); // 5 chars per frame = blazing fast yet smooth
+    const displayedContent = useSmoothTyping(message.content, 5);
     const contentToShow = isUser ? message.content : displayedContent;
 
     return (
@@ -313,7 +312,6 @@ export default function ChatInterface({
 
   // Auto-scroll on new messages
   useEffect(() => {
-    // Use instant scroll for better UX during streaming if near bottom
     scrollToBottom("instant");
   }, [messages.length, scrollToBottom]);
 
@@ -356,8 +354,8 @@ export default function ChatInterface({
                 if (typeof reader.result === "string") {
                   newAttachments.push({
                     name: file.name,
-                    content: reader.result, // This is the base64 data URL
-                    type: file.type, // "image/png", etc.
+                    content: reader.result,
+                    type: file.type,
                   });
                 }
                 resolve();
@@ -596,10 +594,6 @@ export default function ChatInterface({
         )
         .join("\n\n");
 
-      // However, for the AI to "see" it, we must include the data.
-      // For this "Pro" fix, we will simply append the data for the API only,
-      // but keep the user UI clean.
-
       const aiContext = attachments
         .map((a) =>
           a.type.startsWith("image/")
@@ -614,8 +608,8 @@ export default function ChatInterface({
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: Role.User,
-      content: currentQuery, // Clean text only for UI
-      attachments: attachments, // Store full attachments here for UI rendering
+      content: currentQuery,
+      attachments: attachments,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -665,10 +659,8 @@ export default function ChatInterface({
         let errorTitle = "Error";
 
         try {
-          // Try to parse as JSON first
           const errorData = await res.json();
 
-          // Handle specific error cases
           if (res.status === 429) {
             errorTitle = "⏱️ Rate Limit Reached";
             errorMessage =
@@ -701,14 +693,13 @@ export default function ChatInterface({
               JSON.stringify(errorData);
           }
         } catch {
-          // Fallback to text (e.g. for HTML 500 pages)
           const textError = await res.text();
           if (textError.includes("<!DOCTYPE html>")) {
             errorTitle = "🔧 Service Error";
             errorMessage =
               "Service temporarily unavailable. Please try again later.";
           } else {
-            errorMessage = textError.substring(0, 200); // Truncate long text
+            errorMessage = textError.substring(0, 200);
           }
         }
 
