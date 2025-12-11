@@ -146,7 +146,7 @@ const MessageComponent = memo(
                               rehypePlugins={rehypePlugins}
                               components={markdownComponents}
                             >
-                              {preprocessMarkdown(contentToShow)}
+                              {contentToShow}
                             </ReactMarkdown>
                           </div>
                         </div>

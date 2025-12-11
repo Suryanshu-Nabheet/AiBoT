@@ -106,10 +106,6 @@ export async function POST(req: NextRequest) {
     // Construct the user message with file contents
     let filesContentStr = "";
     filesData.forEach((file: { name: string; content: string }) => {
-      // Truncate content if it's too long (rough safety limit for context window)
-      // Assuming a large context window model (128k+), but still good to be safe.
-      // Let's limit per file to ~20k chars for now to safe on tokens if many files.
-      // A improved version would use token counting.
       const truncatedContent =
         file.content.length > 50000
           ? file.content.substring(0, 50000) + "\n...[Content truncated]..."
@@ -131,7 +127,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.0-flash-exp:free", // Better at following markdown formatting instructions
+          model: "google/gemini-2.0-flash-exp:free",
           messages: [
             { role: "system", content: SUMMARIZER_SYSTEM_PROMPT },
             { role: "user", content: userMessage },
@@ -152,14 +148,12 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
     let summary = data.choices[0]?.message?.content || "No summary generated.";
 
-    // Clean up markdown formatting issues
     summary = summary
-      // Fix table formatting: ensure proper pipe alignment
       .replace(
         /\|\s*([^|\n]+?)\s*\|/g,
         (_match: string, content: string) => `| ${content.trim()} |`
       )
-      // Ensure tables have proper header separators
+
       .replace(
         /(\|[^\n]+\|)\n(\|[^\n]+\|)/g,
         (match: string, header: string, row: string) => {
@@ -171,9 +165,7 @@ export async function POST(req: NextRequest) {
           return match;
         }
       )
-      // Remove any stray markdown syntax at start of lines
       .replace(/^\s*(##|\*\*|\*)\s*$/gm, "")
-      // Clean up excessive whitespace
       .replace(/\n{4,}/g, "\n\n\n")
       .trim();
 
