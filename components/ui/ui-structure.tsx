@@ -149,26 +149,24 @@ export const UIStructure = () => {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <SidebarMenuSub className="border-l-blue-200/50 ml-6">
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            className="hover:bg-blue-50/50 text-blue-700 h-9"
-                            onClick={() => router.push("/agent/summarizer")}
-                          >
-                            <FileText className="size-4" />
-                            <span>Summarizer</span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            className="hover:bg-blue-50/50 text-blue-700 h-9"
-                            onClick={() => router.push("/agent/coder")}
-                          >
-                            <TerminalWindow className="size-4" />
-                            <span>Coder</span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      </SidebarMenuSub>
+                      <div className="flex flex-col gap-3 mt-3 px-2">
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-3 h-10 bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
+                          onClick={() => router.push("/agent/summarizer")}
+                        >
+                          <FileText className="size-4" weight="regular" />
+                          Summarizer
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-3 h-10 bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
+                          onClick={() => router.push("/agent/coder")}
+                        >
+                          <TerminalWindow className="size-4" weight="regular" />
+                          Coder
+                        </Button>
+                      </div>
                     </CollapsibleContent>
                   </Collapsible>
                 </div>

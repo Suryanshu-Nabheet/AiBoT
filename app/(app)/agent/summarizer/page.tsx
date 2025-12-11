@@ -1,19 +1,55 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, FileText, ArrowRight, X } from "@phosphor-icons/react";
+import {
+  Upload,
+  FileText,
+  ArrowRight,
+  X,
+  SpeakerHigh,
+  Stop,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { extractTextFromFile } from "@/lib/file-utils";
 import ReactMarkdown from "react-markdown";
+import { useMarkdown } from "@/hooks/useMarkdown";
+import { Geist_Mono } from "next/font/google";
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  preload: true,
+  display: "swap",
+});
 
 export default function AssignmentSummarizerPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [task, setTask] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const {
+    preprocessMarkdown,
+    markdownComponents,
+    remarkPlugins,
+    rehypePlugins,
+  } = useMarkdown({
+    onCopy: async (content: string) => {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    },
+    copied,
+    isWrapped: false,
+    toggleWrap: () => {},
+    resolvedTheme: "dark",
+    geistMono,
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -25,6 +61,30 @@ export default function AssignmentSummarizerPage() {
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSpeak = () => {
+    if (!result) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(result);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast.error("Speech synthesis failed");
+    };
+
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
   };
 
   const handleSummarize = async () => {
@@ -218,12 +278,44 @@ export default function AssignmentSummarizerPage() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-card border rounded-xl p-8 shadow-sm mb-8"
             >
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <div className="size-2 rounded-full bg-green-500" />
-                Result
-              </h3>
-              <div className="prose prose-blue dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:border">
-                <ReactMarkdown>{result}</ReactMarkdown>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <div className="size-2 rounded-full bg-green-500" />
+                  Result
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSpeak}
+                  className="gap-2"
+                >
+                  {isSpeaking ? (
+                    <>
+                      <Stop className="size-4" weight="fill" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <SpeakerHigh className="size-4" weight="fill" />
+                      Listen
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="w-full max-w-full">
+                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-li:my-1 prose-pre:my-3 prose-pre:max-w-full prose-code:break-words">
+                  <div className="w-full max-w-full overflow-hidden">
+                    <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
+                      <ReactMarkdown
+                        remarkPlugins={remarkPlugins}
+                        rehypePlugins={rehypePlugins}
+                        components={markdownComponents}
+                      >
+                        {preprocessMarkdown(result)}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
