@@ -466,6 +466,68 @@ Special thanks to the open-source community for making projects like this possib
 
 ---
 
+## 📜 License & Legal
+
+### Copyright
+
+**Copyright © 2025 Suryanshu Nabheet**
+
+AiBoT is licensed under the **MIT License**.
+
+### Open Source License
+
+This project is open source under the MIT License, allowing:
+
+- ✅ Personal use
+- ✅ Educational use
+- ✅ Commercial use (no restrictions)
+- ✅ Modification and distribution
+- ✅ Private use
+
+See [LICENSE](LICENSE) for full terms.
+
+### Usage Terms
+
+**You are free to:**
+
+- Use this software for any purpose
+- Modify and customize it
+- Deploy commercially without fees
+- Create derivative works
+- Redistribute with or without modifications
+
+**We appreciate (but don't require):**
+
+- Attribution to the original project
+- Contributions back to the community
+- Sharing improvements
+
+### Intellectual Property
+
+- **Source Code**: MIT Licensed (fully open source)
+- **Documentation**: Open for use and modification
+- **Generated Code**: Users own all AI-generated outputs
+- **No Trademark Claims**: "AiBoT" name is not trademarked
+
+### Security & Privacy
+
+- **Data Privacy**: No user data stored on servers
+- **API Keys**: User-provided, never logged or stored
+- **Chat History**: Stored locally in browser (sessionStorage)
+- **Open Source**: All code is publicly auditable
+
+See [SECURITY.md](SECURITY.md) for security policies.
+
+### Contact
+
+**For questions or support:**
+
+- Email: suryanshu.nabheet@example.com
+- Issues: [GitHub Issues](https://github.com/Suryanshu-Nabheet/AiBoT/issues)
+- Contributions: Pull requests welcome!
+
+---
+
 <div align="center">
 
 **Made with ❤️ by Suryanshu Nabheet**

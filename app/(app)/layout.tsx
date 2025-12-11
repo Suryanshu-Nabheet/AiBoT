@@ -1,3 +1,10 @@
+/**
+ * AiBoT - AI-Powered Platform
+ * Copyright (c) 2025 Suryanshu Nabheet
+ * Licensed under MIT with Additional Commercial Terms
+ * See LICENSE file for details
+ */
+
 import { SidebarToggle } from "@/app/_components/sidebar-toggle";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";

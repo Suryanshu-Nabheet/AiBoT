@@ -19,3 +19,33 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+ADDITIONAL TERMS:
+
+1. ATTRIBUTION:
+   - Attribution to "AiBoT by Suryanshu Nabheet" is appreciated but not required.
+   - If you choose to provide attribution, please link back to the original repository.
+
+2. API KEY SECURITY:
+   - Users must provide their own OpenRouter API keys.
+   - Redistribution with embedded API keys is prohibited for security reasons.
+   - Sharing or exposing API keys may violate OpenRouter's terms of service.
+
+3. DERIVATIVE WORKS:
+   - You are free to modify and distribute this software.
+   - Please clearly indicate if you have made modifications.
+   - Consider contributing improvements back to the original project.
+
+4. COMMERCIAL USE:
+   - Commercial use is permitted under the MIT License.
+   - No additional fees or permissions required.
+   - Attribution is appreciated but optional.
+
+5. NO WARRANTY:
+   - This software is provided "as is" without warranty.
+   - Use at your own risk.
+   - The author is not liable for any damages.
+
+For questions or support: suryanshunab@gmail.com
