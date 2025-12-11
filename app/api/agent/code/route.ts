@@ -5,7 +5,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const SITE_NAME = "AiBoT";
 
 // Use Llama 3.3 70B - much more powerful for code generation
-const MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const MODEL = "openai/gpt-oss-20b:free";
 
 const CODER_SYSTEM_PROMPT = `You are AiBoT, an expert web developer. You create complete, working websites using only HTML, CSS, and JavaScript.
 

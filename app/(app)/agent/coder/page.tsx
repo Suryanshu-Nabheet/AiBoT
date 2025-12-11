@@ -71,17 +71,18 @@ export default function CoderAgentPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [code, setCode] = useState(EMPTY_HTML);
 
-  // Load saved code on mount (client-side only)
   useEffect(() => {
     const saved = localStorage.getItem("coder-code");
-    if (saved && saved !== EMPTY_HTML) {
+    if (saved && saved !== EMPTY_HTML && !saved.includes("AiBoT")) {
       setCode(saved);
     }
   }, []);
 
-  // Save code to localStorage whenever it changes
   useEffect(() => {
-    if (code !== EMPTY_HTML) {
+    if (
+      code !== EMPTY_HTML &&
+      !code.includes('Ai</span><span class="bot">BoT')
+    ) {
       localStorage.setItem("coder-code", code);
     }
   }, [code]);
@@ -394,6 +395,22 @@ Then provide the COMPLETE HTML code.`;
             >
               <DownloadSimple className="size-3.5" />
               Export
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => {
+                localStorage.removeItem("coder-code");
+                setCode(EMPTY_HTML);
+                setMessages([]);
+                setActiveTab("preview");
+                toast.success("Reset to empty template");
+              }}
+              title="Reset to empty template"
+            >
+              <ArrowsClockwise className="size-3.5" />
+              Reset
             </Button>
           </div>
         </div>
