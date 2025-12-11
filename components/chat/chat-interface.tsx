@@ -76,18 +76,13 @@ const MessageComponent = memo(
         <div className="px-4 md:px-8 lg:px-12 py-2.5">
           {/* Inner container with same max-width as input */}
           <div className="max-w-4xl mx-auto">
-            {/* Message alignment wrapper */}
-            <div
-              className={cn(
-                "flex w-full",
-                isUser ? "justify-end" : "justify-start"
-              )}
-            >
-              {/* Message bubble container with max-width */}
+            {/* Message alignment wrapper - full width */}
+            <div className="flex w-full">
+              {/* Message bubble container - auto-sized with max width */}
               <div
                 className={cn(
-                  "flex flex-col max-w-[85%] md:max-w-[75%] lg:max-w-[65%]",
-                  isUser ? "items-end" : "items-start"
+                  "flex flex-col max-w-full",
+                  isUser ? "items-end ml-auto" : "items-start mr-auto"
                 )}
               >
                 {/* Attachments Rendering */}
