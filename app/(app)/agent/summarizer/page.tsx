@@ -8,6 +8,8 @@ import {
   X,
   SpeakerHigh,
   Stop,
+  Copy,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -300,6 +302,42 @@ export default function AssignmentSummarizerPage() {
                       Listen
                     </>
                   )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(result);
+                    toast.success("Summary copied to clipboard!");
+                  }}
+                  className="gap-2"
+                >
+                  <Copy className="size-4" />
+                  Copy
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const { generatePDF } = await import("@/lib/pdf-utils");
+                      await generatePDF(
+                        result,
+                        "summary.pdf",
+                        "Summary Report"
+                      );
+                      toast.success("PDF downloaded successfully!");
+                    } catch (error) {
+                      console.error("PDF generation error:", error);
+                      toast.error("Failed to generate PDF");
+                    }
+                  }}
+                  className="gap-2"
+                >
+                  <DownloadSimple className="size-4" />
+                  Download PDF
                 </Button>
               </div>
               <div className="w-full max-w-full">

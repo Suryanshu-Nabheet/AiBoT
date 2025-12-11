@@ -14,6 +14,7 @@ import {
   MicrophoneIcon,
   PaperclipIcon,
   X as XIcon,
+  DownloadSimple as DownloadIcon,
 } from "@phosphor-icons/react";
 import ReactMarkdown from "react-markdown";
 import Image from "next/image";
@@ -149,9 +150,9 @@ const MessageComponent = memo(
                   )}
                 </div>
 
-                {/* Copy button */}
+                {/* Copy and Download buttons */}
                 {!isUser && (
-                  <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="mt-2 flex items-center gap-1 transition-opacity duration-200">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -163,6 +164,30 @@ const MessageComponent = memo(
                       ) : (
                         <CopyIcon className="size-3.5" />
                       )}
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
+                      onClick={async () => {
+                        try {
+                          const { generatePDF } =
+                            await import("@/lib/pdf-utils");
+                          await generatePDF(
+                            message.content,
+                            "ai-response.pdf",
+                            "AI Response"
+                          );
+                          toast.success("PDF downloaded successfully!");
+                        } catch (error) {
+                          console.error("PDF generation error:", error);
+                          toast.error("Failed to generate PDF");
+                        }
+                      }}
+                      title="Download as PDF"
+                    >
+                      <DownloadIcon className="size-3.5" />
                     </Button>
                   </div>
                 )}

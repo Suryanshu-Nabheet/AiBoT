@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { MODELS } from "@/lib/types";
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -116,60 +117,86 @@ export async function POST(req: NextRequest) {
 
     const userMessage = `Files to Analyze:\n${filesContentStr}\n\nTask: ${task}`;
 
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_KEY}`,
-          "HTTP-Referer": SITE_URL,
-          "X-Title": SITE_NAME,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-20b:free",
-          messages: [
-            { role: "system", content: SUMMARIZER_SYSTEM_PROMPT },
-            { role: "user", content: userMessage },
-          ],
-        }),
-      }
-    );
+    // Try each model in fallback chain
+    let lastError = null;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenRouter API Error:", errorText);
-      return NextResponse.json(
-        { message: "Error from AI provider" },
-        { status: response.status }
-      );
+    for (const model of MODELS) {
+      try {
+        console.log(`Summarizer: Trying model ${model.id}...`);
+
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENROUTER_KEY}`,
+              "HTTP-Referer": SITE_URL,
+              "X-Title": SITE_NAME,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: model.id,
+              messages: [
+                { role: "system", content: SUMMARIZER_SYSTEM_PROMPT },
+                { role: "user", content: userMessage },
+              ],
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          let summary =
+            data.choices[0]?.message?.content || "No summary generated.";
+
+          console.log(`Summarizer: Success with model ${model.id}`);
+
+          // Format summary
+          summary = summary
+            .replace(
+              /\|\s*([^|\n]+?)\s*\|/g,
+              (_match: string, content: string) => `| ${content.trim()} |`
+            )
+            .replace(
+              /(\|[^\n]+\|)\n(\|[^\n]+\|)/g,
+              (match: string, header: string, row: string) => {
+                if (!row.includes("---")) {
+                  const cols = (header.match(/\|/g) || []).length - 1;
+                  const separator = "|" + " --- |".repeat(cols);
+                  return `${header}\n${separator}\n${row}`;
+                }
+                return match;
+              }
+            )
+            .replace(/^\s*(##|\*\*|\*)\s*$/gm, "")
+            .replace(/\n{4,}/g, "\n\n\n")
+            .trim();
+
+          return NextResponse.json({ summary });
+        }
+
+        // If rate limited or error, try next model
+        const errorText = await response.text();
+        console.log(
+          `Summarizer: Model ${model.id} failed (${response.status}), trying next...`
+        );
+        lastError = errorText;
+      } catch (modelError) {
+        console.error(`Summarizer: Error with model ${model.id}:`, modelError);
+        lastError = modelError;
+        continue;
+      }
     }
 
-    const data = await response.json();
-    let summary = data.choices[0]?.message?.content || "No summary generated.";
-
-    summary = summary
-      .replace(
-        /\|\s*([^|\n]+?)\s*\|/g,
-        (_match: string, content: string) => `| ${content.trim()} |`
-      )
-
-      .replace(
-        /(\|[^\n]+\|)\n(\|[^\n]+\|)/g,
-        (match: string, header: string, row: string) => {
-          if (!row.includes("---")) {
-            const cols = (header.match(/\|/g) || []).length - 1;
-            const separator = "|" + " --- |".repeat(cols);
-            return `${header}\n${separator}\n${row}`;
-          }
-          return match;
-        }
-      )
-      .replace(/^\s*(##|\*\*|\*)\s*$/gm, "")
-      .replace(/\n{4,}/g, "\n\n\n")
-      .trim();
-
-    return NextResponse.json({ summary });
+    // All models failed
+    console.error("Summarizer: All models failed. Last error:", lastError);
+    return NextResponse.json(
+      {
+        message:
+          "All AI models are currently unavailable. Please try again in a moment.",
+      },
+      { status: 503 }
+    );
   } catch (error) {
     console.error("API Error:", error);
     return NextResponse.json(
