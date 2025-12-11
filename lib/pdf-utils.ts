@@ -1,61 +1,65 @@
-import { jsPDF } from 'jspdf';
-import ReactMarkdown from 'react-markdown';
-import { createRoot } from 'react-dom/client';
+import { jsPDF } from "jspdf";
 
 /**
- * Generate a professional PDF from markdown content with proper rendering
+ * Generate a professional PDF from markdown content
  * @param content - Markdown content to convert
  * @param filename - Output filename
  * @param title - PDF title
  */
 export async function generatePDF(
   content: string,
-  filename: string = 'document.pdf',
-  title: string = 'Document'
+  filename: string = "document.pdf",
+  title: string = "Document"
 ) {
   try {
+    // Import ReactMarkdown dynamically
+    const { default: ReactMarkdown } = await import("react-markdown");
+    const { createRoot } = await import("react-dom/client");
+    const { createElement } = await import("react");
+
     // Create a temporary container
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.width = '800px';
-    container.style.padding = '40px';
-    container.style.backgroundColor = 'white';
-    container.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    container.style.fontSize = '14px';
-    container.style.lineHeight = '1.6';
-    container.style.color = '#000';
-    
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.left = "-9999px";
+    container.style.width = "800px";
+    container.style.padding = "40px";
+    container.style.backgroundColor = "white";
+    container.style.fontFamily =
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    container.style.fontSize = "14px";
+    container.style.lineHeight = "1.6";
+    container.style.color = "#000";
+
     // Add title
-    const titleEl = document.createElement('h1');
+    const titleEl = document.createElement("h1");
     titleEl.textContent = title;
-    titleEl.style.fontSize = '24px';
-    titleEl.style.fontWeight = '700';
-    titleEl.style.marginBottom = '20px';
-    titleEl.style.color = '#000';
+    titleEl.style.fontSize = "24px";
+    titleEl.style.fontWeight = "700";
+    titleEl.style.marginBottom = "20px";
+    titleEl.style.color = "#000";
     container.appendChild(titleEl);
-    
+
     // Create content container for React Markdown
-    const contentContainer = document.createElement('div');
-    contentContainer.style.marginBottom = '60px';
-    contentContainer.className = 'pdf-content';
+    const contentContainer = document.createElement("div");
+    contentContainer.style.marginBottom = "60px";
+    contentContainer.className = "pdf-content";
     container.appendChild(contentContainer);
-    
+
     // Add watermark
-    const watermark = document.createElement('div');
-    watermark.textContent = 'AiBoT by Suryanshu Nabheet';
-    watermark.style.position = 'absolute';
-    watermark.style.bottom = '20px';
-    watermark.style.right = '40px';
-    watermark.style.fontSize = '10px';
-    watermark.style.color = '#666';
-    watermark.style.fontStyle = 'italic';
+    const watermark = document.createElement("div");
+    watermark.textContent = "AiBoT by Suryanshu Nabheet";
+    watermark.style.position = "absolute";
+    watermark.style.bottom = "20px";
+    watermark.style.right = "40px";
+    watermark.style.fontSize = "10px";
+    watermark.style.color = "#666";
+    watermark.style.fontStyle = "italic";
     container.appendChild(watermark);
-    
+
     document.body.appendChild(container);
-    
+
     // Add styles for markdown rendering
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       .pdf-content {
         color: #000;
@@ -141,62 +145,60 @@ export async function generatePDF(
       }
     `;
     document.head.appendChild(style);
-    
-    // Render markdown using React
+
+    // Render markdown using React (without JSX)
     const root = createRoot(contentContainer);
     await new Promise<void>((resolve) => {
-      root.render(
-        <ReactMarkdown>{content}</ReactMarkdown>
-      );
+      root.render(createElement(ReactMarkdown, { children: content }));
       // Wait for render to complete
       setTimeout(resolve, 100);
     });
-    
+
     // Use html2canvas to render
-    const html2canvas = (await import('html2canvas')).default;
+    const html2canvas = (await import("html2canvas")).default;
     const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff',
+      backgroundColor: "#ffffff",
     });
-    
+
     // Cleanup
     root.unmount();
     document.body.removeChild(container);
     document.head.removeChild(style);
-    
+
     // Create PDF
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
     });
-    
+
     const imgWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
-    
+
     // Add first page
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
-    
+
     // Add additional pages if needed
     while (heightLeft > 0) {
       position = heightLeft - imgHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
     }
-    
+
     // Save
     pdf.save(filename);
     return true;
   } catch (error) {
-    console.error('PDF generation error:', error);
+    console.error("PDF generation error:", error);
     throw error;
   }
 }
