@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.0-flash-exp:free",
+          model: "openai/gpt-oss-20b:free",
           messages: [
             { role: "system", content: SUMMARIZER_SYSTEM_PROMPT },
             { role: "user", content: userMessage },
