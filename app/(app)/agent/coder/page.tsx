@@ -505,17 +505,53 @@ export default function CoderAgentPage() {
     }
   };
 
-  const handleExport = () => {
-    const blob = new Blob([code], { type: "text/javascript" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "App.js"; // Default filename
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Code exported to App.js");
+  const handleExport = async () => {
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+
+      // Recursive function to add files to ZIP
+      const addFilesToZip = (nodes: FileNode[], parentPath: string = "") => {
+        nodes.forEach((node) => {
+          const fullPath = parentPath
+            ? `${parentPath}/${node.name}`
+            : node.name;
+
+          if (node.type === "file" && node.content) {
+            // Add file to ZIP
+            zip.file(fullPath, node.content);
+          } else if (node.type === "folder" && node.children) {
+            // Recursively add folder contents
+            addFilesToZip(node.children, fullPath);
+          }
+        });
+      };
+
+      // Add all files from VFS
+      addFilesToZip(files);
+
+      // Generate ZIP file
+      const blob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+      });
+
+      // Download ZIP
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "project.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Project exported! (${files.length} files)`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export project");
+    }
   };
 
   return (
