@@ -347,6 +347,9 @@ export default function ChatInterface({
       const newAttachments: { name: string; content: string; type: string }[] =
         [];
 
+      // Dynamically import extractTextFromFile
+      const { extractTextFromFile } = await import("@/lib/file-utils");
+
       for (const file of files) {
         try {
           // Check if it's an image
@@ -365,8 +368,31 @@ export default function ChatInterface({
                 resolve();
               };
             });
+          } else if (
+            // Document types that need extraction
+            file.name.endsWith(".pdf") ||
+            file.name.endsWith(".docx") ||
+            file.name.endsWith(".doc") ||
+            file.name.endsWith(".pptx") ||
+            file.name.endsWith(".xlsx") ||
+            file.name.endsWith(".xls")
+          ) {
+            try {
+              const extractedText = await extractTextFromFile(file);
+              newAttachments.push({
+                name: file.name,
+                content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n💡 *For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
+                type: "text/plain",
+              });
+              toast.success(`Extracted text from ${file.name}`);
+            } catch (extractError) {
+              console.error(`Failed to extract ${file.name}:`, extractError);
+              toast.error(
+                `Could not extract text from ${file.name}. Try the Summarizer feature.`
+              );
+            }
           } else {
-            // Text based files
+            // Text based files (txt, md, json, etc.)
             const text = await file.text();
             newAttachments.push({
               name: file.name,
@@ -375,6 +401,7 @@ export default function ChatInterface({
             });
           }
         } catch (err) {
+          console.error(`Error reading ${file.name}:`, err);
           toast.error(`Failed to read ${file.name}`);
         }
       }
@@ -816,6 +843,7 @@ export default function ChatInterface({
               ref={fileInputRef}
               className="hidden"
               multiple
+              accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.json,.csv"
               onChange={handleFileSelect}
             />
 
