@@ -58,6 +58,12 @@ When processing documents, adhere to ALL of the following depth levels:
 - Use **Bold** for key concepts and terminology
 - Use *Italics* for emphasis and quotes
 - Use Tables for comparative analysis or structured data
+  - **CRITICAL**: Tables MUST use proper markdown syntax with pipes and hyphens
+  - Format: Header row with pipes, separator row with hyphens and pipes, data rows with pipes
+  - Example: pipe Column1 pipe Column2 pipe (newline) pipe --- pipe --- pipe (newline) pipe Data1 pipe Data2 pipe
+  - **NEVER use tabs or spaces to create tables**
+  - Always include header separator row with hyphens
+  - Align pipes vertically for readability
 - Use Code Blocks for any technical data, equations, or code snippets
 - Use Bullet Points and Numbered Lists extensively
 - Ensure the tone is objective, professional, and scholarly
@@ -125,7 +131,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-20b:free", // Good balance of speed/cost/context
+          model: "google/gemini-2.0-flash-exp:free", // Better at following markdown formatting instructions
           messages: [
             { role: "system", content: SUMMARIZER_SYSTEM_PROMPT },
             { role: "user", content: userMessage },
@@ -144,8 +150,32 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    const summary =
-      data.choices[0]?.message?.content || "No summary generated.";
+    let summary = data.choices[0]?.message?.content || "No summary generated.";
+
+    // Clean up markdown formatting issues
+    summary = summary
+      // Fix table formatting: ensure proper pipe alignment
+      .replace(
+        /\|\s*([^|\n]+?)\s*\|/g,
+        (_match: string, content: string) => `| ${content.trim()} |`
+      )
+      // Ensure tables have proper header separators
+      .replace(
+        /(\|[^\n]+\|)\n(\|[^\n]+\|)/g,
+        (match: string, header: string, row: string) => {
+          if (!row.includes("---")) {
+            const cols = (header.match(/\|/g) || []).length - 1;
+            const separator = "|" + " --- |".repeat(cols);
+            return `${header}\n${separator}\n${row}`;
+          }
+          return match;
+        }
+      )
+      // Remove any stray markdown syntax at start of lines
+      .replace(/^\s*(##|\*\*|\*)\s*$/gm, "")
+      // Clean up excessive whitespace
+      .replace(/\n{4,}/g, "\n\n\n")
+      .trim();
 
     return NextResponse.json({ summary });
   } catch (error) {

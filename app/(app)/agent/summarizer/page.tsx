@@ -311,7 +311,7 @@ export default function AssignmentSummarizerPage() {
                         rehypePlugins={rehypePlugins}
                         components={markdownComponents}
                       >
-                        {preprocessMarkdown(result)}
+                        {result}
                       </ReactMarkdown>
                     </div>
                   </div>
