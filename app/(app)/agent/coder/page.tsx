@@ -242,10 +242,10 @@ Then provide the COMPLETE HTML code.`;
 
   return (
     <div className="flex flex-col lg:flex-row h-full w-full max-w-full bg-background overflow-hidden">
-      {/* Left: Chat Interface */}
-      <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r bg-background flex flex-col min-h-[300px] lg:min-h-0 lg:min-w-[300px] max-w-full">
+      {/* Left: Chat Interface - 50% on desktop */}
+      <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r bg-background flex flex-col min-h-[40vh] lg:min-h-0 max-w-full">
         {/* Header */}
-        <div className="p-4 border-b flex items-center justify-between">
+        <div className="p-3 sm:p-4 border-b flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold flex items-center gap-2">
               <Code className="size-5 text-blue-600" weight="bold" />
@@ -258,18 +258,7 @@ Then provide the COMPLETE HTML code.`;
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg text-sm border border-blue-100">
-            <p className="font-medium text-blue-900 mb-2">
-              ✨ AI Website Builder
-            </p>
-            <p className="text-blue-700 text-xs leading-relaxed">
-              Describe any website you want, and I'll create a complete,
-              production-ready HTML file with beautiful CSS and functional
-              JavaScript. No frameworks needed!
-            </p>
-          </div>
-
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -310,7 +299,7 @@ Then provide the COMPLETE HTML code.`;
             <Button
               size="icon"
               className={cn(
-                "absolute bottom-3 right-3 h-8 w-8 transition-all",
+                "absolute bottom-2 sm:bottom-3 right-2 sm:right-3 h-8 w-8 transition-all",
                 prompt
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-muted text-muted-foreground hover:bg-muted"
@@ -325,7 +314,7 @@ Then provide the COMPLETE HTML code.`;
               )}
             </Button>
           </div>
-          <p className="text-[10px] text-center text-muted-foreground mt-2">
+          <p className="text-[10px] sm:text-[11px] text-center text-muted-foreground mt-2 px-2">
             AI-generated code • Review before use
           </p>
         </div>
