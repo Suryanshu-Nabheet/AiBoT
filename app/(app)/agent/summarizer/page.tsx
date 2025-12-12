@@ -280,65 +280,62 @@ export default function AssignmentSummarizerPage() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-card border rounded-xl p-8 shadow-sm mb-8"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
+              <div className="flex items-center justify-between mb-4 gap-2">
+                <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
                   <div className="size-2 rounded-full bg-green-500" />
                   Result
                 </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSpeak}
-                  className="gap-2"
-                >
-                  {isSpeaking ? (
-                    <>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleSpeak}
+                    className="size-8 sm:size-9"
+                    title={isSpeaking ? "Stop" : "Listen"}
+                  >
+                    {isSpeaking ? (
                       <Stop className="size-4" weight="fill" />
-                      Stop
-                    </>
-                  ) : (
-                    <>
+                    ) : (
                       <SpeakerHigh className="size-4" weight="fill" />
-                      Listen
-                    </>
-                  )}
-                </Button>
+                    )}
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(result);
-                    toast.success("Summary copied to clipboard!");
-                  }}
-                  className="gap-2"
-                >
-                  <Copy className="size-4" />
-                  Copy
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(result);
+                      toast.success("Summary copied to clipboard!");
+                    }}
+                    className="size-8 sm:size-9"
+                    title="Copy"
+                  >
+                    <Copy className="size-4" />
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      const { generatePDF } = await import("@/lib/pdf-utils");
-                      await generatePDF(
-                        result,
-                        "summary.pdf",
-                        "Summary Report"
-                      );
-                      toast.success("PDF downloaded successfully!");
-                    } catch (error) {
-                      console.error("PDF generation error:", error);
-                      toast.error("Failed to generate PDF");
-                    }
-                  }}
-                  className="gap-2"
-                >
-                  <DownloadSimple className="size-4" />
-                  Download PDF
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={async () => {
+                      try {
+                        const { generatePDF } = await import("@/lib/pdf-utils");
+                        await generatePDF(
+                          result,
+                          "summary.pdf",
+                          "Summary Report"
+                        );
+                        toast.success("PDF downloaded successfully!");
+                      } catch (error) {
+                        console.error("PDF generation error:", error);
+                        toast.error("Failed to generate PDF");
+                      }
+                    }}
+                    className="size-8 sm:size-9"
+                    title="Download PDF"
+                  >
+                    <DownloadSimple className="size-4" />
+                  </Button>
+                </div>
               </div>
               <div className="w-full max-w-full">
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-li:my-1 prose-pre:my-3 prose-pre:max-w-full prose-code:break-words">

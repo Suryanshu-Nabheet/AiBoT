@@ -241,9 +241,9 @@ Then provide the COMPLETE HTML code.`;
   };
 
   return (
-    <div className="flex h-full w-full bg-background overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-full w-full max-w-full bg-background overflow-hidden">
       {/* Left: Chat Interface */}
-      <div className="w-full md:w-1/3 border-r bg-background flex flex-col min-w-[300px]">
+      <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r bg-background flex flex-col min-h-[300px] lg:min-h-0 lg:min-w-[300px] max-w-full">
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -332,9 +332,9 @@ Then provide the COMPLETE HTML code.`;
       </div>
 
       {/* Right: Code/Preview Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
+      <div className="flex-1 flex flex-col h-full max-w-full overflow-hidden bg-background">
         {/* Tabs */}
-        <div className="h-[45px] flex items-center gap-1 px-2 border-b bg-background/50 backdrop-blur-sm shrink-0">
+        <div className="h-[45px] flex items-center gap-1 px-2 sm:px-3 border-b bg-background/50 backdrop-blur-sm shrink-0">
           <button
             onClick={() => setActiveTab("code")}
             className={cn(
