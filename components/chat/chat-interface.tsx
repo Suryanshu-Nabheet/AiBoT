@@ -2,6 +2,7 @@
 
 import { v4 } from "uuid";
 import React, { useState, useRef, useEffect, useCallback, memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -841,12 +842,15 @@ export default function ChatInterface({
         </Button>
       )}
 
-      {/* Floating Input Area - Perfectly Positioned */}
-      <div className="absolute bottom-0 left-0 right-0 w-full z-20 px-4 md:px-8 lg:px-12 pb-4 md:pb-6 bg-gradient-to-t from-background via-background to-transparent">
+      {/* Floating Input Area - Premium Design */}
+      <div className="absolute bottom-0 left-0 right-0 w-full z-20 px-4 md:px-8 lg:px-12 pb-4 md:pb-6">
         <div className="max-w-4xl mx-auto w-full">
-          <form
+          <motion.form
             onSubmit={handleCreateChat}
-            className="relative flex w-full flex-col gap-3 rounded-2xl bg-background/95 dark:bg-background/95 backdrop-blur-xl p-4 md:p-5 shadow-2xl ring-1 ring-border/10 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30 focus-within:shadow-primary/10 focus-within:border-primary/30"
+            className="relative flex w-full flex-col rounded-xl border border-input bg-background p-2 shadow-sm transition-all duration-200 ease-in-out focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 focus-within:shadow-md"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           >
             {/* File Upload Hidden Input */}
             <input
@@ -859,27 +863,44 @@ export default function ChatInterface({
             />
 
             {/* File Preview Chips */}
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 px-2 pb-2">
-                {attachments.map((file, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground border border-border"
-                  >
-                    <PaperclipIcon className="size-3" />
-                    <span className="max-w-[100px] truncate">{file.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(i)}
-                      className="ml-1 rounded-full p-0.5 hover:bg-background text-muted-foreground hover:text-foreground"
+            <AnimatePresence>
+              {attachments.length > 0 && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-wrap gap-2 px-2 pb-2"
+                >
+                  {attachments.map((file, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground border border-border"
                     >
-                      <XIcon className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                      <PaperclipIcon className="size-3" />
+                      <span className="max-w-[100px] truncate">
+                        {file.name}
+                      </span>
+                      <motion.button
+                        type="button"
+                        onClick={() => removeAttachment(i)}
+                        className="ml-1 rounded-full p-0.5 hover:bg-background text-muted-foreground hover:text-foreground"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <XIcon className="size-3" />
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
+            {/* Textarea */}
             <div className="relative px-2">
               <Textarea
                 ref={textareaRef}
@@ -891,90 +912,126 @@ export default function ChatInterface({
                     void handleCreateChat(e);
                   }
                 }}
-                placeholder="Ask something..."
-                className="min-h-[24px] w-full resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 max-h-[200px] text-base placeholder:text-muted-foreground/50"
+                placeholder="Send a message..."
+                className="min-h-[60px] w-full resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 max-h-[200px] text-base placeholder:text-muted-foreground"
                 rows={1}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
               />
             </div>
 
-            <div className="flex items-center justify-between px-1">
-              <div className="flex-1 max-w-[200px] md:max-w-xs">
+            {/* Bottom Toolbar */}
+            <div className="mt-2 flex flex-row items-center justify-between">
+              <div className="flex flex-row items-center gap-2">
+                {/* Model Selector - First */}
                 <ModelSelector
                   value={model}
                   onValueChange={handleModelChange}
                   disabled={isLoading}
                 />
-              </div>
-              <div className="flex items-center gap-1">
-                {/* Enterprise Tools Toolbar */}
-                <div className="flex items-center gap-0.5 mr-2 pr-2 border-r border-border/40">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-full"
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Attach File"
-                  >
-                    <PaperclipIcon className="size-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-8 w-8 text-muted-foreground hover:text-foreground rounded-full",
-                      isListening && "text-red-500 animate-pulse bg-red-500/10"
-                    )}
-                    onClick={handleSpeech}
-                    title="Voice Input"
-                  >
-                    <MicrophoneIcon
-                      className={cn("size-4", isListening && "weight-fill")}
-                    />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-8 w-8 text-muted-foreground hover:text-foreground rounded-full",
-                      isEnhancing && "animate-spin text-primary"
-                    )}
-                    onClick={handleEnhance}
-                    disabled={isEnhancing || !query.trim()}
-                    title="Enhance Prompt (AI)"
-                  >
-                    <MagicWandIcon className="size-4" />
-                  </Button>
-                </div>
 
+                {/* Divider */}
+                <div className="h-4 w-px bg-border/40" />
+
+                {/* Attach File Button */}
+                <Button
+                  asChild
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <PaperclipIcon className="size-[18px]" />
+                  </motion.button>
+                </Button>
+
+                {/* Voice Input Button */}
+                <Button
+                  asChild
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "size-8 text-muted-foreground hover:text-foreground",
+                    isListening && "animate-pulse text-red-500"
+                  )}
+                  onClick={handleSpeech}
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <MicrophoneIcon className="size-[18px]" />
+                  </motion.button>
+                </Button>
+
+                {/* Enhance Prompt Button */}
+                <Button
+                  asChild
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "size-8 text-muted-foreground hover:text-foreground",
+                    isEnhancing && "animate-spin"
+                  )}
+                  onClick={handleEnhance}
+                  disabled={isEnhancing || !query.trim()}
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <MagicWandIcon className="size-[18px]" />
+                  </motion.button>
+                </Button>
+              </div>
+
+              {/* Submit/Stop Button */}
+              <div className="flex flex-row items-center gap-2">
                 {isLoading ? (
                   <Button
+                    asChild
                     type="button"
                     size="icon"
-                    variant="ghost"
-                    className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-full transition-transform duration-200 hover:scale-105"
+                    className="size-8 rounded-full p-0"
                     onClick={() => abortControllerRef.current?.abort()}
                   >
-                    <StopIcon weight="bold" />
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <StopIcon className="size-[14px]" />
+                    </motion.button>
                   </Button>
                 ) : (
                   <Button
+                    asChild
                     type="submit"
                     size="icon"
-                    className="h-9 w-9 rounded-full shadow-lg bg-gradient-to-br from-primary to-primary/80 hover:brightness-110 transition-all duration-300 hover:scale-110 active:scale-95 translate-y-0"
-                    disabled={!query.trim()}
+                    className="size-8 rounded-full p-0"
+                    disabled={!query.trim() && attachments.length === 0}
                   >
-                    <PaperPlaneRightIcon
-                      weight="fill"
-                      className="size-4 text-primary-foreground"
-                    />
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <PaperPlaneRightIcon
+                        weight="fill"
+                        className="size-[14px]"
+                      />
+                    </motion.button>
                   </Button>
                 )}
               </div>
             </div>
-          </form>
+          </motion.form>
           <div className="text-center text-[10px] text-muted-foreground mt-3 opacity-60">
             AiBoT can make mistakes. Check important info.
           </div>
