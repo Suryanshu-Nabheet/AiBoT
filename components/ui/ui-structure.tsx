@@ -105,7 +105,7 @@ export const UIStructure = () => {
                       window.location.reload();
                     }, 100);
                   }}
-                  className="w-full justify-start font-medium shadow-sm hover:bg-white/80 bg-white border-blue-100 h-10 text-base"
+                  className="w-full justify-start font-medium shadow-sm hover:bg-white/90 bg-white border-blue-100 h-10 text-base text-foreground"
                   size="lg"
                   variant="outline"
                 >
@@ -122,9 +122,9 @@ export const UIStructure = () => {
                     <CollapsibleTrigger asChild>
                       <Button
                         className={cn(
-                          "w-full justify-between h-11 px-3 bg-background hover:bg-muted border border-input shadow-sm transition-all",
+                          "w-full justify-between h-11 px-3 bg-white hover:bg-white/90 border border-input shadow-sm transition-all text-foreground",
                           isAgentModeOpen &&
-                            "bg-muted font-medium text-primary border-primary/20"
+                            "bg-white font-medium text-primary border-primary/20"
                         )}
                         variant="outline"
                       >
