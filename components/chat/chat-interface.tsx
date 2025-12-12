@@ -485,7 +485,9 @@ export default function ChatInterface({
       return;
     }
 
+    const originalQuery = query; // Save original message
     setIsEnhancing(true);
+
     try {
       const res = await fetch("/api/enhance", {
         method: "POST",
@@ -493,15 +495,43 @@ export default function ChatInterface({
         body: JSON.stringify({ prompt: query }),
       });
 
-      if (!res.ok) throw new Error("Enhancement failed");
+      if (!res.ok) {
+        toast.error("Failed to enhance prompt. Please try again.");
+        return;
+      }
 
       const data = await res.json();
+
+      // Check if response is an actual enhancement or an error message
       if (data.enhanced) {
-        setQuery(data.enhanced);
-        toast.success("Prompt enhanced!");
+        const enhanced = data.enhanced.trim();
+
+        // Check if it's an error/instruction message (not an enhancement)
+        const isErrorMessage =
+          enhanced.toLowerCase().includes("please provide") ||
+          enhanced.toLowerCase().includes("give more") ||
+          enhanced.toLowerCase().includes("add more details") ||
+          enhanced.toLowerCase().includes("be more specific") ||
+          enhanced.toLowerCase().includes("too short") ||
+          enhanced.toLowerCase().includes("need more context") ||
+          enhanced.length < originalQuery.length; // Enhanced should be longer
+
+        if (isErrorMessage) {
+          // Show as toast, keep original message
+          toast.info(enhanced, {
+            duration: 4000,
+          });
+        } else {
+          // Valid enhancement - replace the message
+          setQuery(enhanced);
+          toast.success("Prompt enhanced!");
+        }
+      } else {
+        toast.error("No enhancement received. Please try again.");
       }
     } catch (error) {
-      toast.error("Failed to enhance prompt");
+      console.error("Enhancement error:", error);
+      toast.error("Failed to enhance prompt. Please try again.");
     } finally {
       setIsEnhancing(false);
     }

@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ enhancedPrompt });
+    return NextResponse.json({ enhanced: enhancedPrompt });
   } catch (error) {
     console.error("Prompt enhancement error:", error);
     return NextResponse.json(
