@@ -74,7 +74,7 @@ const MessageComponent = memo(
     return (
       <div className="w-full">
         {/* Outer wrapper with EXACT same padding as floating input */}
-        <div className="px-4 md:px-8 lg:px-12 py-2.5">
+        <div className="px-2 sm:px-4 md:px-6 lg:px-8 py-2.5">
           {/* Inner container with same max-width as input */}
           <div className="max-w-4xl mx-auto">
             {/* Message alignment wrapper - full width */}
@@ -835,7 +835,7 @@ export default function ChatInterface({
         <Button
           size="icon"
           variant="secondary"
-          className="absolute bottom-32 right-8 z-30 rounded-full shadow-lg opacity-90 hover:opacity-100 transition-all border border-border"
+          className="absolute bottom-28 sm:bottom-32 right-2 sm:right-4 md:right-8 z-30 rounded-full shadow-lg opacity-90 hover:opacity-100 transition-all border border-border"
           onClick={() => scrollToBottom()}
         >
           <ArrowDownIcon className="size-4" />
@@ -843,7 +843,7 @@ export default function ChatInterface({
       )}
 
       {/* Floating Input Area - Premium Design */}
-      <div className="absolute bottom-0 left-0 right-0 w-full z-20 px-4 md:px-8 lg:px-12 pb-4 md:pb-6">
+      <div className="absolute bottom-0 left-0 right-0 w-full z-20 px-2 sm:px-4 md:px-6 lg:px-8 pb-2 sm:pb-4 md:pb-6">
         <div className="max-w-4xl mx-auto w-full">
           <motion.form
             onSubmit={handleCreateChat}

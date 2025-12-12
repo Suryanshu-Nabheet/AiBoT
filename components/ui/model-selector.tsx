@@ -52,26 +52,29 @@ export function ModelSelector({
       onValueChange={handleValueChange}
       disabled={disabled}
     >
-      <SelectTrigger className="h-8 w-fit border-none bg-muted/50 px-2 font-medium text-muted-foreground text-xs hover:bg-muted hover:text-foreground focus:ring-0">
+      <SelectTrigger className="h-8 w-fit max-w-[140px] sm:max-w-none border-none bg-muted/50 px-2 font-medium text-muted-foreground text-xs hover:bg-muted hover:text-foreground focus:ring-0">
         <SelectValue placeholder="Select model">
           {selectedModelObj && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <img
                 src={selectedModelObj.logo || "/icons/ai.svg"}
                 alt={selectedModelObj.name}
-                className="size-4 object-contain"
+                className="size-3.5 sm:size-4 object-contain shrink-0"
                 onError={(e) => {
                   e.currentTarget.src = "/icons/ai.svg";
                 }}
               />
-              <span className="truncate max-w-[160px]">
+              <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[160px]">
                 {selectedModelObj.name}
               </span>
             </div>
           )}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent align="start" className="w-[280px]">
+      <SelectContent
+        align="start"
+        className="w-[calc(100vw-1rem)] max-w-[280px]"
+      >
         {MODELS.map((model) => (
           <SelectItem
             key={model.id}
