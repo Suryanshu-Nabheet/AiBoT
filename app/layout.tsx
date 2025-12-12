@@ -30,7 +30,7 @@ export default function RootLayout({
         className={`${font.className} text-foreground bg-background overflow-x-hidden`}
       >
         <Providers>
-          <div className="flex h-screen w-full max-w-full overflow-hidden">
+          <div className="flex h-full w-full max-w-full overflow-hidden">
             <SidebarProvider>
               <UIStructure />
               <main className="flex-1 flex flex-col h-full w-full max-w-full overflow-hidden relative">

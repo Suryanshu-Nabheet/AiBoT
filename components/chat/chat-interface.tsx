@@ -779,13 +779,13 @@ export default function ChatInterface({
   }
 
   return (
-    <div className="flex flex-col h-full w-full relative overflow-hidden bg-background">
+    <div className="flex flex-col h-full w-full max-w-full relative overflow-hidden bg-background touch-none">
       {/* Scrollable Message Area - independent scroll */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 w-full overflow-y-auto scroll-smooth"
+        className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden scroll-smooth overscroll-contain"
       >
-        <div className="w-full max-w-4xl mx-auto pb-48 pt-6 md:pt-8">
+        <div className="w-full max-w-4xl mx-auto pb-40 sm:pb-48 pt-6 md:pt-8">
           {showWelcome && messages.length === 0 ? (
             <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-8 text-center px-4">
               <div className="space-y-4">
