@@ -61,7 +61,7 @@ const MessageComponent = memo(
       onCopy,
       copied,
       isWrapped: false,
-      toggleWrap: () => {},
+      // toggleWrap removed to hide useless button
       resolvedTheme: "dark",
       geistMono,
     });

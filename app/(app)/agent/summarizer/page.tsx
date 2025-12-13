@@ -48,7 +48,7 @@ export default function AssignmentSummarizerPage() {
     },
     copied,
     isWrapped: false,
-    toggleWrap: () => {},
+    // toggleWrap removed
     resolvedTheme: "dark",
     geistMono,
   });

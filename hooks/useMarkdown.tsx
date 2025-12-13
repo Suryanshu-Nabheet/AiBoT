@@ -3,7 +3,11 @@
 "use client";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ClipboardTextIcon, ArrowsLeftRightIcon } from "@phosphor-icons/react";
+import {
+  ClipboardTextIcon,
+  ArrowsLeftRightIcon,
+  CheckIcon,
+} from "@phosphor-icons/react";
 import { WrapText } from "lucide-react";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
@@ -155,26 +159,18 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
                 {match ? match[1] : "text"}
               </span>
               <div className="flex items-center gap-2">
-                {toggleWrap && (
-                  <button
-                    onClick={toggleWrap}
-                    className="hover:bg-muted/40 flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-all duration-200"
-                    aria-label="Toggle line wrapping"
-                  >
-                    {isWrapped ? (
-                      <ArrowsLeftRightIcon weight="bold" className="h-3 w-3" />
-                    ) : (
-                      <WrapText className="h-3 w-3" />
-                    )}
-                  </button>
-                )}
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={copyCode}
-                  className="h-5 w-5 p-0 hover:bg-background/50"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-background/50 transition-colors rounded-sm"
+                  title={copied ? "Copied!" : "Copy code"}
                 >
-                  <ClipboardTextIcon className="h-2.5 w-2.5" />
+                  {copied ? (
+                    <CheckIcon className="h-3.5 w-3.5" />
+                  ) : (
+                    <ClipboardTextIcon className="h-3.5 w-3.5" />
+                  )}
                 </Button>
               </div>
             </div>
