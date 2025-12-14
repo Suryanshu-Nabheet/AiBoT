@@ -73,33 +73,24 @@ export function ModelSelector({
       </SelectTrigger>
       <SelectContent
         align="start"
-        className="w-[calc(100vw-1rem)] max-w-[280px]"
+        className="w-[calc(100vw-1rem)] max-w-[280px] max-h-[50vh]"
       >
         {MODELS.map((model) => (
           <SelectItem
             key={model.id}
             value={model.id}
-            className="cursor-pointer py-3 text-xs"
+            className="cursor-pointer py-2 text-xs"
           >
-            <div className="flex items-start gap-2 w-full">
+            <div className="flex items-center gap-2 w-full">
               <img
                 src={model.logo || "/icons/ai.svg"}
                 alt={model.name}
-                className="size-5 object-contain shrink-0 mt-0.5"
+                className="size-4 object-contain shrink-0"
                 onError={(e) => {
                   e.currentTarget.src = "/icons/ai.svg";
                 }}
               />
-              <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                <span className="font-medium text-sm truncate">
-                  {model.name}
-                </span>
-                {model.summary && (
-                  <span className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {model.summary}
-                  </span>
-                )}
-              </div>
+              <span className="font-medium text-sm truncate">{model.name}</span>
             </div>
           </SelectItem>
         ))}
