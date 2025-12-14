@@ -11,38 +11,21 @@ const SITE_NAME = "AiBoT";
 // export const runtime = "edge"; // Switched to Node.js for better stability/logging
 
 const MODELS = [
-  "openai/gpt-4o-mini", // High stability fallback
-  "google/gemini-flash-1.5", // High stability fallback
   "amazon/nova-2-lite-v1:free",
-  "arcee-ai/trinity-mini:free",
-  "tngtech/tng-r1t-chimera:free",
-  "allenai/olmo-3-32b-think:free",
-  "kwaipilot/kat-coder-pro:free",
-  "nvidia/nemotron-nano-12b-v2-vl:free",
-  "alibaba/tongyi-deepresearch-30b-a3b:free",
-  "meituan/longcat-flash-chat:free",
-  "nvidia/nemotron-nano-9b-v2:free",
-  "openai/gpt-oss-120b:free",
-  "openai/gpt-oss-20b:free",
-  "z-ai/glm-4.5-air:free",
-  "qwen/qwen3-coder:free",
-  "moonshotai/kimi-k2:free",
-  "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-  "google/gemma-3n-e2b-it:free",
-  "tngtech/deepseek-r1t2-chimera:free",
-  "google/gemma-3n-e4b-it:free",
-  "qwen/qwen3-4b:free",
-  "qwen/qwen3-235b-a22b:free",
-  "tngtech/deepseek-r1t-chimera:free",
-  "mistralai/mistral-small-3.1-24b-instruct:free",
-  "google/gemma-3-4b-it:free",
-  "google/gemma-3-12b-it:free",
-  "google/gemma-3-27b-it:free",
   "google/gemini-2.0-flash-exp:free",
   "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "mistralai/mistral-small-3.1-24b-instruct:free",
+  "qwen/qwen3-coder:free",
+  "allenai/olmo-3-32b-think:free",
   "meta-llama/llama-3.2-3b-instruct:free",
+  "google/gemma-3-12b-it:free",
   "nousresearch/hermes-3-llama-3.1-405b:free",
+  "qwen/qwen3-235b-a22b:free",
+  "openai/gpt-oss-20b:free",
   "mistralai/mistral-7b-instruct:free",
+  "qwen/qwen3-4b:free",
+  "google/gemma-3-4b-it:free",
 ];
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -122,6 +105,46 @@ export async function POST(req: NextRequest) {
     // Optimize messages for Vision API
     const optimizedMessages = formatMessagesForOpenRouter(messages);
 
+    let finalMessages = [...optimizedMessages];
+
+    // Workaround for Gemma 3 models which don't support 'system' role (Developer instruction not enabled)
+    const isGemma3 = targetModel.includes("gemma-3");
+
+    if (isGemma3) {
+      if (finalMessages.length > 0) {
+        // Prepend system prompt to the first message if it's from user
+        const firstMsg = finalMessages[0];
+        if (firstMsg.role === "user") {
+          // Handle both string content and array content (multimodal)
+          if (typeof firstMsg.content === "string") {
+            finalMessages[0] = {
+              ...firstMsg,
+              content: `${AIBOT_SYSTEM_PROMPT}\n\n${firstMsg.content}`,
+            };
+          } else if (Array.isArray(firstMsg.content)) {
+            // Find the first text part and prepend
+            const textPartIndex = firstMsg.content.findIndex(
+              (c: any) => c.type === "text"
+            );
+            if (textPartIndex !== -1) {
+              finalMessages[0].content[textPartIndex].text =
+                `${AIBOT_SYSTEM_PROMPT}\n\n${finalMessages[0].content[textPartIndex].text}`;
+            } else {
+              // No text part, add one at the beginning
+              finalMessages[0].content.unshift({
+                type: "text",
+                text: AIBOT_SYSTEM_PROMPT,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const payloadMessages = isGemma3
+      ? finalMessages
+      : [{ role: "system", content: AIBOT_SYSTEM_PROMPT }, ...finalMessages];
+
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -134,10 +157,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           model: targetModel,
-          messages: [
-            { role: "system", content: AIBOT_SYSTEM_PROMPT },
-            ...optimizedMessages,
-          ],
+          messages: payloadMessages,
           stream: true,
           transforms: ["middle-out"], // Compress logic if still too large
         }),
