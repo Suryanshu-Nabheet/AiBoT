@@ -13,34 +13,11 @@ export default function AIVoiceOutput({
   onStop,
   isSpeaking,
 }: AIVoiceOutputProps) {
-  const [time, setTime] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    if (isSpeaking) {
-      intervalId = setInterval(() => {
-        setTime((t) => t + 1);
-      }, 1000);
-    } else {
-      setTime(0);
-    }
-
-    return () => clearInterval(intervalId);
-  }, [isSpeaking]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
 
   return (
     <div className="w-full py-4 flex flex-col items-center justify-center">
@@ -73,17 +50,6 @@ export default function AIVoiceOutput({
             )}
           </div>
         </button>
-
-        <span
-          className={cn(
-            "font-mono text-base font-medium transition-opacity duration-300 h-6",
-            isSpeaking
-              ? "text-blue-700 opacity-100"
-              : "text-slate-400 opacity-0"
-          )}
-        >
-          {formatTime(time)}
-        </span>
 
         {/* Bars - Polished Blue */}
         <div className="h-12 w-64 flex items-center justify-center gap-0.5">

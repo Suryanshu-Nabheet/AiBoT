@@ -196,27 +196,56 @@ export default function CoachAgentPage() {
       <div className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4">
         <div className="w-full max-w-xl min-h-[320px] flex items-center justify-center">
           {/* Center - Visualizer & Controls */}
-          {isProcessing ? (
-            <AITextLoading
-              texts={[
-                "Thinking...",
-                "Understanding...",
-                "Formulating...",
-                "Almost there...",
-              ]}
-              interval={2000}
-            />
-          ) : isSpeaking ? (
-            <AIVoiceOutput isSpeaking={isSpeaking} onStop={stopListening} />
-          ) : (
-            <AIVoiceInput
-              onStart={startListening}
-              onStop={stopListening}
-              isListening={listening}
-              isProcessing={false}
-              isSpeaking={isSpeaking}
-            />
-          )}
+          <AnimatePresence mode="wait">
+            {isProcessing ? (
+              <motion.div
+                key="processing"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <AITextLoading
+                  texts={[
+                    "Thinking...",
+                    "Understanding...",
+                    "Formulating...",
+                    "Almost there...",
+                  ]}
+                  interval={2000}
+                />
+              </motion.div>
+            ) : isSpeaking ? (
+              <motion.div
+                key="speaking"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <AIVoiceOutput isSpeaking={isSpeaking} onStop={stopListening} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="listening"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <AIVoiceInput
+                  onStart={startListening}
+                  onStop={stopListening}
+                  isListening={listening}
+                  isProcessing={false}
+                  isSpeaking={isSpeaking}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
