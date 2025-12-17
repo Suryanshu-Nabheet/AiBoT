@@ -19,6 +19,7 @@ import { extractTextFromFile } from "@/lib/file-utils";
 import ReactMarkdown from "react-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { Geist_Mono } from "next/font/google";
+import AITextLoading from "@/components/ui/ai-text-loading";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -274,6 +275,28 @@ export default function AssignmentSummarizerPage() {
             </div>
           </motion.div>
         </div>
+
+        {/* Loading State */}
+        <AnimatePresence>
+          {isProcessing && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-8"
+            >
+              <AITextLoading
+                texts={[
+                  "Analyzing documents...",
+                  "Extracting key points...",
+                  "Summarizing content...",
+                  "Structuring response...",
+                  "Almost done...",
+                ]}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Results Section */}
         <AnimatePresence>
