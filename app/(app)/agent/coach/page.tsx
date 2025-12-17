@@ -192,30 +192,32 @@ export default function CoachAgentPage() {
         </div>
       </div>
 
-      {/* Center - Visualizer & Controls */}
+      {/* Center - Visualizer & Controls - Fixed Height Container for Alignment */}
       <div className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4">
-        {/* Center - Visualizer & Controls */}
-        {isProcessing ? (
-          <AITextLoading
-            texts={[
-              "Thinking...",
-              "Understanding...",
-              "Formulating...",
-              "Almost there...",
-            ]}
-            interval={2000}
-          />
-        ) : isSpeaking ? (
-          <AIVoiceOutput isSpeaking={isSpeaking} onStop={stopListening} />
-        ) : (
-          <AIVoiceInput
-            onStart={startListening}
-            onStop={stopListening}
-            isListening={listening}
-            isProcessing={false}
-            isSpeaking={isSpeaking}
-          />
-        )}
+        <div className="w-full max-w-xl min-h-[320px] flex items-center justify-center">
+          {/* Center - Visualizer & Controls */}
+          {isProcessing ? (
+            <AITextLoading
+              texts={[
+                "Thinking...",
+                "Understanding...",
+                "Formulating...",
+                "Almost there...",
+              ]}
+              interval={2000}
+            />
+          ) : isSpeaking ? (
+            <AIVoiceOutput isSpeaking={isSpeaking} onStop={stopListening} />
+          ) : (
+            <AIVoiceInput
+              onStart={startListening}
+              onStop={stopListening}
+              isListening={listening}
+              isProcessing={false}
+              isSpeaking={isSpeaking}
+            />
+          )}
+        </div>
       </div>
 
       {/* Transcript Overlay - Hidden by default */}

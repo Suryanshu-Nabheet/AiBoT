@@ -70,7 +70,7 @@ export default function AITextLoading({
             }}
             className={cn(
               // Changed neutral-950/400 to slate-900/400 for better blueish tint compatibility
-              "flex justify-center text-3xl font-bold bg-gradient-to-r from-slate-900 via-slate-400 to-slate-900 dark:from-white dark:via-neutral-600 dark:to-white bg-[length:200%_100%] bg-clip-text text-transparent whitespace-nowrap min-w-max",
+              "flex justify-center text-3xl font-bold bg-gradient-to-r from-blue-700 via-blue-400 to-blue-700 dark:from-white dark:via-blue-300 dark:to-white bg-[length:200%_100%] bg-clip-text text-transparent whitespace-nowrap min-w-max",
               className
             )}
           >

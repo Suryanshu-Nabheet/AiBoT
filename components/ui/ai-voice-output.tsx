@@ -54,19 +54,23 @@ export default function AIVoiceOutput({
           onClick={onStop}
         >
           <div className="relative flex items-center justify-center">
-            {/* Spinning Square - Blue Theme */}
+            {/* Spinning Square - Advanced Polish */}
             <div
               className={cn(
-                "w-14 h-14 rounded-md flex items-center justify-center transition-colors cursor-pointer",
+                "w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-500 cursor-pointer",
                 isSpeaking
-                  ? "animate-spin bg-blue-600 shadow-sm" // Solid Blue Spinner
-                  : "text-blue-600"
+                  ? "animate-spin bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 ring-4 ring-blue-50"
+                  : "text-blue-600 bg-blue-50 hover:bg-blue-100"
               )}
               style={isSpeaking ? { animationDuration: "3s" } : undefined}
             >
-              {/* No icon inside solid spinner, purely abstract shape like the user snippet */}
-              {!isSpeaking && <SpeakerHigh className="size-8" />}
+              {!isSpeaking && <SpeakerHigh className="size-7" weight="bold" />}
             </div>
+
+            {/* Decorative background glow when speaking */}
+            {isSpeaking && (
+              <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse z-[-1]" />
+            )}
           </div>
         </button>
 
@@ -74,14 +78,14 @@ export default function AIVoiceOutput({
           className={cn(
             "font-mono text-base font-medium transition-opacity duration-300 h-6",
             isSpeaking
-              ? "text-blue-700 opacity-100" // Matches Input Timer
+              ? "text-blue-700 opacity-100"
               : "text-slate-400 opacity-0"
           )}
         >
           {formatTime(time)}
         </span>
 
-        {/* Bars - Thin Style but Blue */}
+        {/* Bars - Polished Blue */}
         <div className="h-12 w-64 flex items-center justify-center gap-0.5">
           {[...Array(48)].map((_, i) => (
             <div
@@ -89,7 +93,7 @@ export default function AIVoiceOutput({
               className={cn(
                 "w-0.5 rounded-full transition-all duration-300",
                 isSpeaking
-                  ? "bg-blue-600 animate-pulse" // Blue Pulse
+                  ? "bg-blue-600 animate-pulse shadow-[0_0_8px_rgba(37,99,235,0.4)]" // Glow effect on bars
                   : "bg-slate-200 h-1"
               )}
               style={
