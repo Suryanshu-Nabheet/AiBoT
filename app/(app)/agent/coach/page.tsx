@@ -63,11 +63,19 @@ export default function CoachAgentPage() {
       setIsSpeaking(false);
     }
     resetTranscript();
-    SpeechRecognition.startListening({ continuous: false, language: "en-US" });
+    SpeechRecognition.startListening({ continuous: true, language: "en-US" });
   };
 
   const stopListening = () => {
-    SpeechRecognition.stopListening();
+    // If currently listening, this stops it and triggers the useEffect to process text
+    if (listening) {
+      SpeechRecognition.stopListening();
+    }
+    // If AI is speaking, this cancels it
+    if (isSpeaking || synthRef.current?.speaking) {
+      synthRef.current?.cancel();
+      setIsSpeaking(false);
+    }
   };
 
   // Process User Message
