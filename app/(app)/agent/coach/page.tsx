@@ -12,6 +12,7 @@ import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 import { AIVoiceInput } from "@/components/ui/ai-voice-input";
+import AITextLoading from "@/components/ui/ai-text-loading";
 
 export default function CoachAgentPage() {
   // State
@@ -192,14 +193,26 @@ export default function CoachAgentPage() {
 
       {/* Center - Visualizer & Controls */}
       <div className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4">
-        {/* The NEW Voice Component */}
-        <AIVoiceInput
-          onStart={startListening}
-          onStop={stopListening}
-          isListening={listening}
-          isProcessing={isProcessing}
-          isSpeaking={isSpeaking}
-        />
+        {/* Center - Visualizer & Controls */}
+        {isProcessing ? (
+          <AITextLoading
+            texts={[
+              "Thinking...",
+              "Understanding...",
+              "Formulating...",
+              "Almost there...",
+            ]}
+            interval={2000}
+          />
+        ) : (
+          <AIVoiceInput
+            onStart={startListening}
+            onStop={stopListening}
+            isListening={listening}
+            isProcessing={isProcessing}
+            isSpeaking={isSpeaking}
+          />
+        )}
       </div>
 
       {/* Transcript Overlay - Hidden by default */}

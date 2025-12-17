@@ -1,6 +1,6 @@
 "use client";
 
-import { Microphone } from "@phosphor-icons/react";
+import { Microphone, Pause, SpeakerHigh } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +22,8 @@ export function AIVoiceInput({
   const [time, setTime] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
-  // Active state combines listening, processing, or speaking for the "submitted" look
-  const isActive = isListening || isProcessing || isSpeaking;
+  // Active if either listening or speaking
+  const isActive = isListening || isSpeaking;
 
   useEffect(() => {
     setIsClient(true);
@@ -59,14 +59,19 @@ export function AIVoiceInput({
     }
   };
 
-  // Determine status text
-  const statusText = isProcessing
-    ? "Thinking..."
-    : isSpeaking
-      ? "Speaking..."
-      : isListening
-        ? "Listening..."
-        : "Click to speak";
+  // Determine status text & color theme
+  // Unified Blue Theme as per user request ("past style")
+  const isModeSpeaking = isSpeaking;
+  const statusText = isSpeaking
+    ? "Speaking..."
+    : isListening
+      ? "Listening..."
+      : "Click to speak";
+
+  // Always Blue
+  const pulseColor = "bg-blue-600";
+  const darkPulseColor = "dark:bg-blue-400";
+  const textColor = "text-blue-700";
 
   return (
     <div className="w-full py-4 flex flex-col items-center justify-center">
@@ -74,7 +79,6 @@ export function AIVoiceInput({
         <button
           className={cn(
             "group w-24 h-24 rounded-2xl flex items-center justify-center transition-all z-50 shadow-sm",
-            // Idle: White styling with shadow. Active: Transparent.
             isActive
               ? "bg-transparent cursor-default shadow-none"
               : "bg-white hover:bg-slate-50 border border-slate-200 cursor-pointer shadow-md"
@@ -86,14 +90,18 @@ export function AIVoiceInput({
         >
           {isActive ? (
             <div className="relative flex items-center justify-center">
-              {/* Spinner for Thinking/Active */}
+              {/* Stop Icon for active state - Blue Background */}
               <div
                 className={cn(
-                  "w-10 h-10 rounded-md animate-spin cursor-pointer",
-                  "bg-blue-600"
+                  "w-14 h-14 rounded-full flex items-center justify-center transition-colors bg-blue-100 text-blue-600"
                 )}
-                style={{ animationDuration: "3s" }}
-              />
+              >
+                {isModeSpeaking ? (
+                  <SpeakerHigh className="size-8 animate-pulse" weight="fill" />
+                ) : (
+                  <Pause className="size-6" weight="fill" />
+                )}
+              </div>
             </div>
           ) : (
             <Microphone
@@ -106,12 +114,10 @@ export function AIVoiceInput({
         <span
           className={cn(
             "font-mono text-base font-medium transition-opacity duration-300 h-6",
-            isActive
-              ? "text-blue-900 opacity-100" // Clearly visible Text
-              : "text-slate-400 opacity-0"
+            isActive ? `${textColor} opacity-100` : "text-slate-400 opacity-0"
           )}
         >
-          {formatTime(time)}
+          {isListening ? formatTime(time) : <span>&nbsp;</span>}
         </span>
 
         {/* Bars Visualizer */}
@@ -122,7 +128,7 @@ export function AIVoiceInput({
               className={cn(
                 "w-1.5 rounded-full transition-all duration-300",
                 isActive
-                  ? "bg-blue-600 animate-pulse" // Bright Blue
+                  ? `${pulseColor} ${darkPulseColor} animate-pulse`
                   : "bg-slate-200 h-1.5"
               )}
               style={
@@ -130,6 +136,8 @@ export function AIVoiceInput({
                   ? {
                       height: `${30 + Math.random() * 70}%`, // Dynamic height
                       animationDelay: `${i * 0.05}s`,
+                      // Keep slightly faster animation for speaking to differentiate state subtly
+                      animationDuration: isModeSpeaking ? "0.5s" : "0.8s",
                     }
                   : { height: "6px" }
               }
