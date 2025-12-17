@@ -159,8 +159,11 @@ export default function AssignmentSummarizerPage() {
 
       <div className="flex-1 overflow-auto p-8 max-w-5xl mx-auto w-full">
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight mb-3 text-blue-600">
-            Summarizer
+          <h1 className="text-2xl font-bold tracking-tight mb-3 text-foreground flex items-center justify-center gap-2">
+            <FileText className="size-6 text-blue-600" weight="bold" />
+            <span>
+              Ai <span className="text-blue-600">Summarizer</span>
+            </span>
           </h1>
 
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">

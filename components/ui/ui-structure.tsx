@@ -32,6 +32,7 @@ import {
   FileText,
   TerminalWindow,
   CaretDown,
+  SpeakerHigh,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -165,6 +166,14 @@ export const UIStructure = () => {
                         >
                           <TerminalWindow className="size-4" weight="regular" />
                           Coder
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-3 h-10 bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
+                          onClick={() => router.push("/agent/coach")}
+                        >
+                          <SpeakerHigh className="size-4" weight="regular" />
+                          Coach
                         </Button>
                       </div>
                     </CollapsibleContent>

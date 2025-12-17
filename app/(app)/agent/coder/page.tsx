@@ -247,10 +247,12 @@ Then provide the COMPLETE HTML code.`;
         {/* Header */}
         <div className="p-3 sm:p-4 border-b flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <h2 className="font-semibold flex items-center gap-2">
-              <Code className="size-5 text-blue-600" weight="bold" />
-              Website Builder
-            </h2>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <Code className="size-6 text-blue-600" weight="bold" />
+              <span>
+                Ai <span className="text-blue-600">Coder</span>
+              </span>
+            </h1>
           </div>
           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
             HTML/CSS/JS

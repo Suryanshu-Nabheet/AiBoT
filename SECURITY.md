@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in AiBoT, please report it responsibly:
 
-**Email:** suryanshu.nabheet@example.com  
+**Email:** suryanshunab@gmail.com
 **Subject:** [SECURITY] AiBoT Vulnerability Report
 
 Please include:
