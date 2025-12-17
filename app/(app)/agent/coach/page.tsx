@@ -13,6 +13,7 @@ import SpeechRecognition, {
 } from "react-speech-recognition";
 import { AIVoiceInput } from "@/components/ui/ai-voice-input";
 import AITextLoading from "@/components/ui/ai-text-loading";
+import AIVoiceOutput from "@/components/ui/ai-voice-output";
 
 export default function CoachAgentPage() {
   // State
@@ -204,12 +205,14 @@ export default function CoachAgentPage() {
             ]}
             interval={2000}
           />
+        ) : isSpeaking ? (
+          <AIVoiceOutput isSpeaking={isSpeaking} onStop={stopListening} />
         ) : (
           <AIVoiceInput
             onStart={startListening}
             onStop={stopListening}
             isListening={listening}
-            isProcessing={isProcessing}
+            isProcessing={false}
             isSpeaking={isSpeaking}
           />
         )}
