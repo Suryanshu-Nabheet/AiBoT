@@ -195,7 +195,17 @@ export function ChatInput({
 
           {/* Toolbar */}
           <div className="flex items-center justify-between px-3 pb-3 pt-0">
-            <div className="flex items-center gap-1">
+            {/* Left Tools: Input & AI */}
+            <div className="flex items-center gap-1.5">
+              {/* Model Selector - First */}
+              {showModelSelector && model && onModelChange && (
+                <>
+                  <ModelSelector value={model} onValueChange={onModelChange} />
+                  {/* Divider - Only shown if model selector is present */}
+                  <div className="h-4 w-[1px] bg-border/50 mx-1" />
+                </>
+              )}
+
               <input
                 type="file"
                 multiple
@@ -203,48 +213,26 @@ export function ChatInput({
                 className="hidden"
                 onChange={handleFileSelect}
               />
+
+              {/* Attachment */}
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-9 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="size-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 onClick={() => fileInputRef.current?.click()}
                 title="Attach files"
               >
                 <PaperclipIcon className="size-[18px]" />
               </Button>
 
-              {showModelSelector && model && onModelChange && (
-                <ModelSelector value={model} onValueChange={onModelChange} />
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
+              {/* Voice Input */}
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
                 className={cn(
-                  "size-9 rounded-full transition-all duration-300",
-                  isEnhancing
-                    ? "text-purple-400 bg-purple-400/10"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                onClick={onEnhance}
-                disabled={isEnhancing || !query.trim()}
-                title="Enhance prompt"
-              >
-                <MagicWandIcon
-                  className={cn("size-[18px]", isEnhancing && "animate-pulse")}
-                />
-              </Button>
-
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className={cn(
-                  "size-9 rounded-full transition-all duration-300",
+                  "size-8 rounded-full transition-all duration-300",
                   isListening
                     ? "text-red-500 bg-red-500/10 animate-pulse"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -259,6 +247,29 @@ export function ChatInput({
                 )}
               </Button>
 
+              {/* Enhance Prompt */}
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "size-8 rounded-full transition-all duration-300",
+                  isEnhancing
+                    ? "text-purple-400 bg-purple-400/10"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                onClick={onEnhance}
+                disabled={isEnhancing || !query.trim()}
+                title="Enhance prompt"
+              >
+                <MagicWandIcon
+                  className={cn("size-[18px]", isEnhancing && "animate-pulse")}
+                />
+              </Button>
+            </div>
+
+            {/* Right Tools: Submit */}
+            <div className="flex items-center gap-2">
               {isLoading ? (
                 <Button
                   type="button"
