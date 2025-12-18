@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
+import { useChatSession } from "@/hooks/use-chat-session";
+import { ChatInput } from "./chat-input";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 import { useExecutionContext } from "@/contexts/execution-context";
@@ -259,61 +261,46 @@ MessagesList.displayName = "MessagesList";
 
 interface ChatInterfaceProps {
   conversationId?: string;
+  storageKey?: string;
+  className?: string;
 }
 
 export default function ChatInterface({
   conversationId: initialConversationId,
+  storageKey = "preferredModel",
+  className,
 }: ChatInterfaceProps = {}) {
-  const { modelId: persistedModelId, setModelId } = useModel({
-    storageKey: "preferredModel",
-    persistToLocalStorage: true,
+  const {
+    model,
+    setModel,
+    query,
+    setQuery,
+    messages,
+    showWelcome,
+    isLoading,
+    attachments,
+    setAttachments,
+    handleSend,
+    conversationId,
+    stopHelpers,
+  } = useChatSession({
+    conversationId: initialConversationId,
+    storageKey,
   });
 
-  const [model, setModel] = useState<string>(persistedModelId);
-  const [query, setQuery] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [showWelcome, setShowWelcome] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Enterprise Features State
-  const [attachments, setAttachments] = useState<
-    { name: string; content: string; type: string }[]
-  >([]);
+  // Enterprise Features State (UI only)
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null); // Store recognition instance
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const recognitionRef = useRef<any>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const [conversationId] = useState<string | null>(
-    initialConversationId || v4()
-  );
-  const { conversation, loading: conversationLoading } = useConversationById(
-    initialConversationId
-  );
-  const { refreshExecutions, addExecution } = useExecutionContext();
-
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [executionCreated, setExecutionCreated] = useState(false);
-
-  useEffect(() => {
-    if (persistedModelId !== model) {
-      setModel(persistedModelId);
-    }
-  }, [persistedModelId, model]);
-
-  const handleModelChange = useCallback(
-    (newModel: string) => {
-      setModel(newModel);
-      setModelId(newModel);
-    },
-    [setModelId]
-  );
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -340,16 +327,6 @@ export default function ChatInterface({
   useEffect(() => {
     scrollToBottom("instant");
   }, [messages.length, scrollToBottom]);
-
-  // Load conversation history
-  useEffect(() => {
-    if (conversation?.messages && initialConversationId) {
-      setMessages(conversation.messages);
-      setShowWelcome(false);
-      // Small delay to allow render before scrolling
-      setTimeout(() => scrollToBottom("instant"), 10);
-    }
-  }, [conversation, initialConversationId, scrollToBottom]);
 
   useGlobalKeyPress({
     inputRef: textareaRef,
@@ -539,260 +516,13 @@ export default function ChatInterface({
 
   // -----------------------------------
 
-  const processStream = async (response: globalThis.Response) => {
-    if (!response.ok || !response.body) {
-      setIsLoading(false);
-      return;
-    }
-
-    const tempId = `ai-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      { id: tempId, role: Role.Agent, content: "" },
-    ]);
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let accumulated = "";
-    let updateCounter = 0;
-    const UPDATE_BATCH_SIZE = 5; // Update UI every 5 chunks for performance
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-
-        // Simple parsing for this example, adjust based on actual API format (SSE vs raw)
-        // Assuming consistent SSE format from route
-        const lines = chunk.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content || data.content; // Handle both OpenAI standard and simplified formats
-              if (content) accumulated += content;
-            } catch (e) {}
-          }
-        }
-
-        // Batch updates: only update state every N chunks or on last chunk
-        updateCounter++;
-        if (updateCounter >= UPDATE_BATCH_SIZE || done) {
-          updateCounter = 0;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId ? { ...m, content: accumulated } : m
-            )
-          );
-        }
-      }
-
-      // Final update to ensure we display everything
-      setMessages((prev) => {
-        const updatedMessages = prev.map((m) =>
-          m.id === tempId ? { ...m, content: accumulated } : m
-        );
-
-        // Save conversation to sessionStorage
-        if (conversationId) {
-          saveConversation({
-            id: conversationId,
-            title:
-              updatedMessages
-                .find((m) => m.role === Role.User)
-                ?.content.substring(0, 50) || "New Chat",
-            createdAt: new Date().toISOString(),
-            messages: updatedMessages,
-            updatedAt: new Date().toISOString(),
-          });
-        }
-
-        return updatedMessages;
-      });
-    } catch (e) {
-      console.error("Stream error", e);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-stream-${Date.now()}`,
-          role: Role.Agent,
-          content:
-            "**Connection Error:** The stream was interrupted. Please try again.",
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-      refreshExecutions();
-    }
-  };
-
-  const handleCreateChat = async (e: React.FormEvent) => {
+  const handleCreateChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || isLoading) return;
-
-    setShowWelcome(false);
-    const currentQuery = query.trim();
-
-    // Construct API payload content (Text + Attachments Context)
-    // We do NOT clutter the visible user message with huge base64 strings anymore.
-    // Instead dependencies are handled via the `attachments` property on the message object (which we will add).
-
-    // For the API capability, we still need to send the context.
-    let apiContent = currentQuery;
-    if (attachments.length > 0) {
-      const fileContext = attachments
-        .map((a) =>
-          a.type.startsWith("image/")
-            ? `[Image Uploaded: ${a.name}]` // Placeholder for text history if needed
-            : `<details><summary>Reference File: ${a.name}</summary>\n\n\`\`\`\n${a.content}\n\`\`\`\n</details>`
-        )
-        .join("\n\n");
-
-      const aiContext = attachments
-        .map((a) =>
-          a.type.startsWith("image/")
-            ? `![${a.name}](${a.content})`
-            : `\n\nFile: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``
-        )
-        .join("\n");
-
-      apiContent = `${aiContext}\n\n${currentQuery}`;
-    }
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: Role.User,
-      content: currentQuery,
-      attachments: attachments,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setQuery("");
-    setAttachments([]);
-    setIsLoading(true);
-
-    // Create execution entry in sidebar on first message
-    if (!executionCreated && conversationId) {
-      const title =
-        currentQuery.length > 50
-          ? currentQuery.substring(0, 50) + "..."
-          : currentQuery;
-
-      addExecution({
-        id: conversationId,
-        title,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        type: "CONVERSATION" as any,
-      });
-      setExecutionCreated(true);
-    }
-
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, { ...userMessage, content: apiContent }].map(
-            (m) => ({
-              role: m.role,
-              content: m.content,
-            })
-          ),
-          model,
-          conversationId,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!res.ok) {
-        let errorMessage = "An unexpected error occurred.";
-        let errorTitle = "Error";
-
-        try {
-          const errorData = await res.json();
-
-          if (res.status === 429) {
-            errorTitle = "⏱️ Rate Limit Reached";
-            errorMessage =
-              errorData.error?.message ||
-              "You've sent too many requests. Please wait a moment and try again.";
-          } else if (res.status === 400) {
-            errorTitle = "⚠️ Invalid Request";
-            if (errorData.error?.message?.includes("not a valid model")) {
-              errorMessage =
-                "The selected AI model is not available. Please try a different model from the dropdown.";
-            } else {
-              errorMessage =
-                errorData.error?.message ||
-                errorData.message ||
-                errorData.message ||
-                "Bad request. Please check your input.";
-            }
-          } else if (res.status === 401) {
-            errorTitle = "🔐 Authentication Failed";
-            errorMessage =
-              "API key is invalid or missing. Please check your configuration.";
-          } else if (res.status === 500) {
-            errorTitle = "🔧 Server Error";
-            errorMessage =
-              "The AI service is temporarily unavailable. Please try again in a moment.";
-          } else {
-            errorMessage =
-              errorData.error?.message ||
-              errorData.message ||
-              JSON.stringify(errorData);
-          }
-        } catch {
-          const textError = await res.text();
-          if (textError.includes("<!DOCTYPE html>")) {
-            errorTitle = "🔧 Service Error";
-            errorMessage =
-              "Service temporarily unavailable. Please try again later.";
-          } else {
-            errorMessage = textError.substring(0, 200);
-          }
-        }
-
-        console.error(`Chat Request Failed (${res.status}):`, errorMessage);
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `error-${Date.now()}`,
-            role: Role.Agent,
-            content: `**${errorTitle}**\n\n${errorMessage}`,
-            isError: true,
-            errorType: res.status === 429 ? "rate_limit" : "general",
-          },
-        ]);
-        setIsLoading(false);
-        return;
-      }
-
-      await processStream(res);
-    } catch (error: any) {
-      if (error.name === "AbortError") {
-        console.log("Request aborted");
-      } else {
-        console.error("Chat error", error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `error-fetch-${Date.now()}`,
-            role: Role.Agent,
-            content: `**Network Error:** Failed to connect to the server. Please check your connection.`,
-          },
-        ]);
-      }
-      setIsLoading(false);
-    }
+    handleSend();
   };
+
+  // NOTE: Logic successfully extracted to useChatSession
+  // The rest of this file is purely UI Rendering
 
   const handleCopy = useCallback(async (content: string) => {
     await navigator.clipboard.writeText(content);
@@ -800,16 +530,13 @@ export default function ChatInterface({
     setTimeout(() => setCopied(false), 2000);
   }, []);
 
-  if (initialConversationId && conversationLoading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center p-4">
-        Loading...
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col h-full w-full max-w-full relative overflow-hidden bg-background touch-none">
+    <div
+      className={cn(
+        "flex flex-col h-full w-full max-w-full relative overflow-hidden bg-background touch-none",
+        className
+      )}
+    >
       {/* Scrollable Message Area - independent scroll */}
       <div
         ref={scrollContainerRef}
@@ -834,7 +561,7 @@ export default function ChatInterface({
                 messages={messages}
                 onCopy={handleCopy}
                 copied={copied}
-                onModelSelect={handleModelChange}
+                onModelSelect={setModel}
               />
               {isLoading && (
                 <div className="flex items-center gap-2 px-4 text-muted-foreground py-3">
@@ -852,220 +579,51 @@ export default function ChatInterface({
                       style={{ animationDelay: "300ms" }}
                     />
                   </div>
+                  <span className="text-xs font-medium animate-pulse">
+                    AiBoT is thinking...
+                  </span>
                 </div>
               )}
+              {/* Invisible element to scroll to */}
               <div ref={messagesEndRef} className="h-4" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Scroll To Bottom Button */}
-      {showScrollButton && (
-        <Button
-          size="icon"
-          variant="secondary"
-          className="absolute bottom-28 sm:bottom-32 right-2 sm:right-4 md:right-8 z-30 rounded-full shadow-lg opacity-90 hover:opacity-100 transition-all border border-border"
-          onClick={() => scrollToBottom()}
-        >
-          <ArrowDownIcon className="size-4" />
-        </Button>
-      )}
+      {/* Floating Scroll Down Button */}
+      <AnimatePresence>
+        {showScrollButton && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute bottom-32 right-6 z-20 p-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+            onClick={() => scrollToBottom()}
+          >
+            <ArrowDownIcon className="size-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
-      {/* Floating Input Area - Professional Design */}
-      <div className="absolute bottom-0 left-0 right-0 w-full z-20 pointer-events-none">
-        <div className="pointer-events-auto bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-4 sm:pb-6 px-2 sm:px-4 md:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto w-full">
-            <motion.form
-              onSubmit={handleCreateChat}
-              className="relative flex w-full flex-col rounded-2xl border border-border/60 bg-background shadow-lg shadow-black/5 p-2 transition-all duration-200 ease-in-out focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:shadow-xl focus-within:shadow-black/10"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-            >
-              {/* File Upload Hidden Input */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                multiple
-                accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.json,.csv"
-                onChange={handleFileSelect}
-              />
-
-              {/* File Preview Chips */}
-              <AnimatePresence>
-                {attachments.length > 0 && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex flex-wrap gap-2 px-2 pb-2"
-                  >
-                    {attachments.map((file, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground border border-border"
-                      >
-                        <PaperclipIcon className="size-3" />
-                        <span className="max-w-[100px] truncate">
-                          {file.name}
-                        </span>
-                        <motion.button
-                          type="button"
-                          onClick={() => removeAttachment(i)}
-                          className="ml-1 rounded-full p-0.5 hover:bg-background text-muted-foreground hover:text-foreground"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          <XIcon className="size-3" />
-                        </motion.button>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Textarea */}
-              <div className="relative px-2">
-                <Textarea
-                  ref={textareaRef}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void handleCreateChat(e);
-                    }
-                  }}
-                  placeholder="Send a message..."
-                  className="min-h-[60px] w-full resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 max-h-[200px] text-base placeholder:text-muted-foreground"
-                  rows={1}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-              </div>
-
-              {/* Bottom Toolbar */}
-              <div className="mt-2 flex flex-row items-center justify-between">
-                <div className="flex flex-row items-center gap-2">
-                  {/* Model Selector - First */}
-                  <ModelSelector
-                    value={model}
-                    onValueChange={handleModelChange}
-                    disabled={isLoading}
-                  />
-
-                  {/* Divider */}
-                  <div className="h-4 w-px bg-border/40" />
-
-                  {/* Attach File Button */}
-                  <Button
-                    asChild
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-muted-foreground hover:text-foreground"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <PaperclipIcon className="size-[18px]" />
-                    </motion.button>
-                  </Button>
-
-                  {/* Voice Input Button */}
-                  <Button
-                    asChild
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "size-8 text-muted-foreground hover:text-foreground",
-                      isListening && "animate-pulse text-red-500"
-                    )}
-                    onClick={handleSpeech}
-                  >
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <MicrophoneIcon className="size-[18px]" />
-                    </motion.button>
-                  </Button>
-
-                  {/* Enhance Prompt Button */}
-                  <Button
-                    asChild
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "size-8 text-muted-foreground hover:text-foreground",
-                      isEnhancing && "animate-spin"
-                    )}
-                    onClick={handleEnhance}
-                    disabled={isEnhancing || !query.trim()}
-                  >
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <MagicWandIcon className="size-[18px]" />
-                    </motion.button>
-                  </Button>
-                </div>
-
-                {/* Submit/Stop Button */}
-                <div className="flex flex-row items-center gap-2">
-                  {isLoading ? (
-                    <Button
-                      asChild
-                      type="button"
-                      size="icon"
-                      className="size-8 rounded-full p-0"
-                      onClick={() => abortControllerRef.current?.abort()}
-                    >
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <StopIcon className="size-[14px]" />
-                      </motion.button>
-                    </Button>
-                  ) : (
-                    <Button
-                      asChild
-                      type="submit"
-                      size="icon"
-                      className="size-8 rounded-full p-0"
-                      disabled={!query.trim() && attachments.length === 0}
-                    >
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <PaperPlaneRightIcon
-                          weight="fill"
-                          className="size-[14px]"
-                        />
-                      </motion.button>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </motion.form>
-          </div>
-        </div>
-      </div>
+      <ChatInput
+        query={query}
+        setQuery={setQuery}
+        onSubmit={handleCreateChat}
+        isLoading={isLoading}
+        onStop={stopHelpers.stop}
+        attachments={attachments}
+        setAttachments={setAttachments}
+        isListening={isListening}
+        onSpeechToggle={handleSpeech}
+        isEnhancing={isEnhancing}
+        onEnhance={handleEnhance}
+        model={model}
+        onModelChange={setModel}
+        showModelSelector={true}
+        placeholder={isListening ? "Listening..." : "Message AiBoT..."}
+        className="absolute bottom-0 left-0"
+      />
     </div>
   );
 }
