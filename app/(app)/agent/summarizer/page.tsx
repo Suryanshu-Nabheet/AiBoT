@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Upload,
   FileText,
@@ -35,6 +35,29 @@ export default function AssignmentSummarizerPage() {
   const [result, setResult] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Session Storage Persistence
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTask = sessionStorage.getItem("summarizer-task");
+      if (savedTask) setTask(savedTask);
+
+      const savedResult = sessionStorage.getItem("summarizer-result");
+      if (savedResult) setResult(savedResult);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("summarizer-task", task);
+    }
+  }, [task]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && result) {
+      sessionStorage.setItem("summarizer-result", result);
+    }
+  }, [result]);
 
   const {
     preprocessMarkdown,

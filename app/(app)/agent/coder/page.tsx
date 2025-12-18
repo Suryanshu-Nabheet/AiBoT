@@ -72,20 +72,45 @@ export default function CoderAgentPage() {
   const [code, setCode] = useState(EMPTY_HTML);
 
   useEffect(() => {
-    const saved = localStorage.getItem("coder-code");
-    if (saved && saved !== EMPTY_HTML && !saved.includes("AiBoT")) {
-      setCode(saved);
+    // Load persisted state from Session Storage
+    if (typeof window !== "undefined") {
+      const savedCode = sessionStorage.getItem("coder-code");
+      if (
+        savedCode &&
+        savedCode !== EMPTY_HTML &&
+        !savedCode.includes("AiBoT")
+      ) {
+        setCode(savedCode);
+      }
+
+      const savedMessages = sessionStorage.getItem("coder-messages");
+      if (savedMessages) {
+        try {
+          setMessages(JSON.parse(savedMessages));
+        } catch (e) {
+          console.error("Failed to parse saved messages", e);
+        }
+      }
     }
   }, []);
 
   useEffect(() => {
+    // Save Code to Session Storage
     if (
       code !== EMPTY_HTML &&
-      !code.includes('Ai</span><span class="bot">BoT')
+      !code.includes('Ai</span><span class="bot">BoT') &&
+      typeof window !== "undefined"
     ) {
-      localStorage.setItem("coder-code", code);
+      sessionStorage.setItem("coder-code", code);
     }
   }, [code]);
+
+  useEffect(() => {
+    // Save Messages to Session Storage
+    if (messages.length > 0 && typeof window !== "undefined") {
+      sessionStorage.setItem("coder-messages", JSON.stringify(messages));
+    }
+  }, [messages]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -235,7 +260,7 @@ Then provide the COMPLETE HTML code.`;
   };
 
   const handleSave = () => {
-    localStorage.setItem("coder-code", code);
+    sessionStorage.setItem("coder-code", code);
     setIsEditing(false);
     toast.success("Code saved successfully!");
   };
@@ -392,7 +417,8 @@ Then provide the COMPLETE HTML code.`;
               size="sm"
               className="h-7 text-xs gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={() => {
-                localStorage.removeItem("coder-code");
+                sessionStorage.removeItem("coder-code");
+                sessionStorage.removeItem("coder-messages");
                 setCode(EMPTY_HTML);
                 setMessages([]);
                 setActiveTab("preview");

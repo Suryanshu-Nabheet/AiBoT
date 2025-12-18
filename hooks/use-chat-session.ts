@@ -11,11 +11,13 @@ import { Message, Role } from "@/lib/types";
 export interface UseChatSessionOptions {
   conversationId?: string;
   storageKey?: string;
+  sessionId?: string; // Persistence key for conversationId
 }
 
 export function useChatSession({
   conversationId: initialConversationId,
   storageKey = "preferredModel",
+  sessionId,
 }: UseChatSessionOptions = {}) {
   // --- State ---
   const { modelId: persistedModelId, setModelId } = useModel({
@@ -32,9 +34,31 @@ export function useChatSession({
     { name: string; content: string; type: string }[]
   >([]);
   const [executionCreated, setExecutionCreated] = useState(false);
-  const [conversationId] = useState<string | null>(
-    initialConversationId || v4()
-  );
+
+  // Initialize conversationId with session persistence logic
+  const [conversationId, setConversationId] = useState<string | null>(() => {
+    if (initialConversationId) return initialConversationId;
+    if (sessionId && typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem(`session-${sessionId}`);
+        if (stored) return stored;
+      } catch (e) {
+        console.error("Session storage read error", e);
+      }
+    }
+    return v4();
+  });
+
+  // Persist conversationId if sessionId is provided
+  useEffect(() => {
+    if (sessionId && conversationId && typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(`session-${sessionId}`, conversationId);
+      } catch (e) {
+        console.error("Session storage write error", e);
+      }
+    }
+  }, [sessionId, conversationId]);
 
   // --- Refs ---
   const abortControllerRef = useRef<AbortController | null>(null);

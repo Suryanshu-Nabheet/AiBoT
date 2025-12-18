@@ -122,8 +122,14 @@ MessageComponent.displayName = "MessageComponent";
 
 export default function ArenaInterface() {
   // --- Dual Sessions ---
-  const leftChat = useChatSession({ storageKey: "arena-a" });
-  const rightChat = useChatSession({ storageKey: "arena-b" });
+  const leftChat = useChatSession({
+    storageKey: "arena-a",
+    sessionId: "arena-a",
+  });
+  const rightChat = useChatSession({
+    storageKey: "arena-b",
+    sessionId: "arena-b",
+  });
 
   // --- Shared Input State ---
   const [query, setQuery] = useState("");

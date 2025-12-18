@@ -22,6 +22,26 @@ export default function CoachAgentPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Session Storage Persistence
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMessages = sessionStorage.getItem("coach-messages");
+      if (savedMessages) {
+        try {
+          setMessages(JSON.parse(savedMessages));
+        } catch (e) {
+          console.error("Failed to parse saved coach messages", e);
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 0 && typeof window !== "undefined") {
+      sessionStorage.setItem("coach-messages", JSON.stringify(messages));
+    }
+  }, [messages]);
+
   // Speech Recognition
   const {
     transcript,
