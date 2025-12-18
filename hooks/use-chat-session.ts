@@ -76,7 +76,12 @@ export function useChatSession({
 
   useEffect(() => {
     if (conversation?.messages && initialConversationId) {
-      setMessages(conversation.messages);
+      // Mark all restored messages as not needing animation
+      const nonAnimatingMessages = conversation.messages.map((m) => ({
+        ...m,
+        shouldAnimate: false,
+      }));
+      setMessages(nonAnimatingMessages);
       setShowWelcome(false);
     }
   }, [conversation, initialConversationId]);

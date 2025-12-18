@@ -70,7 +70,11 @@ const MessageComponent = memo(
 
     const isUser = message.role === Role.User;
 
-    const displayedContent = useSmoothTyping(message.content, 5);
+    const displayedContent = useSmoothTyping(
+      message.content,
+      5,
+      message.shouldAnimate
+    );
     const contentToShow = isUser ? message.content : displayedContent;
 
     return (

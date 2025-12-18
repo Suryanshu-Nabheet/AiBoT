@@ -1,11 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 
-export function useSmoothTyping(targetText: string, charsPerFrame = 3) {
-  const [displayedText, setDisplayedText] = useState("");
+export function useSmoothTyping(
+  targetText: string,
+  charsPerFrame = 3,
+  shouldAnimate = true
+) {
+  const [displayedText, setDisplayedText] = useState(
+    shouldAnimate ? "" : targetText
+  );
   const indexRef = useRef(0);
   const rafRef = useRef<number | undefined>(undefined);
+  const prevShouldAnimate = useRef(shouldAnimate);
 
   useEffect(() => {
+    // Immediate update if animation disabled
+    if (!shouldAnimate) {
+      setDisplayedText(targetText);
+      indexRef.current = targetText.length;
+      return;
+    }
+
     // Reset if text changed dramatically (new message)
     if (targetText.length < indexRef.current) {
       indexRef.current = 0;
@@ -31,7 +45,7 @@ export function useSmoothTyping(targetText: string, charsPerFrame = 3) {
         cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [targetText, charsPerFrame]);
+  }, [targetText, charsPerFrame, shouldAnimate]);
 
   return displayedText;
 }

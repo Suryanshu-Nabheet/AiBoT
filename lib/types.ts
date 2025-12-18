@@ -136,6 +136,7 @@ export type Message = {
   isError?: boolean;
   errorType?: string;
   attachments?: { name: string; content: string; type: string }[];
+  shouldAnimate?: boolean;
 };
 
 export type Messages = Message[];
