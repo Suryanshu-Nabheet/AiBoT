@@ -10,23 +10,7 @@ const SITE_NAME = "AiBoT";
 
 // export const runtime = "edge"; // Switched to Node.js for better stability/logging
 
-const MODELS = [
-  "amazon/nova-2-lite-v1:free",
-  "google/gemini-2.0-flash-exp:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "google/gemma-3-27b-it:free",
-  "mistralai/mistral-small-3.1-24b-instruct:free",
-  "qwen/qwen3-coder:free",
-  "allenai/olmo-3-32b-think:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "google/gemma-3-12b-it:free",
-  "nousresearch/hermes-3-llama-3.1-405b:free",
-  "qwen/qwen3-235b-a22b:free",
-  "openai/gpt-oss-20b:free",
-  "mistralai/mistral-7b-instruct:free",
-  "qwen/qwen3-4b:free",
-  "google/gemma-3-4b-it:free",
-];
+import { MODELS } from "@/lib/types";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -97,7 +81,7 @@ export async function POST(req: NextRequest) {
   const { messages, model: requestedModel } = body;
 
   // No auto-switching: Try ONLY the requested model
-  const targetModel = requestedModel || MODELS[0];
+  const targetModel = requestedModel || MODELS[0].id;
 
   try {
     console.log(`API: Attempting model ${targetModel}...`);
