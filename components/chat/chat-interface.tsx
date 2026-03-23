@@ -45,14 +45,19 @@ const MessageComponent = memo(
   ({
     message,
     onCopy,
-    copied,
     onModelSelect,
   }: {
     message: Message;
     onCopy: (content: string) => void;
-    copied: boolean;
     onModelSelect?: (modelId: string) => void;
   }) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleMessageCopy = useCallback(async () => {
+      await onCopy(message.content);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }, [onCopy, message.content]);
     // Simplified Markdown usage for now, ensuring robustness
     const {
       preprocessMarkdown,
@@ -60,8 +65,8 @@ const MessageComponent = memo(
       remarkPlugins,
       rehypePlugins,
     } = useMarkdown({
-      onCopy,
-      copied,
+      onCopy: handleMessageCopy,
+      copied: isCopied,
       isWrapped: false,
       // toggleWrap removed to hide useless button
       resolvedTheme: "dark",
@@ -158,16 +163,16 @@ const MessageComponent = memo(
                 </div>
 
                 {/* Copy and Download buttons */}
-                {!isUser && (
+                {!isUser && message.content.trim() && (
                   <div className="mt-2 flex items-center gap-1 transition-opacity duration-200">
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
-                      onClick={() => onCopy(message.content)}
+                      onClick={handleMessageCopy}
                     >
-                      {copied ? (
-                        <CheckIcon className="size-3.5" />
+                      {isCopied ? (
+                        <CheckIcon className="size-3.5 text-green-500" />
                       ) : (
                         <CopyIcon className="size-3.5" />
                       )}
@@ -238,12 +243,10 @@ const MessagesList = memo(
   ({
     messages,
     onCopy,
-    copied,
     onModelSelect,
   }: {
     messages: Array<Message>;
     onCopy: (content: string) => void;
-    copied: boolean;
     onModelSelect: (modelId: string) => void;
   }) => {
     return (
@@ -253,7 +256,6 @@ const MessagesList = memo(
             key={message.id || i}
             message={message}
             onCopy={onCopy}
-            copied={copied}
             onModelSelect={onModelSelect}
           />
         ))}
@@ -292,7 +294,7 @@ export default function ChatInterface({
     storageKey,
   });
 
-  const [copied, setCopied] = useState(false);
+
 
   // Enterprise Features State (UI only)
   const [isListening, setIsListening] = useState(false);
@@ -530,8 +532,6 @@ export default function ChatInterface({
 
   const handleCopy = useCallback(async (content: string) => {
     await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }, []);
 
   return (
@@ -564,7 +564,6 @@ export default function ChatInterface({
               <MessagesList
                 messages={messages}
                 onCopy={handleCopy}
-                copied={copied}
                 onModelSelect={setModel}
               />
               {isLoading && (

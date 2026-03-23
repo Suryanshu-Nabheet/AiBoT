@@ -191,7 +191,7 @@ export const UIStructure = () => {
                       className="bg-muted h-9 w-full animate-pulse rounded-md"
                     />
                   ))
-                : executions
+                : [...new Map(executions.map((e) => [e.id, e])).values()]
                     .filter((execution) =>
                       execution.title
                         .toLowerCase()

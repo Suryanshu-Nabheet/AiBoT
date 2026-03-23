@@ -8,7 +8,7 @@ export function HeaderModeToggle() {
   const pathname = usePathname();
   const { viewMode, setViewMode } = useViewMode();
 
-  if (pathname !== "/") return null;
+
 
   return <ModeToggle mode={viewMode} onChange={setViewMode} className="ml-2" />;
 }

@@ -13,6 +13,7 @@ import {
   X as XIcon,
   CheckIcon,
   CopyIcon,
+  ClipboardTextIcon,
   DownloadSimple as DownloadIcon,
 } from "@phosphor-icons/react";
 import { Textarea } from "@/components/ui/textarea";
@@ -102,18 +103,19 @@ const MessageComponent = memo(
             </div>
           )}
         </div>
-        {!isUser && (
+        {!isUser && message.content.trim() && ( // Hide buttons on empty content
           <div className="flex items-center gap-1 mt-1 pl-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors"
               onClick={handleCopy}
+              title={copied ? "Copied!" : "Copy message"}
             >
               {copied ? (
-                <CheckIcon className="size-3" />
+                <CheckIcon className="size-3.5 text-green-500" />
               ) : (
-                <CopyIcon className="size-3" />
+                <ClipboardTextIcon className="size-3.5" />
               )}
             </Button>
           </div>
@@ -124,15 +126,21 @@ const MessageComponent = memo(
 );
 MessageComponent.displayName = "MessageComponent";
 
-export default function ArenaInterface() {
+export default function ArenaInterface({
+  conversationId,
+}: {
+  conversationId?: string;
+}) {
   // --- Dual Sessions ---
   const leftChat = useChatSession({
     storageKey: "arena-a",
     sessionId: "arena-a",
+    conversationId,
   });
   const rightChat = useChatSession({
     storageKey: "arena-b",
     sessionId: "arena-b",
+    conversationId,
   });
 
   // --- Shared Input State ---

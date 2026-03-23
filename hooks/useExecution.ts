@@ -43,6 +43,8 @@ export const useExecution = () => {
 
   const addExecution = useCallback((execution: Execution) => {
     setExecutions((prev) => {
+      // Avoid duplicates
+      if (prev.some((e) => e.id === execution.id)) return prev;
       const newExecutions = [execution, ...prev];
       saveToStorage(newExecutions);
       return newExecutions;
