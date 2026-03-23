@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MODELS } from "@/lib/types";
 import { useModel } from "@/hooks/use-model";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ModelSelectorProps {
   value?: string;
@@ -22,6 +31,7 @@ export function ModelSelector({
   onValueChange,
   disabled = false,
 }: ModelSelectorProps) {
+  const [open, setOpen] = useState(false);
   const { modelId: persistedModelId, setModelId } = useModel({
     initialModel: value ?? MODELS[0].id,
     storageKey: "preferredModel",
@@ -38,6 +48,7 @@ export function ModelSelector({
 
   const handleValueChange = (newValue: string) => {
     setModelId(newValue);
+    setOpen(false);
 
     if (onValueChange) {
       onValueChange(newValue);
@@ -47,14 +58,16 @@ export function ModelSelector({
   const selectedModelObj = MODELS.find((m) => m.id === selectedModel);
 
   return (
-    <Select
-      value={selectedModel}
-      onValueChange={handleValueChange}
-      disabled={disabled}
-    >
-      <SelectTrigger className="h-8 w-fit max-w-[140px] sm:max-w-none border-none bg-muted/50 px-2 font-medium text-muted-foreground text-xs hover:bg-muted hover:text-foreground focus:ring-0">
-        <SelectValue placeholder="Select model">
-          {selectedModelObj && (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="h-8 w-fit max-w-[160px] sm:max-w-none border-none bg-muted/50 px-2 font-medium text-muted-foreground text-xs hover:bg-muted hover:text-foreground focus:ring-0 justify-between items-center flex"
+        >
+          {selectedModelObj ? (
             <div className="flex items-center gap-1.5 sm:gap-2">
               <img
                 src={selectedModelObj.logo || "/icons/ai.svg"}
@@ -68,33 +81,54 @@ export function ModelSelector({
                 {selectedModelObj.name}
               </span>
             </div>
+          ) : (
+            "Select model"
           )}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent
-        align="start"
-        className="w-[calc(100vw-1rem)] max-w-[280px] max-h-[50vh]"
-      >
-        {MODELS.map((model) => (
-          <SelectItem
-            key={model.id}
-            value={model.id}
-            className="cursor-pointer py-2 text-xs"
-          >
-            <div className="flex items-center gap-2 w-full">
-              <img
-                src={model.logo || "/icons/ai.svg"}
-                alt={model.name}
-                className="size-4 object-contain shrink-0"
-                onError={(e) => {
-                  e.currentTarget.src = "/icons/ai.svg";
-                }}
-              />
-              <span className="font-medium text-sm truncate">{model.name}</span>
-            </div>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+          <ChevronsUpDown className="ml-1 size-3 shrink-0 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-[calc(100vw-1rem)] max-w-[280px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search models..." className="h-8 text-xs" />
+          <CommandList className="max-h-[50vh]">
+            <CommandEmpty className="text-xs py-4">No model found.</CommandEmpty>
+            <CommandGroup>
+              {MODELS.map((model) => (
+                <CommandItem
+                  key={model.id}
+                  value={`${model.name} ${model.summary || ""} ${model.id}`}
+                  onSelect={() => handleValueChange(model.id)}
+                  className="cursor-pointer py-2 text-xs flex justify-between items-center border-none"
+                >
+                  <div className="flex items-center gap-2 w-full">
+                    <img
+                      src={model.logo || "/icons/ai.svg"}
+                      alt={model.name}
+                      className="size-4 object-contain shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.src = "/icons/ai.svg";
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm text-foreground">
+                        {model.name}
+                      </span>
+                      {model.summary && (
+                        <span className="text-[10px] text-muted-foreground leading-tight line-clamp-1">
+                          {model.summary}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {selectedModel === model.id && (
+                    <Check className="size-3.5 shrink-0 text-primary" />
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
