@@ -279,8 +279,16 @@ export const UIStructure = () => {
       </SidebarContent>
       <SidebarFooter className="border-t border-blue-100 p-4">
         <div className="w-full text-center">
-          <p className="text-[10px] text-blue-400 font-medium">
-            Made by <span className="font-bold">Suryanshu Nabheet</span>
+          <p className="text-[11px] text-blue-400 font-medium">
+            Made by{" "}
+            <a
+              href="https://github.com/Suryanshu-Nabheet"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold hover:underline transition-all"
+            >
+              Suryanshu Nabheet
+            </a>
           </p>
         </div>
       </SidebarFooter>
