@@ -229,7 +229,7 @@ export const MODELS: ModelFull[] = [
     name: "Kimi K2",
     isPremium: false,
     summary: "Moonshot AI model",
-    logo: "/icons/generic.svg",
+    logo: "/icons/kimi.svg",
   },
   {
     id: "z-ai/glm-4.5-air:free",
