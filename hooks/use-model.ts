@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 
 import { MODELS } from "@/lib/types";
 
-const DEFAULT_MODEL_ID = "openai/gpt-oss-20b:free";
+const DEFAULT_MODEL_ID = "openrouter/free";
 
 interface UseModelOptions {
   initialModel?: string;

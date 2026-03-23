@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-20b:free",
+          model: "openrouter/free",
           messages: [
             { role: "system", content: PROMPT_ENGINEER_SYSTEM },
             { role: "user", content: prompt },
