@@ -89,9 +89,17 @@ export async function POST(req: NextRequest) {
     // Optimize messages for Vision API
     const optimizedMessages = formatMessagesForOpenRouter(messages);
 
+    const selectedModelObj = MODELS.find((m) => m.id === targetModel);
+    const modelDisplayName = selectedModelObj?.name || targetModel;
+    const providerTitle = targetModel.includes("/")
+      ? targetModel.split("/")[0].toUpperCase()
+      : "AI Provider";
+
+    const dynamicSystemPrompt = `You are the ${modelDisplayName} model (provided by ${providerTitle}), integrated within the AiBoT platform, which was founded and developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
+
     let finalMessages = [...optimizedMessages];
 
-    // Workaround for Gemma 3 models which don't support 'system' role (Developer instruction not enabled)
+    // Workaround for Gemma 3 models which don't support 'system' role
     const isGemma3 = targetModel.includes("gemma-3");
 
     if (isGemma3) {
@@ -103,7 +111,7 @@ export async function POST(req: NextRequest) {
           if (typeof firstMsg.content === "string") {
             finalMessages[0] = {
               ...firstMsg,
-              content: `${AIBOT_SYSTEM_PROMPT}\n\n${firstMsg.content}`,
+              content: `${dynamicSystemPrompt}\n\n${firstMsg.content}`,
             };
           } else if (Array.isArray(firstMsg.content)) {
             // Find the first text part and prepend
@@ -111,13 +119,12 @@ export async function POST(req: NextRequest) {
               (c: any) => c.type === "text"
             );
             if (textPartIndex !== -1) {
-              finalMessages[0].content[textPartIndex].text =
-                `${AIBOT_SYSTEM_PROMPT}\n\n${finalMessages[0].content[textPartIndex].text}`;
+              finalMessages[0].content[textPartIndex].text = `${dynamicSystemPrompt}\n\n${finalMessages[0].content[textPartIndex].text}`;
             } else {
               // No text part, add one at the beginning
               finalMessages[0].content.unshift({
                 type: "text",
-                text: AIBOT_SYSTEM_PROMPT,
+                text: dynamicSystemPrompt,
               });
             }
           }
@@ -127,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     const payloadMessages = isGemma3
       ? finalMessages
-      : [{ role: "system", content: AIBOT_SYSTEM_PROMPT }, ...finalMessages];
+      : [{ role: "system", content: dynamicSystemPrompt }, ...finalMessages];
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",

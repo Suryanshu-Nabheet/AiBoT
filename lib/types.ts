@@ -13,7 +13,7 @@ export const MODELS: ModelFull[] = [
     name: "OpenRouter Auto",
     isPremium: false,
     summary: "Automatically routes to the best available model",
-    logo: "/icons/openrotuer.svg",
+    logo: "/icons/openrouter.svg",
   },
   {
     id: "google/gemma-3-12b-it:free",
