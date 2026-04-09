@@ -445,9 +445,9 @@ _Full-Stack Engineer & AI Enthusiast_
 
 Building the future of human-AI interaction, one commit at a time.
 
-- 🌐 Portfolio: [suryanshu.dev](https://suryanshu.dev)
+- 🌐 Portfolio: [suryanshunabheet.vercel.app](https://suryanshunabheet.vercel.app)
 - 💼 GitHub: [@Suryanshu-Nabheet](https://github.com/Suryanshu-Nabheet)
-- 📧 Email: contact@suryanshu.dev
+- 📧 Email: suryanshunab@gmail.com
 
 ---
 

@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { cn } from "@/lib/utils";
+import ShinyText from "@/components/ui/shiny-text";
 import { useChatSession } from "@/hooks/use-chat-session";
 import ReactMarkdown from "react-markdown";
 import { ChatInput } from "./chat-input";
@@ -150,6 +151,45 @@ export default function ArenaInterface({
   >([]);
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+
+  const [leftLoadingStatus, setLeftLoadingStatus] = useState("Model A is thinking...");
+  const [rightLoadingStatus, setRightLoadingStatus] = useState("Model B is thinking...");
+
+  useEffect(() => {
+    if (!leftChat.isLoading) {
+      setLeftLoadingStatus("Model A is thinking...");
+      return;
+    }
+    const statuses = [
+      "Model A is thinking...",
+      "Model A is processing...",
+      "Model A is drafting...",
+    ];
+    let i = 0;
+    const interval = setInterval(() => {
+      i = (i + 1) % statuses.length;
+      setLeftLoadingStatus(statuses[i]);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [leftChat.isLoading]);
+
+  useEffect(() => {
+    if (!rightChat.isLoading) {
+      setRightLoadingStatus("Model B is thinking...");
+      return;
+    }
+    const statuses = [
+      "Model B is thinking...",
+      "Model B is processing...",
+      "Model B is drafting...",
+    ];
+    let i = 0;
+    const interval = setInterval(() => {
+      i = (i + 1) % statuses.length;
+      setRightLoadingStatus(statuses[i]);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [rightChat.isLoading]);
 
   // --- Refs ---
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -363,8 +403,11 @@ export default function ArenaInterface({
               />
             ))}
             {leftChat.isLoading && (
-              <div className="px-4 py-2 text-xs text-muted-foreground animate-pulse">
-                Model A is generating...
+              <div className="px-6 py-4 flex items-center">
+                <ShinyText
+                  text={leftLoadingStatus}
+                  speed={2}
+                />
               </div>
             )}
             <div
@@ -392,8 +435,11 @@ export default function ArenaInterface({
               />
             ))}
             {rightChat.isLoading && (
-              <div className="px-4 py-2 text-xs text-muted-foreground animate-pulse">
-                Model B is generating...
+              <div className="px-6 py-4 flex items-center">
+                <ShinyText
+                  text={rightLoadingStatus}
+                  speed={2}
+                />
               </div>
             )}
             <div

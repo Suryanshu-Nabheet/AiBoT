@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
+import ShinyText from "@/components/ui/shiny-text";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
@@ -244,21 +245,51 @@ const MessagesList = memo(
     messages,
     onCopy,
     onModelSelect,
+    isLoading,
+    loadingStatus,
   }: {
     messages: Array<Message>;
     onCopy: (content: string) => void;
     onModelSelect: (modelId: string) => void;
+    isLoading?: boolean;
+    loadingStatus?: string;
   }) => {
     return (
       <div className="flex flex-col gap-2 pb-4">
-        {messages.map((message, i) => (
-          <MessageComponent
-            key={message.id || i}
-            message={message}
-            onCopy={onCopy}
-            onModelSelect={onModelSelect}
-          />
-        ))}
+        {messages.map((message, i) => {
+          const isLastAgent =
+            isLoading &&
+            i === messages.length - 1 &&
+            message.role === Role.Agent;
+
+          return (
+            <React.Fragment key={message.id || i}>
+              {isLastAgent && loadingStatus && (
+                <div className="px-2 sm:px-4 md:px-6 lg:px-8">
+                  <div className="max-w-4xl mx-auto">
+                    <ShinyText text={loadingStatus} speed={3} />
+                  </div>
+                </div>
+              )}
+              <MessageComponent
+                message={message}
+                onCopy={onCopy}
+                onModelSelect={onModelSelect}
+              />
+            </React.Fragment>
+          );
+        })}
+        {/* Case where AI is thinking but hasn't sent the first token yet */}
+        {isLoading &&
+          messages.length > 0 &&
+          messages[messages.length - 1].role === Role.User &&
+          loadingStatus && (
+            <div className="px-2 sm:px-4 md:px-6 lg:px-8">
+              <div className="max-w-4xl mx-auto">
+                <ShinyText text={loadingStatus} speed={3} />
+              </div>
+            </div>
+          )}
       </div>
     );
   }
@@ -299,6 +330,30 @@ export default function ChatInterface({
   // Enterprise Features State (UI only)
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("AiBoT is thinking...");
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingStatus("AiBoT is thinking...");
+      return;
+    }
+
+    const statuses = [
+      "AiBoT is thinking...",
+      "Searching for answers...",
+      "Analyzing the context...",
+      "Drafting a response...",
+      "Finalizing details...",
+    ];
+
+    let i = 0;
+    const interval = setInterval(() => {
+      i = (i + 1) % statuses.length;
+      setLoadingStatus(statuses[i]);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -565,28 +620,9 @@ export default function ChatInterface({
                 messages={messages}
                 onCopy={handleCopy}
                 onModelSelect={setModel}
+                isLoading={isLoading}
+                loadingStatus={loadingStatus}
               />
-              {isLoading && (
-                <div className="flex items-center gap-2 px-4 text-muted-foreground py-3">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium animate-pulse">
-                    AiBoT is thinking...
-                  </span>
-                </div>
-              )}
               {/* Invisible element to scroll to */}
               <div ref={messagesEndRef} className="h-4" />
             </div>
