@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./public/Logo.png" alt="AiBoT Logo" width="80" height="80" />
+<img src="./public/Logo.png" alt="AiBoT Logo" />
 
 # AiBoT
 ### Enterprise-Grade AI Orchestration Platform
