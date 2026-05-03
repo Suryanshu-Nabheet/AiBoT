@@ -1,3 +1,10 @@
+/**
+ * AiBoT - AI-Powered Platform
+ * Copyright (c) 2026 Suryanshu Nabheet
+ * Licensed under MIT with Additional Commercial Terms
+ * See LICENSE file for details
+ */
+
 "use client";
 
 import { Microphone, Pause, SpeakerHigh } from "@phosphor-icons/react";

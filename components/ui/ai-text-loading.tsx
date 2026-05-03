@@ -1,10 +1,17 @@
+/**
+ * AiBoT - AI-Powered Platform
+ * Copyright (c) 2026 Suryanshu Nabheet
+ * Licensed under MIT with Additional Commercial Terms
+ * See LICENSE file for details
+ */
+
 "use client";
 
 /**
  * @author: @kokonutui
  * @description: AI Text Loading
  * @version: 1.0.0
- * @date: 2025-06-26
+ * @date: 2026-06-26
  * @license: MIT
  * @website: https://kokonutui.com
  * @github: https://github.com/kokonut-labs/kokonutui

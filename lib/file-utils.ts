@@ -1,3 +1,10 @@
+/**
+ * AiBoT - AI-Powered Platform
+ * Copyright (c) 2026 Suryanshu Nabheet
+ * Licensed under MIT with Additional Commercial Terms
+ * See LICENSE file for details
+ */
+
 import mammoth from "mammoth";
 
 export async function extractTextFromFile(file: File): Promise<string> {

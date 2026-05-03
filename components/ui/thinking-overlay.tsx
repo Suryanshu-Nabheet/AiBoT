@@ -1,3 +1,10 @@
+/**
+ * AiBoT - AI-Powered Platform
+ * Copyright (c) 2026 Suryanshu Nabheet
+ * Licensed under MIT with Additional Commercial Terms
+ * See LICENSE file for details
+ */
+
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, Zap, Brain, Wand2 } from "lucide-react";
 import { useEffect, useState } from "react";

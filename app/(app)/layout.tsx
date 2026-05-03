@@ -1,6 +1,6 @@
 /**
  * AiBoT - AI-Powered Platform
- * Copyright (c) 2025 Suryanshu Nabheet
+ * Copyright (c) 2026 Suryanshu Nabheet
  * Licensed under MIT with Additional Commercial Terms
  * See LICENSE file for details
  */

@@ -1,9 +1,8 @@
 <div align="center">
 
-<img src="./public/favicon.svg" alt="AiBoT Logo" width="80" height="80" />
+<img src="./public/Logo.png" alt="AiBoT Logo" width="80" height="80" />
 
 # AiBoT
-
 ### Enterprise-Grade AI Orchestration Platform
 
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge&logo=checkmarx)](https://github.com/Suryanshu-Nabheet/AiBoT)
@@ -483,7 +482,7 @@ Special thanks to the open-source community for making projects like this possib
 
 ### Copyright
 
-**Copyright © 2025 Suryanshu Nabheet**
+**Copyright © 2026 Suryanshu Nabheet**
 
 AiBoT is licensed under the **MIT License**.
 
