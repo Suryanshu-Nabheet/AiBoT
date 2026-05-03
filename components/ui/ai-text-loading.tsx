@@ -63,21 +63,20 @@ export default function AITextLoading({
             animate={{
               opacity: 1,
               y: 0,
-              backgroundPosition: ["200% center", "-200% center"],
+              backgroundPosition: ["-100% center", "100% center"],
             }}
             exit={{ opacity: 0, y: -20 }}
             transition={{
               opacity: { duration: 0.3 },
               y: { duration: 0.3 },
               backgroundPosition: {
-                duration: 2.5,
+                duration: 2,
                 ease: "linear",
                 repeat: Infinity,
               },
             }}
             className={cn(
-              // Changed neutral-950/400 to slate-900/400 for better blueish tint compatibility
-              "flex justify-center text-3xl font-bold bg-gradient-to-r from-blue-700 via-blue-400 to-blue-700 dark:from-white dark:via-blue-300 dark:to-white bg-[length:200%_100%] bg-clip-text text-transparent whitespace-nowrap min-w-max",
+              "flex justify-center text-3xl font-bold bg-gradient-to-r from-blue-700/80 via-blue-400 to-blue-700/80 dark:from-white/50 dark:via-white dark:to-white/50 bg-[length:200%_100%] bg-clip-text text-transparent whitespace-nowrap min-w-max",
               className
             )}
           >

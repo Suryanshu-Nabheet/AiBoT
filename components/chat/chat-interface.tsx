@@ -31,7 +31,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
-import ShinyText from "@/components/ui/shiny-text";
+import { TextShimmer } from "@/components/core/text-shimmer";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
@@ -274,7 +274,9 @@ const MessagesList = memo(
               {isLastAgent && loadingStatus && (
                 <div className="px-2 sm:px-4 md:px-6 lg:px-8">
                   <div className="max-w-4xl mx-auto">
-                    <ShinyText text={loadingStatus} speed={3} />
+                    <TextShimmer className="text-sm font-medium" duration={1}>
+                      {loadingStatus}
+                    </TextShimmer>
                   </div>
                 </div>
               )}
@@ -293,7 +295,9 @@ const MessagesList = memo(
           loadingStatus && (
             <div className="px-2 sm:px-4 md:px-6 lg:px-8">
               <div className="max-w-4xl mx-auto">
-                <ShinyText text={loadingStatus} speed={3} />
+                <TextShimmer className="text-sm font-medium" duration={1}>
+                  {loadingStatus}
+                </TextShimmer>
               </div>
             </div>
           )}
