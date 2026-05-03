@@ -1,8 +1,9 @@
 <div align="center">
 
-<img src="./public/Logo.png" alt="AiBoT Logo" />
+<img src="./public/Logo.png" alt="AiBoT Logo" width="200" height="200" />
 
 # AiBoT
+
 ### Enterprise-Grade AI Orchestration Platform
 
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge&logo=checkmarx)](https://github.com/Suryanshu-Nabheet/AiBoT)
