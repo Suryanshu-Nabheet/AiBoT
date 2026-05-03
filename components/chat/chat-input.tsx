@@ -95,7 +95,7 @@ export function ChatInput({
               const extractedText = await extractTextFromFile(file);
               newAttachments.push({
                 name: file.name,
-                content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n💡 *For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
+                content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n*For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
                 type: "text/plain",
               });
               toast.success(`Extracted text from ${file.name}`);

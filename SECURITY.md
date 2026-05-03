@@ -1,6 +1,6 @@
 # Security Policy
 
-## Reporting a Vulnerability
+## <kbd>REPORTING A VULNERABILITY</kbd>
 
 If you discover a security vulnerability in AiBoT, please report it responsibly:
 
@@ -16,9 +16,9 @@ Please include:
 
 We will respond within 48 hours and work to address the issue promptly.
 
-## Security Best Practices
+## <kbd>SECURITY BEST PRACTICES</kbd>
 
-### API Key Protection
+### <kbd>API KEY PROTECTION</kbd>
 
 **CRITICAL:** Never commit API keys to version control.
 
@@ -32,7 +32,7 @@ We will respond within 48 hours and work to address the issue promptly.
 3. **Use `.env.local`** for local development (gitignored)
 4. **Rotate keys** if exposed
 
-### Deployment Security
+### <kbd>DEPLOYMENT SECURITY</kbd>
 
 1. **HTTPS Only:** Always deploy with SSL/TLS
 2. **Environment Variables:** Use platform-specific secret management
@@ -40,23 +40,23 @@ We will respond within 48 hours and work to address the issue promptly.
 4. **Rate Limiting:** Implement rate limiting on API routes
 5. **Input Validation:** All user inputs are validated
 
-### Code Security
+### <kbd>CODE SECURITY</kbd>
 
 - **XSS Prevention:** All user content is sanitized
 - **Iframe Sandboxing:** Generated code runs in sandboxed iframes
 - **CSP Headers:** Content Security Policy configured
 - **Dependency Audits:** Regular `npm audit` checks
 
-## Supported Versions
+## <kbd>SUPPORTED VERSIONS</kbd>
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| 1.x.x   | YES |
+| < 1.0   | NO  |
 
-## Security Features
+## <kbd>SECURITY FEATURES</kbd>
 
-### Built-in Protection
+### <kbd>BUILT-IN PROTECTION</kbd>
 
 1. **API Key Validation:** Server-side validation of API keys
 2. **Sanitized Outputs:** All AI-generated content is sanitized
@@ -64,20 +64,20 @@ We will respond within 48 hours and work to address the issue promptly.
 4. **Session Management:** Secure session handling
 5. **Error Handling:** No sensitive data in error messages
 
-### User Responsibilities
+### <kbd>USER RESPONSIBILITIES</kbd>
 
 1. **Protect API Keys:** Keep your OpenRouter API key secure
 2. **Review Generated Code:** Always review AI-generated code before deployment
 3. **Update Dependencies:** Keep dependencies up to date
 4. **Monitor Usage:** Monitor API usage and costs
 
-## Compliance
+## <kbd>COMPLIANCE</kbd>
 
 - **GDPR:** No personal data stored without consent
 - **Data Privacy:** Chat history stored locally (sessionStorage)
 - **API Usage:** Complies with OpenRouter terms of service
 
-## Contact
+## <kbd>CONTACT</kbd>
 
 For security concerns: suryanshu.nabheet@example.com
 

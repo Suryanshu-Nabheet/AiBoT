@@ -2,7 +2,7 @@
 
 First off, thank you for considering contributing to AiBoT! It's people like you that make AiBoT such a great tool.
 
-## Code of Conduct
+## <kbd>CODE OF CONDUCT</kbd>
 
 By participating in this project, you are expected to uphold our Code of Conduct:
 
@@ -11,9 +11,9 @@ By participating in this project, you are expected to uphold our Code of Conduct
 - Focus on what is best for the community
 - Show empathy towards other community members
 
-## How Can I Contribute?
+## <kbd>HOW CAN I CONTRIBUTE?</kbd>
 
-### Reporting Bugs
+### <kbd>REPORTING BUGS</kbd>
 
 Before creating bug reports, please check the existing issues to avoid duplicates. When you create a bug report, include as many details as possible:
 
@@ -24,7 +24,7 @@ Before creating bug reports, please check the existing issues to avoid duplicate
 - Include screenshots if applicable
 - Include your environment details (OS, Node version, etc.)
 
-### Suggesting Enhancements
+### <kbd>SUGGESTING ENHANCEMENTS</kbd>
 
 Enhancement suggestions are tracked as GitHub issues. When creating an enhancement suggestion, include:
 
@@ -33,7 +33,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 - Explain why this enhancement would be useful
 - List any alternative solutions you've considered
 
-### Pull Requests
+### <kbd>PULL REQUESTS</kbd>
 
 1. Fork the repo and create your branch from `main`
 2. If you've added code that should be tested, add tests
@@ -42,7 +42,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 5. Make sure your code lints
 6. Issue that pull request!
 
-## Development Setup
+## <kbd>DEVELOPMENT SETUP</kbd>
 
 ```bash
 # Clone your fork
@@ -60,9 +60,9 @@ cp .env.example .env
 pnpm run dev
 ```
 
-## Development Guidelines
+## <kbd>DEVELOPMENT GUIDELINES</kbd>
 
-### Code Style
+### <kbd>CODE STYLE</kbd>
 
 - Use TypeScript for all new code
 - Follow the existing code style (we use Prettier)
@@ -70,7 +70,7 @@ pnpm run dev
 - Add comments for complex logic
 - Keep functions small and focused
 
-### Component Guidelines
+### <kbd>COMPONENT GUIDELINES</kbd>
 
 - Use functional components with hooks
 - Memoize expensive computations
@@ -78,7 +78,7 @@ pnpm run dev
 - Use proper TypeScript types (no `any`)
 - Follow the existing folder structure
 
-### Commit Messages
+### <kbd>COMMIT MESSAGES</kbd>
 
 - Use the present tense ("Add feature" not "Added feature")
 - Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
@@ -97,13 +97,13 @@ Add user authentication feature
 Closes #123
 ```
 
-### Testing
+### <kbd>TESTING</kbd>
 
 - Write tests for new features
 - Ensure all tests pass before submitting PR
 - Aim for good code coverage
 
-## Project Structure
+## <kbd>PROJECT STRUCTURE</kbd>
 
 ```
 AiBoT/
@@ -120,8 +120,8 @@ AiBoT/
 └── styles/               # Global styles
 ```
 
-## Questions?
+## <kbd>QUESTIONS?</kbd>
 
 Feel free to open an issue with your question or reach out to the maintainers.
 
-Thank you for contributing! 🎉
+Thank you for contributing!

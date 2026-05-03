@@ -16,13 +16,13 @@
 
 _Unified interface for 20+ LLMs, browser-based development environments, and research-grade document analysis._
 
-[Architecture](#-architecture) • [Quick Start](#-quick-start) • [Features](#-core-capabilities) • [Deployment](#-deployment) • [API Reference](#️-api-reference)
+[Architecture](#architecture) • [Quick Start](#quick-start) • [Features](#core-capabilities) • [Deployment](#deployment) • [API Reference](#api-reference)
 
 </div>
 
 ---
 
-## 🏗️ Architecture
+## <kbd>ARCHITECTURE</kbd>
 
 AiBoT is a **polyglot AI orchestration platform** built on a microservices-inspired architecture with three specialized agent modes:
 
@@ -50,9 +50,9 @@ graph TB
 
 ---
 
-## 🚀 Core Capabilities
+## <kbd>CORE CAPABILITIES</kbd>
 
-### 1️⃣ Conversational AI (Chat Agent)
+### <kbd>CONVERSATIONAL AI</kbd> (Chat Agent)
 
 - **Multi-Model Routing**: Intelligent failover across 20+ LLMs with sub-second latency
 - **Streaming Architecture**: Server-Sent Events (SSE) with backpressure handling
@@ -74,7 +74,7 @@ const stream = await fetch("/api/chat", {
 const displayedContent = useSmoothTyping(content, 5); // 5 chars/frame
 ```
 
-### 2️⃣ Code Agent (Browser IDE)
+### <kbd>CODE AGENT</kbd> (Browser IDE)
 
 **Full-Stack Development Environment in the Browser**
 
@@ -113,7 +113,7 @@ process.output.pipeTo(
 - Port 8080 binding for preview (configurable)
 - Supports Next.js, Vite, React, and vanilla projects
 
-### 3️⃣ Document Analyzer (Summarizer Agent)
+### <kbd>DOCUMENT ANALYZER</kbd> (Summarizer Agent)
 
 **Research-Grade Document Intelligence**
 
@@ -133,7 +133,7 @@ process.output.pipeTo(
 const filesData = await Promise.all(
   files.map(async (file) => ({
     name: file.name,
-    content: await extractTextFromFile(file),
+    content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n*For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
   }))
 );
 
@@ -146,7 +146,7 @@ const response = await fetch("/api/agent/summarize", {
 
 ---
 
-## ⚡ Performance Optimizations
+## <kbd>PERFORMANCE OPTIMIZATIONS</kbd>
 
 ### Frontend
 
@@ -170,7 +170,7 @@ const response = await fetch("/api/agent/summarize", {
 
 ---
 
-## 🛠️ Tech Stack
+## <kbd>TECH STACK</kbd>
 
 ### Core Framework
 
@@ -211,7 +211,7 @@ const response = await fetch("/api/agent/summarize", {
 
 ---
 
-## 🔧 Configuration
+## <kbd>CONFIGURATION</kbd>
 
 ### Environment Variables
 
@@ -247,21 +247,32 @@ export const MODELS: Model[] = [
 
 ---
 
-## 📦 Installation
+## <kbd>INSTALLATION</kbd>
 
 ### Prerequisites
 
-- **Node.js**: 18.17.0+ or 20.x (LTS recommended)
+- **Node.js**: 18.17.0+ (LTS recommended)
 - **pnpm**: 8.0.0+ (or npm 9.0.0+)
 - **Git**: Latest version
 
-### Setup
+### Quick Setup (Recommended)
+
+We provide a production-grade automated setup script that handles dependency installation, environment configuration, and server launch.
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/Suryanshu-Nabheet/AiBoT.git
 cd AiBoT
 
+# Run the automated setup
+./scripts/setup.sh
+```
+
+### Manual Setup
+
+If you prefer manual configuration:
+
+```bash
 # Install dependencies
 pnpm install
 
@@ -272,6 +283,8 @@ cp .env.example .env
 # Start development server
 pnpm dev
 ```
+
+For detailed instructions, see the [End-to-End Setup Guide](docs/setup.md).
 
 ### Build for Production
 
@@ -288,7 +301,7 @@ pm2 start npm --name "aibot" -- start
 
 ---
 
-## 🚀 Deployment
+## <kbd>DEPLOYMENT</kbd>
 
 ### Vercel (Recommended)
 
@@ -363,7 +376,7 @@ spec:
 
 ---
 
-## 🛡️ Security
+## <kbd>SECURITY</kbd>
 
 ### Best Practices Implemented
 
@@ -383,7 +396,7 @@ spec:
 
 ---
 
-## 📊 Monitoring & Analytics
+## <kbd>MONITORING & ANALYTICS</kbd>
 
 ### Built-in Metrics
 
@@ -406,7 +419,7 @@ Sentry.init({
 
 ---
 
-## 🤝 Contributing
+## <kbd>CONTRIBUTING</kbd>
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
@@ -432,26 +445,26 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ---
 
-## 📝 License
+## <kbd>LICENSE</kbd>
 
 MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-## 👨‍💻 Author
+## <kbd>AUTHOR</kbd>
 
 **Suryanshu Nabheet**  
 _Full-Stack Engineer & AI Enthusiast_
 
 Building the future of human-AI interaction, one commit at a time.
 
-- 🌐 Portfolio: [suryanshunabheet.vercel.app](https://suryanshunabheet.vercel.app)
-- 💼 GitHub: [@Suryanshu-Nabheet](https://github.com/Suryanshu-Nabheet)
-- 📧 Email: suryanshunab@gmail.com
+- Portfolio: [suryanshunabheet.vercel.app](https://suryanshunabheet.vercel.app)
+- GitHub: [@Suryanshu-Nabheet](https://github.com/Suryanshu-Nabheet)
+- Email: suryanshunab@gmail.com
 
 ---
 
-## 🙏 Acknowledgments
+## <kbd>ACKNOWLEDGMENTS</kbd>
 
 Built with cutting-edge open-source technologies:
 
@@ -466,7 +479,7 @@ Special thanks to the open-source community for making projects like this possib
 
 ---
 
-## 📜 License & Legal
+## <kbd>LICENSE & LEGAL</kbd>
 
 ### Copyright
 
@@ -478,11 +491,11 @@ AiBoT is licensed under the **MIT License**.
 
 This project is open source under the MIT License, allowing:
 
-- ✅ Personal use
-- ✅ Educational use
-- ✅ Commercial use (no restrictions)
-- ✅ Modification and distribution
-- ✅ Private use
+- [PASS] Personal use
+- [PASS] Educational use
+- [PASS] Commercial use (no restrictions)
+- [PASS] Modification and distribution
+- [PASS] Private use
 
 See [LICENSE](LICENSE) for full terms.
 
@@ -530,9 +543,9 @@ See [SECURITY.md](SECURITY.md) for security policies.
 
 <div align="center">
 
-**Made with ❤️ by Suryanshu Nabheet**
+**Made by Suryanshu Nabheet**
 
-⭐ Star this repo if you find it useful!
+Star this repo if you find it useful!
 
 _Democratizing AI, one conversation at a time._
 
