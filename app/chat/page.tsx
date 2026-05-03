@@ -8,7 +8,7 @@
 import React from "react";
 import ChatInterface from "@/components/chat/chat-interface";
 
-const AskPage = () => {
+const ChatPage = () => {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
       <ChatInterface />
@@ -16,4 +16,4 @@ const AskPage = () => {
   );
 };
 
-export default AskPage;
+export default ChatPage;

@@ -14,8 +14,8 @@ import { useViewMode } from "@/contexts/view-mode-context";
 import { AnimatePresence, motion } from "framer-motion";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const AskPage = ({ params }: { params: any }) => {
-  const { chatId } = use(params as Promise<{ chatId: string }>);
+const ChatPage = ({ params }: { params: any }) => {
+  const { id } = use(params as Promise<{ id: string }>);
   const { viewMode } = useViewMode();
 
   return (
@@ -30,7 +30,7 @@ const AskPage = ({ params }: { params: any }) => {
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.2 }}
           >
-            <ChatInterface conversationId={chatId} />
+            <ChatInterface conversationId={id} />
           </motion.div>
         ) : (
           <motion.div
@@ -41,7 +41,7 @@ const AskPage = ({ params }: { params: any }) => {
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.2 }}
           >
-            <ArenaInterface conversationId={chatId} />
+            <ArenaInterface conversationId={id} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -49,4 +49,4 @@ const AskPage = ({ params }: { params: any }) => {
   );
 };
 
-export default AskPage;
+export default ChatPage;

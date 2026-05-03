@@ -63,8 +63,8 @@ export const UIStructure = () => {
   const router = useRouter();
 
   const pathname = usePathname();
-  const currentConversationId = pathname?.includes("/ask/")
-    ? pathname.split("/ask/")[1]
+  const currentConversationId = pathname?.includes("/chat/")
+    ? pathname.split("/chat/")[1]
     : null;
 
   const handleDeleteExecution = (executionId: string) => {
@@ -215,7 +215,7 @@ export const UIStructure = () => {
                           )}
                           onMouseEnter={() => setHoverChatId(execution.id)}
                           onMouseLeave={() => setHoverChatId("")}
-                          onClick={() => router.push(`/ask/${execution.id}`)}
+                          onClick={() => router.push(`/chat/${execution.id}`)}
                         >
                           <div className="flex w-full items-center justify-between overflow-hidden">
                             {editingId === execution.id ? (

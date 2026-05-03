@@ -12,7 +12,10 @@ import { siteConfig } from "@/config/site";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import { UIStructure } from "@/components/ui/ui-structure";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { ViewModeProvider } from "@/contexts/view-mode-context";
+import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { HeaderModeToggle } from "@/components/home/header-mode-toggle";
 
 export const metadata: Metadata = siteConfig;
 
@@ -37,14 +40,25 @@ export default function RootLayout({
         className={`${font.className} text-foreground bg-background overflow-x-hidden`}
       >
         <Providers>
-          <div className="flex h-full w-full max-w-full overflow-hidden">
-            <SidebarProvider>
-              <UIStructure />
-              <main className="flex-1 flex flex-col h-full w-full max-w-full overflow-hidden relative">
-                {children}
-              </main>
-            </SidebarProvider>
-          </div>
+          <ViewModeProvider>
+            <div className="flex h-screen w-full max-w-full overflow-hidden">
+              <SidebarProvider>
+                <UIStructure />
+                <SidebarInset className="h-full overflow-hidden bg-background max-w-full">
+                  <div className="flex h-full flex-col w-full max-w-full relative overflow-x-hidden">
+                    <header className="flex h-12 w-full items-center gap-2 shrink-0 px-2 sm:px-4 bg-background z-10 border-b border-border/50">
+                      <SidebarToggle />
+                      <div className="flex-1" />
+                      <HeaderModeToggle />
+                    </header>
+                    <main className="flex-1 w-full max-w-full relative overflow-hidden">
+                      {children}
+                    </main>
+                  </div>
+                </SidebarInset>
+              </SidebarProvider>
+            </div>
+          </ViewModeProvider>
         </Providers>
         <Toaster />
       </body>

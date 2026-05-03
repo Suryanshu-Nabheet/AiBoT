@@ -108,13 +108,17 @@ Closes #123
 ```
 AiBoT/
 ├── app/                    # Next.js app directory
-│   ├── (app)/             # App routes
+│   ├── agent/             # Agent-specific routes
+│   ├── chat/              # Chat routes
 │   ├── api/               # API routes
-│   └── layout.tsx         # Root layout
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Home page
 ├── components/            # React components
 │   ├── chat/             # Chat-specific components
 │   ├── ui/               # Reusable UI components
-│   └── ai-elements/      # AI-specific elements
+│   ├── home/             # Home-specific components
+│   └── layout/           # Layout components (SidebarToggle, etc.)
+├── contexts/              # React contexts
 ├── hooks/                # Custom React hooks
 ├── lib/                  # Utilities and types
 └── styles/               # Global styles

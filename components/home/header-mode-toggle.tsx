@@ -15,7 +15,12 @@ export function HeaderModeToggle() {
   const pathname = usePathname();
   const { viewMode, setViewMode } = useViewMode();
 
-
+  // Only show the mode toggle on chat-related screens
+  const isChatPage = pathname === "/" || pathname.startsWith("/chat");
+  
+  if (!isChatPage) {
+    return null;
+  }
 
   return <ModeToggle mode={viewMode} onChange={setViewMode} className="ml-2" />;
 }

@@ -42,7 +42,7 @@ export default function NotFound() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-xl">
-            <Link href="/ask">
+            <Link href="/chat">
               <ChatCircleIcon weight="bold" />
               Start Chatting
             </Link>
