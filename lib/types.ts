@@ -44,6 +44,13 @@ export const MODELS: ModelFull[] = [
     logo: "/icons/qwen.svg",
   },
   {
+    id: "inclusionai/ring-2.6-1t:free",
+    name: "Ring 2.6 1T",
+    isPremium: false,
+    summary: "Efficient 1T MoE model for AI agents", 
+    logo: "/icons/ai.svg",
+  },
+  {
     id: "stepfun/step-3-5-flash:free",
     name: "Step 3.5 Flash",
     isPremium: false,
