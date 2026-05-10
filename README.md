@@ -181,7 +181,7 @@ const response = await fetch("/api/agent/summarize", {
 ### AI & ML
 
 - **OpenRouter API**: Unified gateway to 20+ LLM providers
-- **Models**: GPT-4, Claude 3.5, Gemini 2.0, Llama 3.3, Mistral, DeepSeek, Qwen
+- **Models**: GPT-4, Claude 3.5, Gemini 2.0, Gemma 4, Llama 3.3, Ring 2.6, DeepSeek, Qwen, CoBuddy, Laguna
 - **Streaming**: Server-Sent Events (SSE) with custom parser
 
 ### Development Tools
