@@ -35,6 +35,7 @@ import { Geist_Mono } from "next/font/google";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
 import { Message, Role } from "@/lib/types";
 import { useMarkdown } from "@/hooks/useMarkdown";
+import { ThinkingBar } from "@/components/prompt-kit/thinking-bar";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -411,9 +412,10 @@ export default function ArenaInterface({
             ))}
             {leftChat.isLoading && (
               <div className="px-6 py-4 flex items-center">
-                <ShinyText
+                <ThinkingBar
                   text={leftLoadingStatus}
-                  speed={2}
+                  onStop={leftChat.stopHelpers.stop}
+                  className="w-full max-w-sm"
                 />
               </div>
             )}
@@ -443,9 +445,10 @@ export default function ArenaInterface({
             ))}
             {rightChat.isLoading && (
               <div className="px-6 py-4 flex items-center">
-                <ShinyText
+                <ThinkingBar
                   text={rightLoadingStatus}
-                  speed={2}
+                  onStop={rightChat.stopHelpers.stop}
+                  className="w-full max-w-sm"
                 />
               </div>
             )}
