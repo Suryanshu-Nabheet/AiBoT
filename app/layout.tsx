@@ -16,6 +16,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { HeaderModeToggle } from "@/components/home/header-mode-toggle";
+import { CommandMenu } from "@/components/ui/command-menu";
 
 export const metadata: Metadata = siteConfig;
 
@@ -59,6 +60,7 @@ export default function RootLayout({
               </SidebarProvider>
             </div>
           </ViewModeProvider>
+          <CommandMenu />
         </Providers>
         <Toaster />
       </body>
