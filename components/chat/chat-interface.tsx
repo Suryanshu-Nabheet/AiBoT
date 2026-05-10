@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
+import { TextShimmer } from "@/components/core/text-shimmer";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
@@ -39,7 +40,6 @@ import { useExecutionContext } from "@/contexts/execution-context";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
 import { Message, Role, MODELS } from "@/lib/types";
-import { ThinkingBar } from "@/components/prompt-kit/thinking-bar";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -254,14 +254,12 @@ const MessagesList = memo(
     onModelSelect,
     isLoading,
     loadingStatus,
-    onStop,
   }: {
     messages: Array<Message>;
     onCopy: (content: string) => void;
     onModelSelect: (modelId: string) => void;
     isLoading?: boolean;
     loadingStatus?: string;
-    onStop?: () => void;
   }) => {
     return (
       <div className="flex flex-col gap-2 pb-4">
@@ -274,12 +272,11 @@ const MessagesList = memo(
           return (
             <React.Fragment key={message.id || i}>
               {isLastAgent && loadingStatus && (
-                <div className="px-2 sm:px-4 md:px-6 lg:px-8 mb-4">
-                  <div className="max-w-4xl mx-auto flex justify-start">
-                    <ThinkingBar 
-                        text={loadingStatus} 
-                        onStop={onStop}
-                    />
+                <div className="px-2 sm:px-4 md:px-6 lg:px-8">
+                  <div className="max-w-4xl mx-auto">
+                    <TextShimmer className="text-sm font-medium" duration={1}>
+                      {loadingStatus}
+                    </TextShimmer>
                   </div>
                 </div>
               )}
@@ -296,12 +293,11 @@ const MessagesList = memo(
           messages.length > 0 &&
           messages[messages.length - 1].role === Role.User &&
           loadingStatus && (
-            <div className="px-2 sm:px-4 md:px-6 lg:px-8 mb-4">
-              <div className="max-w-4xl mx-auto flex justify-start">
-                <ThinkingBar 
-                    text={loadingStatus} 
-                    onStop={onStop}
-                />
+            <div className="px-2 sm:px-4 md:px-6 lg:px-8">
+              <div className="max-w-4xl mx-auto">
+                <TextShimmer className="text-sm font-medium" duration={1}>
+                  {loadingStatus}
+                </TextShimmer>
               </div>
             </div>
           )}
@@ -637,7 +633,6 @@ export default function ChatInterface({
                 onModelSelect={setModel}
                 isLoading={isLoading}
                 loadingStatus={loadingStatus}
-                onStop={stopHelpers.stop}
               />
               {/* Invisible element to scroll to */}
               <div ref={messagesEndRef} className="h-4" />
