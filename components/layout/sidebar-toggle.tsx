@@ -17,13 +17,13 @@ export function SidebarToggle({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "p-2 rounded-md bg-blue-100/50 text-blue-600 cursor-pointer hover:bg-blue-100 transition-colors",
+        "p-2 rounded-lg bg-background border border-sidebar-border text-sidebar-foreground/80 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200 shadow-sm hover:shadow-md ring-1 ring-black/5",
         className
       )}
       onClick={toggleSidebar}
       title="Toggle Sidebar"
     >
-      <SidebarSimple className="size-5" />
+      <SidebarSimple className="size-4" weight="bold" />
     </div>
   );
 }

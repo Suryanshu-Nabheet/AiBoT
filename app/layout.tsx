@@ -44,9 +44,9 @@ export default function RootLayout({
             <div className="flex h-screen w-full max-w-full overflow-hidden">
               <SidebarProvider>
                 <UIStructure />
-                <SidebarInset className="h-full overflow-hidden bg-background max-w-full">
-                  <div className="flex h-full flex-col w-full max-w-full relative overflow-x-hidden">
-                    <header className="flex h-12 w-full items-center gap-2 shrink-0 px-2 sm:px-4 bg-background z-10 border-b border-border/50">
+                <SidebarInset className="bg-sidebar p-0 md:p-2">
+                  <div className="flex h-full flex-col w-full max-w-full relative overflow-hidden bg-background md:rounded-2xl border border-sidebar-border/50 shadow-sm">
+                    <header className="flex h-12 w-full items-center gap-2 shrink-0 px-2 sm:px-4 bg-background/80 backdrop-blur-md z-10 border-b border-sidebar-border/20">
                       <SidebarToggle />
                       <div className="flex-1" />
                       <HeaderModeToggle />

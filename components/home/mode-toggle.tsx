@@ -23,11 +23,11 @@ export function ModeToggle({ mode, onChange, className }: ModeToggleProps) {
   return (
     <div
       className={cn(
-        "relative flex h-10 w-fit items-center rounded-lg bg-muted/50 p-1 ring-1 ring-border/50",
+        "relative flex h-10 w-fit items-center rounded-xl bg-sidebar-accent/50 p-1 ring-1 ring-sidebar-border/50 shadow-sm backdrop-blur-sm",
         className
       )}
     >
-      <div className="absolute inset-0 rounded-lg bg-background/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 rounded-xl bg-background/5 backdrop-blur-sm" />
 
       <button
         onClick={() => onChange("direct")}

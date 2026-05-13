@@ -82,16 +82,16 @@ export const UIStructure = () => {
   };
 
   return (
-    <Sidebar className="border-r-2 border-blue-100 bg-blue-50/50">
+    <Sidebar className="border-r border-sidebar-border/50 bg-sidebar">
       <SidebarContent className="w-full">
         <SidebarGroup>
-          <SidebarHeader className="border-b border-blue-100 px-2 pb-3">
-            <div className="flex w-full flex-col items-center gap-4 rounded-lg p-3">
+          <SidebarHeader className="border-b border-sidebar-border/50 px-2 pb-3">
+            <div className="flex w-full flex-col items-center gap-4 rounded-xl p-2">
               <div
-                className="flex w-full items-center justify-center rounded-lg p-2 text-lg cursor-pointer hover:bg-blue-50/50 transition-colors group"
+                className="flex w-full items-center justify-center rounded-xl p-2.5 text-lg cursor-pointer bg-background/40 border border-sidebar-border/50 hover:bg-background/60 hover:border-sidebar-border transition-all duration-300 group shadow-sm hover:shadow-md"
                 onClick={() => router.push("/")}
               >
-                <h1 className="text-3xl font-extrabold text-foreground tracking-tight group-hover:scale-105 transition-transform duration-200">
+                <h1 className="text-3xl font-black text-foreground tracking-tighter group-hover:scale-105 transition-transform duration-300">
                   Ai<span className="text-primary">BoT</span>
                 </h1>
               </div>
@@ -99,7 +99,7 @@ export const UIStructure = () => {
                 <MagnifyingGlass className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <SidebarInput
                   placeholder="Search chats..."
-                  className="pl-9 h-10 bg-background/50 border-blue-200/50 focus-visible:ring-blue-400/30"
+                  className="pl-9 h-10 bg-background/50 border-sidebar-border/50 focus-visible:ring-sidebar-ring/30"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -113,7 +113,7 @@ export const UIStructure = () => {
                       window.location.reload();
                     }, 100);
                   }}
-                  className="w-full justify-start font-medium shadow-sm hover:bg-white/90 bg-white border-blue-100 h-10 text-base text-foreground"
+                  className="w-full justify-start font-semibold shadow-sm hover:bg-sidebar-accent bg-background border-sidebar-border/50 h-10 text-sm text-foreground transition-all duration-200"
                   size="lg"
                   variant="outline"
                 >
@@ -130,9 +130,9 @@ export const UIStructure = () => {
                     <CollapsibleTrigger asChild>
                       <Button
                         className={cn(
-                          "w-full justify-between h-11 px-3 bg-white hover:bg-white/90 border border-input shadow-sm transition-all text-foreground",
+                          "w-full justify-between h-11 px-3 bg-background hover:bg-sidebar-accent border border-sidebar-border/50 shadow-sm transition-all text-foreground",
                           isAgentModeOpen &&
-                            "bg-white font-medium text-primary border-primary/20"
+                            "bg-sidebar-accent font-semibold text-primary border-sidebar-border"
                         )}
                         variant="outline"
                       >
@@ -157,29 +157,29 @@ export const UIStructure = () => {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="flex flex-col gap-3 mt-3 px-2">
+                      <div className="flex flex-col gap-2 mt-3 px-1">
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-10 bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
+                          className="w-full justify-start gap-3 h-11 bg-background/50 text-foreground border border-sidebar-border/80 shadow-sm font-semibold hover:bg-sidebar-accent hover:border-sidebar-border transition-all duration-200"
                           onClick={() => router.push("/agent/summarizer")}
                         >
-                          <FileText className="size-4" weight="regular" />
+                          <FileText className="size-4.5 text-primary" weight="bold" />
                           Summarizer
                         </Button>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-10 bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
+                          className="w-full justify-start gap-3 h-11 bg-background/50 text-foreground border border-sidebar-border/80 shadow-sm font-semibold hover:bg-sidebar-accent hover:border-sidebar-border transition-all duration-200"
                           onClick={() => router.push("/agent/coder")}
                         >
-                          <TerminalWindow className="size-4" weight="regular" />
+                          <TerminalWindow className="size-4.5 text-primary" weight="bold" />
                           Coder
                         </Button>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-10 bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
+                          className="w-full justify-start gap-3 h-11 bg-background/50 text-foreground border border-sidebar-border/80 shadow-sm font-semibold hover:bg-sidebar-accent hover:border-sidebar-border transition-all duration-200"
                           onClick={() => router.push("/agent/coach")}
                         >
-                          <SpeakerHigh className="size-4" weight="regular" />
+                          <SpeakerHigh className="size-4.5 text-primary" weight="bold" />
                           Coach
                         </Button>
                       </div>
@@ -210,8 +210,8 @@ export const UIStructure = () => {
                           className={cn(
                             "group relative w-full text-left transition-all duration-200 rounded-lg px-3 py-2 h-auto text-sm",
                             execution.id === currentConversationId
-                              ? "bg-accent text-accent-foreground font-medium"
-                              : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                              : "hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground"
                           )}
                           onMouseEnter={() => setHoverChatId(execution.id)}
                           onMouseLeave={() => setHoverChatId("")}
@@ -284,9 +284,9 @@ export const UIStructure = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-blue-100 p-4">
+      <SidebarFooter className="border-t border-sidebar-border/50 p-4">
         <div className="w-full text-center">
-          <p className="text-[11px] text-blue-400 font-medium">
+          <p className="text-[11px] text-sidebar-foreground/40 font-medium">
             Made by{" "}
             <a
               href="https://github.com/Suryanshu-Nabheet"
