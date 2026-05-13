@@ -48,6 +48,13 @@ const geistMono = Geist_Mono({
 // To keep it clean and robust, I'll inline a simplified version here or duplicate for safety.
 // Given strict instructions, I will duplicate the MessageComponent logic to ensure isolation.
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 const MessageComponent = memo(
   ({
     message,
@@ -73,59 +80,93 @@ const MessageComponent = memo(
     );
     const contentToShow = isUser ? message.content : displayedContent;
 
-    // Simple copy for now
-    const [copied, setCopied] = useState(false);
-    const handleCopy = () => {
-      onCopy(message.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    };
+    const [isCopied, setIsCopied] = useState(false);
+    const handleCopy = useCallback(async () => {
+      await onCopy(message.content);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }, [onCopy, message.content]);
 
     return (
       <div
         className={cn(
-          "flex flex-col max-w-full px-4 py-2",
+          "flex flex-col max-w-full px-4 md:px-6 py-2",
           isUser ? "items-end" : "items-start"
         )}
       >
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 text-sm shadow-sm max-w-[90%]",
-            "break-words overflow-hidden",
+            "text-sm w-full max-w-full overflow-hidden break-words",
             isUser
-              ? "bg-primary text-primary-foreground rounded-tr-md"
-              : "bg-muted text-foreground rounded-tl-md border border-border/50"
+              ? "bg-muted text-foreground border border-border/50 rounded-2xl px-3.5 py-2.5 md:px-5 md:py-3.5 shadow-sm"
+              : "bg-transparent text-foreground px-0 py-2 shadow-none border-none"
           )}
         >
           {isUser ? (
-            <div className="whitespace-pre-wrap">{contentToShow}</div>
+            <div className="whitespace-pre-wrap font-medium">{contentToShow}</div>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown
-                remarkPlugins={remarkPlugins}
-                rehypePlugins={rehypePlugins}
-                components={markdownComponents}
-              >
-                {contentToShow}
-              </ReactMarkdown>
+            <div className="w-full max-w-full">
+              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
+                <div className="w-full max-w-full overflow-hidden">
+                  <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_p]:break-words [&_li]:break-words [&_h1]:break-words [&_h2]:break-words">
+                    <ReactMarkdown
+                      remarkPlugins={remarkPlugins}
+                      rehypePlugins={rehypePlugins}
+                      components={markdownComponents}
+                    >
+                      {contentToShow}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
-        {!isUser && message.content.trim() && ( // Hide buttons on empty content
-          <div className="flex items-center gap-1 mt-1 pl-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors"
-              onClick={handleCopy}
-              title={copied ? "Copied!" : "Copy message"}
-            >
-              {copied ? (
-                <CheckIcon className="size-3.5 text-green-500" />
-              ) : (
-                <ClipboardTextIcon className="size-3.5" />
-              )}
-            </Button>
+        
+        {/* Actions - Only show after response is complete */}
+        {!isUser && message.content.trim() && displayedContent.length === message.content.length && (
+          <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200">
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                    onClick={handleCopy}
+                  >
+                    {isCopied ? (
+                      <CheckIcon className="size-4 text-green-500" />
+                    ) : (
+                      <CopyIcon className="size-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Copy message</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                    onClick={async () => {
+                      try {
+                        const { generatePDF } = await import("@/lib/pdf-utils");
+                        await generatePDF(message.content, "arena-response.pdf", "Arena Response");
+                        toast.success("PDF downloaded successfully!");
+                      } catch (err) {
+                        toast.error("Failed to generate PDF");
+                      }
+                    }}
+                  >
+                    <DownloadIcon className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Download as PDF</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
       </div>
@@ -135,20 +176,27 @@ const MessageComponent = memo(
 MessageComponent.displayName = "MessageComponent";
 
 export default function ArenaInterface({
-  conversationId,
+  conversationId: initialConversationId,
 }: {
   conversationId?: string;
 }) {
+  // Shared conversation ID for both panels to keep history unified
+  const [arenaConversationId] = useState(() => initialConversationId || v4());
+
   // --- Dual Sessions ---
   const leftChat = useChatSession({
     storageKey: "arena-a",
     sessionId: "arena-a",
-    conversationId,
+    conversationId: arenaConversationId,
+    executionType: "ARENA",
+    viewMode: "side-by-side",
   });
   const rightChat = useChatSession({
     storageKey: "arena-b",
     sessionId: "arena-b",
-    conversationId,
+    conversationId: arenaConversationId,
+    executionType: "ARENA",
+    viewMode: "side-by-side",
   });
 
   // --- Shared Input State ---

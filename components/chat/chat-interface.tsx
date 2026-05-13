@@ -345,6 +345,7 @@ export default function ChatInterface({
   } = useChatSession({
     conversationId: initialConversationId,
     storageKey,
+    viewMode: "direct",
   });
 
 

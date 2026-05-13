@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
+import { useViewMode } from "@/contexts/view-mode-context";
 
 export const UIStructure = () => {
   const {
@@ -82,6 +83,8 @@ export const UIStructure = () => {
     setEditingId("");
     toast.success("Title updated");
   };
+
+  const { setViewMode } = useViewMode();
 
   return (
     <Sidebar className="border-r border-sidebar-border/50 bg-sidebar">
@@ -217,7 +220,12 @@ export const UIStructure = () => {
                           )}
                           onMouseEnter={() => setHoverChatId(execution.id)}
                           onMouseLeave={() => setHoverChatId("")}
-                          onClick={() => router.push(`/chat/${execution.id}`)}
+                          onClick={() => {
+                            if (execution.mode) {
+                              setViewMode(execution.mode);
+                            }
+                            router.push(`/chat/${execution.id}`);
+                          }}
                         >
                           <div className="flex w-full items-center justify-between overflow-hidden">
                             {editingId === execution.id ? (

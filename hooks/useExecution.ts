@@ -13,10 +13,12 @@ export interface Execution {
   createdAt: string;
   updatedAt: string;
   type: ExecutionType;
+  mode?: "direct" | "side-by-side";
 }
 
-enum ExecutionType {
+export enum ExecutionType {
   CONVERSATION = "CONVERSATION",
+  ARENA = "ARENA",
 }
 
 // Initial load from sessionStorage if available (client-side only)

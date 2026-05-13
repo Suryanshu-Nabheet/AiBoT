@@ -19,12 +19,16 @@ export interface UseChatSessionOptions {
   conversationId?: string;
   storageKey?: string;
   sessionId?: string; // Persistence key for conversationId
+  executionType?: any; // e.g. ExecutionType.ARENA
+  viewMode?: "direct" | "side-by-side";
 }
 
 export function useChatSession({
   conversationId: initialConversationId,
   storageKey = "preferredModel",
   sessionId,
+  executionType,
+  viewMode,
 }: UseChatSessionOptions = {}) {
   // --- State ---
   const { modelId: persistedModelId, setModelId } = useModel({
@@ -234,7 +238,8 @@ export function useChatSession({
         title,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        type: "CONVERSATION" as any,
+        type: executionType || ("CONVERSATION" as any),
+        mode: viewMode || "direct",
       });
       setExecutionCreated(true);
     }
