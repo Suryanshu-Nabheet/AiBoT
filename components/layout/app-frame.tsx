@@ -17,7 +17,7 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
         <UIStructure />
         <SidebarInset className="bg-sidebar p-0 md:p-2 relative flex-col">
           <div className="flex h-full flex-col w-full max-w-full relative overflow-hidden bg-background md:rounded-2xl border border-sidebar-border/50 shadow-sm">
-            <header className="flex h-12 w-full items-center gap-0 shrink-0 z-10 overflow-hidden select-none">
+            <header className="flex h-11 w-full items-center gap-0 shrink-0 z-10 overflow-hidden select-none">
               {/* Left and Center of Header - White Background */}
               <div className="flex-1 flex items-center gap-4 px-4 h-full bg-background border-b border-sidebar-border/30">
                 <SidebarToggle />
@@ -27,21 +27,21 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
               {isHomePage ? (
                 <>
                   {/* The "Slanted" S-Curve Transition - Desktop Only */}
-                  <div className="hidden md:block h-full w-12 bg-sidebar relative">
+                  <div className="hidden md:block h-full w-8 bg-sidebar relative">
                     <svg
-                      viewBox="0 0 48 48"
+                      viewBox="0 0 32 44"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
                       className="absolute inset-0 w-full h-full text-background fill-current"
                       preserveAspectRatio="none"
                     >
-                      <path d="M0 0H48V48H0V0Z" fill="var(--color-sidebar)" />
+                      <path d="M0 0H32V44H0V0Z" fill="var(--color-sidebar)" />
                       <path
-                        d="M0 0C24 0 24 48 48 48H0V0Z"
+                        d="M0 0C16 0 16 44 32 44H0V0Z"
                         fill="currentColor"
                       />
                       <path
-                        d="M0 48H48"
+                        d="M0 44H32"
                         stroke="border-sidebar-border/30"
                         strokeWidth="1"
                       />
@@ -49,7 +49,7 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
                   </div>
 
                   {/* Right "Cut-out" for the Toggle - Desktop Only */}
-                  <div className="hidden md:flex items-center h-full bg-sidebar pr-6 border-b border-sidebar-border/30">
+                  <div className="hidden md:flex items-center h-full bg-sidebar pr-4 border-b border-sidebar-border/30">
                     <HeaderModeToggle />
                   </div>
 
