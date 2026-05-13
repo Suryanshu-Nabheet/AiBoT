@@ -94,7 +94,14 @@ export const UIStructure = () => {
             <div className="flex w-full flex-col items-center gap-4 rounded-xl p-2">
               <div
                 className="flex w-full items-center justify-center py-2 cursor-pointer transition-all duration-300 group"
-                onClick={() => router.push("/")}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    sessionStorage.removeItem("session-directModel");
+                    sessionStorage.removeItem("session-arena-a");
+                    sessionStorage.removeItem("session-arena-b");
+                    window.location.href = "/";
+                  }
+                }}
               >
                 <h1 className="text-3xl font-bold text-foreground tracking-tight group-hover:scale-105 transition-transform duration-300">
                   Ai<span className="text-primary">BoT</span>
@@ -114,10 +121,12 @@ export const UIStructure = () => {
                 <Button
                   onClick={(e) => {
                     e.preventDefault();
-                    router.push(`/`);
-                    setTimeout(() => {
-                      window.location.reload();
-                    }, 100);
+                    if (typeof window !== "undefined") {
+                      sessionStorage.removeItem("session-directModel");
+                      sessionStorage.removeItem("session-arena-a");
+                      sessionStorage.removeItem("session-arena-b");
+                      window.location.href = "/";
+                    }
                   }}
                   className="w-full justify-start gap-3 h-11 px-4 bg-background text-foreground border border-sidebar-border shadow-sm hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-300 font-bold tracking-tight rounded-xl group"
                 >
