@@ -44,13 +44,26 @@ export default function RootLayout({
             <div className="flex h-screen w-full max-w-full overflow-hidden">
               <SidebarProvider>
                 <UIStructure />
-                <SidebarInset className="bg-sidebar p-0 md:p-2">
+                <SidebarInset className="bg-sidebar p-0 md:p-2 relative flex-col">
                   <div className="flex h-full flex-col w-full max-w-full relative overflow-hidden bg-background md:rounded-2xl border border-sidebar-border/50 shadow-sm">
-                    <header className="flex h-12 w-full items-center gap-2 shrink-0 px-2 sm:px-4 bg-background/80 backdrop-blur-md z-10 border-b border-sidebar-border/20">
-                      <SidebarToggle />
-                      <div className="flex-1" />
-                      <HeaderModeToggle />
+                    <header className="flex h-12 w-full items-center gap-0 shrink-0 z-10 overflow-hidden">
+                      {/* Left and Center of Header - White Background */}
+                      <div className="flex-1 flex items-center gap-2 px-4 h-full bg-background border-b border-sidebar-border/30">
+                        <SidebarToggle />
+                        <div className="flex-1" />
+                      </div>
+                      
+                      {/* Minimalist Right "Cut-out" for Settings Gear */}
+                      <div className="hidden md:flex items-center h-full bg-sidebar pl-3 pr-3 rounded-bl-[1.25rem] border-l border-b border-sidebar-border/30 shadow-[inset_2px_-2px_4px_rgba(0,0,0,0.02)]">
+                        <HeaderModeToggle />
+                      </div>
+
+                      {/* Mobile fallback */}
+                      <div className="md:hidden flex items-center px-4 h-full bg-background border-b border-sidebar-border/30">
+                        <HeaderModeToggle />
+                      </div>
                     </header>
+
                     <main className="flex-1 w-full max-w-full relative overflow-hidden">
                       {children}
                     </main>

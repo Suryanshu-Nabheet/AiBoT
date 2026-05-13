@@ -88,10 +88,10 @@ export const UIStructure = () => {
           <SidebarHeader className="border-b border-sidebar-border/50 px-2 pb-3">
             <div className="flex w-full flex-col items-center gap-4 rounded-xl p-2">
               <div
-                className="flex w-full items-center justify-center rounded-xl p-2.5 text-lg cursor-pointer bg-background/40 border border-sidebar-border/50 hover:bg-background/60 hover:border-sidebar-border transition-all duration-300 group shadow-sm hover:shadow-md"
+                className="flex w-full items-center justify-center py-2 cursor-pointer transition-all duration-300 group"
                 onClick={() => router.push("/")}
               >
-                <h1 className="text-3xl font-black text-foreground tracking-tighter group-hover:scale-105 transition-transform duration-300">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight group-hover:scale-105 transition-transform duration-300">
                   Ai<span className="text-primary">BoT</span>
                 </h1>
               </div>
