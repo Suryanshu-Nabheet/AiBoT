@@ -90,16 +90,16 @@ const MessageComponent = memo(
     return (
       <div
         className={cn(
-          "flex flex-col max-w-full px-4 md:px-6 py-2",
+          "flex flex-col w-full px-4 md:px-6 py-2",
           isUser ? "items-end" : "items-start"
         )}
       >
         <div
           className={cn(
-            "text-sm w-full max-w-full overflow-hidden break-words",
+            "text-sm overflow-hidden break-words",
             isUser
-              ? "bg-muted text-foreground border border-border/50 rounded-2xl px-3.5 py-2.5 md:px-5 md:py-3.5 shadow-sm"
-              : "bg-transparent text-foreground px-0 py-2 shadow-none border-none"
+              ? "bg-muted text-foreground border border-border/50 rounded-2xl px-4 py-2.5 md:px-5 md:py-3 shadow-sm max-w-[85%]"
+              : "bg-transparent text-foreground px-0 py-2 shadow-none border-none w-full max-w-full"
           )}
         >
           {isUser ? (
