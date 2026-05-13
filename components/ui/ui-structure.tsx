@@ -101,9 +101,10 @@ export const UIStructure = () => {
                 <MagnifyingGlass className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <SidebarInput
                   placeholder="Search chats..."
-                  className="pl-9 h-10 bg-background/50 border-sidebar-border/50 focus-visible:ring-sidebar-ring/30"
+                  className="pl-9 h-10 bg-background/50 border-sidebar-border/50 focus-visible:ring-0 focus-visible:ring-offset-0"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus={false}
                 />
               </div>
               <div className="w-full flex flex-col gap-2">

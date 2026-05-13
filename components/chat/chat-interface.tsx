@@ -147,7 +147,7 @@ const MessageComponent = memo(
                   className={cn(
                     "text-sm w-full max-w-full overflow-hidden break-words",
                     isUser
-                      ? "bg-muted text-foreground border border-border/50 rounded-2xl px-5 py-3.5 shadow-sm"
+                      ? "bg-muted text-foreground border border-border/50 rounded-2xl px-3.5 py-2.5 md:px-5 md:py-3.5 shadow-sm"
                       : "bg-transparent text-foreground px-0 py-2 shadow-none border-none"
                   )}
                 >
@@ -157,8 +157,8 @@ const MessageComponent = memo(
                     </div>
                   ) : (
                     <div className="w-full max-w-full">
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
-                        <div className="w-full max-w-full overflow-hidden">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words prose-img:rounded-lg prose-img:max-w-full">
+                        <div className="w-full max-w-full overflow-x-auto scrollbar-thin">
                           {/* Critical overflow container */}
                           <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
                             <ReactMarkdown
