@@ -40,6 +40,8 @@ import {
   TerminalWindow,
   CaretDown,
   SpeakerHigh,
+  ArrowCounterClockwise,
+  Plus,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -113,12 +115,12 @@ export const UIStructure = () => {
                       window.location.reload();
                     }, 100);
                   }}
-                  className="w-full justify-start font-semibold shadow-sm hover:bg-sidebar-accent bg-background border-sidebar-border/50 h-10 text-sm text-foreground transition-all duration-200"
-                  size="lg"
-                  variant="outline"
+                  className="w-full justify-start gap-3 h-11 px-4 bg-background text-foreground border border-sidebar-border shadow-sm hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-300 font-bold tracking-tight rounded-xl group"
                 >
-                  <span className="mr-2 text-primary font-bold">+</span> New
-                  Chat
+                  <div className="flex items-center justify-center size-5 rounded-lg bg-sidebar-accent border border-sidebar-border/50 group-hover:bg-background transition-colors">
+                    <Plus className="size-3.5 text-primary" weight="bold" />
+                  </div>
+                  New Chat
                 </Button>
 
                 <div className="w-full">
@@ -130,29 +132,28 @@ export const UIStructure = () => {
                     <CollapsibleTrigger asChild>
                       <Button
                         className={cn(
-                          "w-full justify-between h-11 px-3 bg-background hover:bg-sidebar-accent border border-sidebar-border/50 shadow-sm transition-all text-foreground",
+                          "w-full justify-between h-11 px-3 bg-background hover:bg-sidebar-accent border border-sidebar-border shadow-sm transition-all text-foreground rounded-xl",
                           isAgentModeOpen &&
-                            "bg-sidebar-accent font-semibold text-primary border-sidebar-border"
+                            "bg-sidebar-accent font-bold text-primary border-sidebar-border"
                         )}
-                        variant="outline"
+                        variant="ghost"
                       >
                         <div className="flex items-center gap-2.5">
                           <Code
                             className={cn(
-                              "size-4",
-                              isAgentModeOpen
-                                ? "text-primary"
-                                : "text-muted-foreground"
+                              "size-5 transition-colors",
+                              isAgentModeOpen ? "text-primary" : "text-muted-foreground"
                             )}
-                            weight={isAgentModeOpen ? "bold" : "regular"}
+                            weight="bold"
                           />
-                          <span className="text-sm">Agent Mode</span>
+                          <span className="font-bold tracking-tight">Agent Mode</span>
                         </div>
                         <CaretDown
                           className={cn(
-                            "size-3.5 text-muted-foreground transition-transform duration-200",
-                            isAgentModeOpen && "rotate-180 text-primary"
+                            "size-3.5 transition-transform duration-300",
+                            isAgentModeOpen ? "rotate-180 text-primary" : "text-muted-foreground"
                           )}
+                          weight="bold"
                         />
                       </Button>
                     </CollapsibleTrigger>
@@ -160,7 +161,7 @@ export const UIStructure = () => {
                       <div className="flex flex-col gap-2 mt-3 px-1">
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-11 bg-background/50 text-foreground border border-sidebar-border/80 shadow-sm font-semibold hover:bg-sidebar-accent hover:border-sidebar-border transition-all duration-200"
+                          className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
                           onClick={() => router.push("/agent/summarizer")}
                         >
                           <FileText className="size-4.5 text-primary" weight="bold" />
@@ -168,7 +169,7 @@ export const UIStructure = () => {
                         </Button>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-11 bg-background/50 text-foreground border border-sidebar-border/80 shadow-sm font-semibold hover:bg-sidebar-accent hover:border-sidebar-border transition-all duration-200"
+                          className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
                           onClick={() => router.push("/agent/coder")}
                         >
                           <TerminalWindow className="size-4.5 text-primary" weight="bold" />
@@ -176,7 +177,7 @@ export const UIStructure = () => {
                         </Button>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-11 bg-background/50 text-foreground border border-sidebar-border/80 shadow-sm font-semibold hover:bg-sidebar-accent hover:border-sidebar-border transition-all duration-200"
+                          className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
                           onClick={() => router.push("/agent/coach")}
                         >
                           <SpeakerHigh className="size-4.5 text-primary" weight="bold" />
