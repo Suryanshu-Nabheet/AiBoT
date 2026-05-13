@@ -11,13 +11,9 @@ import { Toaster } from "sonner";
 import { siteConfig } from "@/config/site";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
-import { UIStructure } from "@/components/ui/ui-structure";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { ViewModeProvider } from "@/contexts/view-mode-context";
-import { SidebarToggle } from "@/components/layout/sidebar-toggle";
-import { HeaderModeToggle } from "@/components/home/header-mode-toggle";
-import { ThemeProvider } from "next-themes";
 import { AppFrame } from "@/components/layout/app-frame";
+import { ViewModeProvider } from "@/contexts/view-mode-context";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = siteConfig;
 
@@ -41,18 +37,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${font.variable} font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Providers>
-            <ViewModeProvider>
+        <Providers>
+          <ViewModeProvider>
+            <TooltipProvider delayDuration={0}>
               <AppFrame>{children}</AppFrame>
-            </ViewModeProvider>
-          </Providers>
-        </ThemeProvider>
+            </TooltipProvider>
+          </ViewModeProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>

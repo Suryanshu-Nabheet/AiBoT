@@ -66,21 +66,28 @@ const ArenaLayoutIcon = ({ active }: { active: boolean }) => (
   </div>
 );
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 export function ModeToggle({ mode, onChange, className }: ModeToggleProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "h-8 w-8 rounded-lg bg-background/50 backdrop-blur-md border border-sidebar-border shadow-sm hover:bg-background transition-all duration-200",
-            className
-          )}
-        >
-          <Gear className="size-4 text-sidebar-foreground/70" weight="bold" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-8 w-8 rounded-lg bg-background/50 backdrop-blur-md border border-sidebar-border shadow-sm hover:bg-background transition-all duration-200",
+                className
+              )}
+            >
+              <Gear className="size-4 text-sidebar-foreground/70" weight="bold" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">View Architecture</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5 shadow-xl border-sidebar-border/50">
         <DropdownMenuLabel className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 px-2 py-1.5">
           Architecture

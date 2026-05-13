@@ -40,6 +40,12 @@ import { useExecutionContext } from "@/contexts/execution-context";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
 import { Message, Role, MODELS } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -139,20 +145,19 @@ const MessageComponent = memo(
                 {/* Message Content */}
                 <div
                   className={cn(
-                    "rounded-2xl px-5 py-3.5 text-sm shadow-md",
-                    "w-full max-w-full overflow-hidden break-words",
+                    "text-sm w-full max-w-full overflow-hidden break-words",
                     isUser
-                      ? "bg-primary text-primary-foreground rounded-tr-md"
-                      : "bg-muted text-foreground rounded-tl-md border border-border/50"
+                      ? "bg-muted text-foreground border border-border/50 rounded-2xl px-5 py-3.5 shadow-sm"
+                      : "bg-transparent text-foreground px-0 py-2 shadow-none border-none"
                   )}
                 >
                   {isUser ? (
-                    <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere">
+                    <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere font-medium">
                       {contentToShow}
                     </div>
                   ) : (
                     <div className="w-full max-w-full">
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-li:my-1 prose-pre:my-3 prose-pre:max-w-full prose-code:break-words">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
                         <div className="w-full max-w-full overflow-hidden">
                           {/* Critical overflow container */}
                           <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
@@ -170,45 +175,51 @@ const MessageComponent = memo(
                   )}
                 </div>
 
-                {/* Copy and Download buttons */}
-                {!isUser && message.content.trim() && (
-                  <div className="mt-2 flex items-center gap-1 transition-opacity duration-200">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
-                      onClick={handleMessageCopy}
-                    >
-                      {isCopied ? (
-                        <CheckIcon className="size-3.5 text-green-500" />
-                      ) : (
-                        <CopyIcon className="size-3.5" />
-                      )}
-                    </Button>
+                {/* Copy and Download buttons - Only show after response is complete */}
+                {!isUser && message.content.trim() && displayedContent.length === message.content.length && (
+                  <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                            onClick={handleMessageCopy}
+                          >
+                            {isCopied ? (
+                              <CheckIcon className="size-4 text-green-500" />
+                            ) : (
+                              <CopyIcon className="size-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Copy message</TooltipContent>
+                      </Tooltip>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
-                      onClick={async () => {
-                        try {
-                          const { generatePDF } =
-                            await import("@/lib/pdf-utils");
-                          await generatePDF(
-                            message.content,
-                            "ai-response.pdf",
-                            "AI Response"
-                          );
-                          toast.success("PDF downloaded successfully!");
-                        } catch (error) {
-                          console.error("PDF generation error:", error);
-                          toast.error("Failed to generate PDF");
-                        }
-                      }}
-                      title="Download as PDF"
-                    >
-                      <DownloadIcon className="size-3.5" />
-                    </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                            onClick={async () => {
+                              try {
+                                const { generatePDF } = await import("@/lib/pdf-utils");
+                                await generatePDF(message.content, "ai-response.pdf", "AI Response");
+                                toast.success("PDF downloaded successfully!");
+                              } catch (error) {
+                                console.error("PDF generation error:", error);
+                                toast.error("Failed to generate PDF");
+                              }
+                            }}
+                          >
+                            <DownloadIcon className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Download as PDF</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 )}
               </div>
