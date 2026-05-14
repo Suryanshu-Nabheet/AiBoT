@@ -70,8 +70,9 @@ const MessageComponent = memo(
   }) => {
     const [isCopied, setIsCopied] = useState(false);
 
-    const handleMessageCopy = useCallback(async () => {
-      await onCopy(message.content);
+    const handleMessageCopy = useCallback(async (content?: string) => {
+      const textToCopy = typeof content === 'string' ? content : message.content;
+      await onCopy(textToCopy);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     }, [onCopy, message.content]);
