@@ -86,7 +86,7 @@ export function SettingsToggle({ mode, onChange, className }: SettingsToggleProp
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">View Architecture</TooltipContent>
+        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold"> Settings</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5 shadow-xl border-sidebar-border/50">
         <DropdownMenuLabel className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 px-2 py-1.5">

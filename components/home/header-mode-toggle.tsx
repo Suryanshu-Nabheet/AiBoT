@@ -7,12 +7,13 @@
 
 "use client";
 
-import { usePathname } from "next/navigation";
-import { SettingsToggle } from "@/components/home/settings-toggle";
+import { usePathname, useRouter } from "next/navigation";
+import { SettingsToggle, ViewMode } from "@/components/home/settings-toggle";
 import { useViewMode } from "@/contexts/view-mode-context";
 
 export function HeaderModeToggle() {
   const pathname = usePathname();
+  const router = useRouter();
   const { viewMode, setViewMode } = useViewMode();
 
   // Only show the mode toggle on chat-related screens
@@ -22,5 +23,16 @@ export function HeaderModeToggle() {
     return null;
   }
 
-  return <SettingsToggle mode={viewMode} onChange={setViewMode} className="ml-2" />;
+  const handleModeChange = (newMode: ViewMode) => {
+    // If we're in a specific chat and switching mode, go back to a new chat (home)
+    if (pathname.startsWith("/chat/") && newMode !== "settings") {
+      // Set the mode first, then navigate
+      setViewMode(newMode);
+      router.push("/");
+      return;
+    }
+    setViewMode(newMode);
+  };
+
+  return <SettingsToggle mode={viewMode} onChange={handleModeChange} className="ml-2" />;
 }

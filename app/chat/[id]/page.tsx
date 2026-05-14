@@ -14,26 +14,21 @@ import { useViewMode } from "@/contexts/view-mode-context";
 import { AnimatePresence, motion } from "framer-motion";
 import { useExecutionContext } from "@/contexts/execution-context";
 
+import { SettingsPanel } from "@/components/settings/settings-panel";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ChatPage = ({ params }: { params: any }) => {
   const { id } = use(params as Promise<{ id: string }>);
   const { viewMode, setViewMode } = useViewMode();
   const { executions } = useExecutionContext();
 
-  // Force the correct view mode based on the conversation's history
-  useEffect(() => {
-    if (id && executions.length > 0) {
-      const currentExecution = executions.find((e) => e.id === id);
-      if (currentExecution?.mode && currentExecution.mode !== viewMode) {
-        setViewMode(currentExecution.mode);
-      }
-    }
-  }, [id, executions, viewMode, setViewMode]);
+  // The view mode is now primarily driven by the user's manual selection in the header
+  // or the initial load. Removing aggressive auto-correction to prevent "double-click" bugs.
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden relative">
       <AnimatePresence mode="popLayout" initial={false}>
-        {viewMode === "direct" ? (
+        {viewMode === "direct" && (
           <motion.div
             key="direct"
             className="h-full w-full overflow-hidden"
@@ -44,7 +39,9 @@ const ChatPage = ({ params }: { params: any }) => {
           >
             <ChatInterface conversationId={id} />
           </motion.div>
-        ) : (
+        )}
+        
+        {viewMode === "side-by-side" && (
           <motion.div
             key="arena"
             className="h-full w-full overflow-hidden"
@@ -54,6 +51,19 @@ const ChatPage = ({ params }: { params: any }) => {
             transition={{ duration: 0.15 }}
           >
             <ArenaInterface conversationId={id} />
+          </motion.div>
+        )}
+
+        {viewMode === "settings" && (
+          <motion.div
+            key="settings"
+            className="h-full w-full"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
+            <SettingsPanel />
           </motion.div>
         )}
       </AnimatePresence>
