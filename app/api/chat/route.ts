@@ -8,6 +8,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 
+export const runtime = "edge";
+export const maxDuration = 300; // 5 minutes for deep reasoning
+
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const SITE_NAME = "AiBoT";

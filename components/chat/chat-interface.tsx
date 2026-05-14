@@ -108,9 +108,9 @@ const MessageComponent = memo(
 
     if (!isUser) {
       const rawContent = message.content;
+      const isThinkingMode = message.isThinkingRequested;
       
       // Super-Advance Harness: Universal Thinking Tag Support
-      // Matches: <thinking>, <|thinking|>, <thought>, [THOUGHT], etc.
       const thinkingPatterns = [
         { open: /<thinking>/i, close: /<\/thinking>/i },
         { open: /<begin_of_thinking>/i, close: /<\/end_of_thinking>/i },
@@ -120,31 +120,39 @@ const MessageComponent = memo(
       ];
 
       let matchFound = false;
-      for (const pattern of thinkingPatterns) {
-        const openMatch = rawContent.match(pattern.open);
+
+      // 1. Universal Transition Detector
+      // This looks for ANY closing tags, specialized markers, or bracketed headers 
+      // that models typically use to transition from reasoning to answer.
+      const transitionRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
+      const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i; // Matches any closing tag or "final" markers
+      
+      const transitionMatch = rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
+
+      if (transitionMatch) {
+        const splitMarker = transitionMatch[0];
+        const parts = rawContent.split(splitMarker);
+        
+        // The part before the first transition is ALWAYS reasoning
+        thinkingContent = parts[0].replace(/<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi, "").trim();
+        
+        // The part after is the main response, stripped of any remaining hallucinated tags
+        mainResponse = parts.slice(1).join(splitMarker).replace(/<\/?[^>]+(>|$)/g, "").trim();
+        matchFound = true;
+      } else if (isThinkingMode && rawContent.length > 0) {
+        // 2. If no transition found yet, and we have an opening tag, extract what's inside
+        const anyOpenTag = /<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+        const openMatch = rawContent.match(anyOpenTag);
+        
         if (openMatch) {
-          matchFound = true;
-          const openTag = openMatch[0];
-          const parts = rawContent.split(openTag);
-          
-          if (parts.length > 1) {
-            const closeMatch = parts[1].match(pattern.close);
-            if (closeMatch) {
-              const closeTag = closeMatch[0];
-              const thinkingParts = parts[1].split(closeTag);
-              thinkingContent = thinkingParts[0].trim();
-              
-              // Remove the entire block from the main response
-              const blockPattern = new RegExp(`${openTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${closeTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, "gi");
-              mainResponse = contentToShow.replace(blockPattern, "").trim();
-            } else {
-              // Still thinking
-              thinkingContent = parts[1].trim();
-              mainResponse = "";
-            }
-          }
-          break;
+          thinkingContent = rawContent.split(openMatch[0])[1]?.trim() || "";
+          mainResponse = "";
+        } else {
+          // If no tags at all but thinking requested, assume all is thinking
+          thinkingContent = rawContent.trim();
+          mainResponse = "";
         }
+        matchFound = true;
       }
     }
 

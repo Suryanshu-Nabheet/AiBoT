@@ -128,23 +128,33 @@ export function useChatSession({
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let accumulated = "";
+    let buffer = "";
     let updateCounter = 0;
-    const UPDATE_BATCH_SIZE = 5;
+    const UPDATE_BATCH_SIZE = 3; // Smaller batch for smoother UI
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        
+        const lines = buffer.split("\n");
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() || "";
+
         for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || trimmedLine === "data: [DONE]") continue;
+
+          if (trimmedLine.startsWith("data: ")) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const data = JSON.parse(trimmedLine.slice(6));
               const content = data.choices?.[0]?.delta?.content || data.content;
               if (content) accumulated += content;
-            } catch (e) {}
+            } catch (e) {
+              // Silently ignore parse errors for partial/malformed JSON in stream
+            }
           }
         }
 
