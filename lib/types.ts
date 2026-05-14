@@ -183,6 +183,7 @@ export type ModelFull = {
   isPremium: boolean;
   summary?: string;
   logo?: string;
+  provider?: string;
 };
 
 export const CreateChatSchema = z.object({

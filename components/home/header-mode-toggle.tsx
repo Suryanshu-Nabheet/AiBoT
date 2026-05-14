@@ -8,7 +8,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { ModeToggle } from "@/components/home/mode-toggle";
+import { SettingsToggle } from "@/components/home/settings-toggle";
 import { useViewMode } from "@/contexts/view-mode-context";
 
 export function HeaderModeToggle() {
@@ -22,5 +22,5 @@ export function HeaderModeToggle() {
     return null;
   }
 
-  return <ModeToggle mode={viewMode} onChange={setViewMode} className="ml-2" />;
+  return <SettingsToggle mode={viewMode} onChange={setViewMode} className="ml-2" />;
 }

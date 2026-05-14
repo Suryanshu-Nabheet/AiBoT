@@ -8,7 +8,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { ViewMode } from "@/components/home/mode-toggle";
+import { ViewMode } from "@/components/home/settings-toggle";
 
 interface ViewModeContextType {
   viewMode: ViewMode;

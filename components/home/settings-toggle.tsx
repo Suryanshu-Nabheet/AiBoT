@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-export type ViewMode = "direct" | "side-by-side";
+export type ViewMode = "direct" | "side-by-side" | "settings";
 
-interface ModeToggleProps {
+interface SettingsToggleProps {
   mode: ViewMode;
   onChange: (mode: ViewMode) => void;
   className?: string;
@@ -68,7 +68,7 @@ const ArenaLayoutIcon = ({ active }: { active: boolean }) => (
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export function ModeToggle({ mode, onChange, className }: ModeToggleProps) {
+export function SettingsToggle({ mode, onChange, className }: SettingsToggleProps) {
   return (
     <DropdownMenu>
       <Tooltip>
@@ -118,6 +118,21 @@ export function ModeToggle({ mode, onChange, className }: ModeToggleProps) {
             <span className="text-[10px] font-bold tracking-tight">Arena Mode</span>
           </button>
         </div>
+        <DropdownMenuSeparator className="my-1.5 bg-sidebar-border/50" />
+        <DropdownMenuItem 
+          onClick={() => onChange("settings")}
+          className={cn(
+            "flex items-center gap-2.5 p-2 rounded-lg transition-all duration-200 cursor-pointer mx-0.5",
+            mode === "settings" 
+              ? "bg-primary/[0.04] text-primary" 
+              : "hover:bg-muted/50 text-muted-foreground"
+          )}
+        >
+          <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted/50 text-muted-foreground group-hover:text-primary transition-colors">
+            <Gear className="size-3.5" weight="bold" />
+          </div>
+          <span className="text-[11px] font-bold tracking-tight">App Settings</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

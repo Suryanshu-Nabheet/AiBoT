@@ -11,6 +11,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { v4 } from "uuid";
 import { toast } from "sonner";
 import { useModel } from "@/hooks/use-model";
+import { useSettings } from "@/contexts/settings-context";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { Message, Role } from "@/lib/types";
@@ -44,6 +45,7 @@ export function useChatSession({
   const [attachments, setAttachments] = useState<
     { name: string; content: string; type: string }[]
   >([]);
+  const { apiKeys } = useSettings();
   const [executionCreated, setExecutionCreated] = useState(false);
 
   // Initialize conversationId with session persistence logic
@@ -252,6 +254,7 @@ export function useChatSession({
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -263,6 +266,7 @@ export function useChatSession({
           model,
           conversationId,
           isThinking,
+          customKeys: apiKeys,
         }),
         signal: abortControllerRef.current.signal,
       });

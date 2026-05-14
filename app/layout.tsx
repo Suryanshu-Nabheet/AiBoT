@@ -13,6 +13,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import { AppFrame } from "@/components/layout/app-frame";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
+import { SettingsProvider } from "@/contexts/settings-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = siteConfig;
@@ -39,9 +40,11 @@ export default function RootLayout({
       <body className={`${font.variable} font-sans antialiased`}>
         <Providers>
           <ViewModeProvider>
-            <TooltipProvider delayDuration={0}>
-              <AppFrame>{children}</AppFrame>
-            </TooltipProvider>
+            <SettingsProvider>
+              <TooltipProvider delayDuration={0}>
+                <AppFrame>{children}</AppFrame>
+              </TooltipProvider>
+            </SettingsProvider>
           </ViewModeProvider>
         </Providers>
         <Toaster />
