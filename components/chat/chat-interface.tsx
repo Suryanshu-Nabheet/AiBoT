@@ -196,8 +196,16 @@ const MessageComponent = memo(
                           exit={{ height: 0, opacity: 0 }}
                           className="overflow-hidden px-1"
                         >
-                          <div className="text-sm text-muted-foreground/80 leading-relaxed whitespace-pre-wrap font-mono py-2 border-l border-primary/5 pl-4 my-1">
-                            {thinkingContent}
+                          <div className="text-sm text-muted-foreground/75 leading-relaxed py-2 border-l border-primary/5 pl-4 my-1">
+                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:first:mt-0 prose-headings:mb-3 prose-headings:text-muted-foreground/80 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words prose-img:rounded-lg prose-img:max-w-full [&_*]:text-muted-foreground/75">
+                              <ReactMarkdown
+                                remarkPlugins={remarkPlugins}
+                                rehypePlugins={rehypePlugins}
+                                components={markdownComponents}
+                              >
+                                {thinkingContent}
+                              </ReactMarkdown>
+                            </div>
                           </div>
                         </motion.div>
                       )}
