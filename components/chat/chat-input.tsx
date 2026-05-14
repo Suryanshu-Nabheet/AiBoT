@@ -15,6 +15,7 @@ import {
   PaperclipIcon,
   MagicWandIcon,
   MicrophoneIcon,
+  Lightbulb as LightbulbIcon,
   X as XIcon,
 } from "@phosphor-icons/react";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +38,8 @@ interface ChatInputProps {
   onSpeechToggle?: () => void;
   isEnhancing?: boolean;
   onEnhance?: () => void;
+  isThinking?: boolean;
+  onThinkingToggle?: () => void;
   model?: string;
   onModelChange?: (model: string) => void;
   showModelSelector?: boolean;
@@ -56,6 +59,8 @@ export function ChatInput({
   onSpeechToggle,
   isEnhancing = false,
   onEnhance,
+  isThinking = false,
+  onThinkingToggle,
   model,
   onModelChange,
   showModelSelector = false,
@@ -252,6 +257,30 @@ export function ChatInput({
                 ) : (
                   <MicrophoneIcon className="size-[18px]" />
                 )}
+              </Button>
+
+              {/* Thinking Mode */}
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "size-8 rounded-full transition-all duration-300",
+                  isThinking
+                    ? "text-amber-400 bg-amber-400/10"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                onClick={onThinkingToggle}
+                title="Thinking mode"
+              >
+                <LightbulbIcon
+                  weight={isThinking ? "fill" : "regular"}
+                  className={cn(
+                    "size-[18px]",
+                    isThinking && "animate-pulse brightness-125"
+                  )}
+                  style={isThinking ? { filter: "drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))" } : {}}
+                />
               </Button>
 
               {/* Enhance Prompt */}

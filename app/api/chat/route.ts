@@ -85,13 +85,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Invalid JSON" }, { status: 400 });
   }
 
-  const { messages, model: requestedModel } = body;
+  const { messages, model: requestedModel, isThinking } = body;
 
   // No auto-switching: Try ONLY the requested model
   const targetModel = requestedModel || MODELS[0].id;
 
   try {
-    console.log(`API: Attempting model ${targetModel}...`);
+    console.log(`API: Attempting model ${targetModel} (Thinking: ${isThinking})...`);
 
     // Optimize messages for Vision API
     const optimizedMessages = formatMessagesForOpenRouter(messages);
@@ -102,7 +102,12 @@ export async function POST(req: NextRequest) {
       ? targetModel.split("/")[0].toUpperCase()
       : "AI Provider";
 
-    const dynamicSystemPrompt = `You are the ${modelDisplayName} model (provided by ${providerTitle}), integrated within the AiBoT platform, which was founded and developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
+    let dynamicSystemPrompt = `You are the ${modelDisplayName} model (provided by ${providerTitle}), integrated within the AiBoT platform, which was founded and developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
+
+    // Inject Deep Reasoning instruction if enabled
+    if (isThinking) {
+      dynamicSystemPrompt += `\n\n[DEEP REASONING MODE: MANDATORY]\n- You MUST start your response with an internal reasoning process inside <thinking> tags.\n- This reasoning must be thorough, step-by-step, and strictly analytical.\n- ONLY after the closing </thinking> tag, provide your final response to the user.\n- DO NOT skip the thinking process. It is an UNCOMPROMISING requirement for this session.\n- ALWAYS start the very first token of your response with the opening <thinking> tag.`;
+    }
 
     let finalMessages = [...optimizedMessages];
 

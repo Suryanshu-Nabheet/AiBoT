@@ -46,6 +46,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ThinkingBar } from "@/components/core/thinking-bar";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -60,10 +61,12 @@ const MessageComponent = memo(
     message,
     onCopy,
     onModelSelect,
+    isGenerating,
   }: {
     message: Message;
     onCopy: (content: string) => void;
     onModelSelect?: (modelId: string) => void;
+    isGenerating?: boolean;
   }) => {
     const [isCopied, setIsCopied] = useState(false);
 
@@ -95,6 +98,40 @@ const MessageComponent = memo(
       message.shouldAnimate
     );
     const contentToShow = isUser ? message.content : displayedContent;
+
+    // Parsing Thinking blocks - Only for Agent responses
+    const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
+    
+    let thinkingContent = "";
+    let mainResponse = contentToShow;
+
+    if (!isUser) {
+      const rawContent = message.content;
+      
+      // Use raw content for parsing tags to avoid smooth typing interference
+      const thinkingMatch = rawContent.match(/<thinking>([\s\S]*?)<\/thinking>/);
+      
+      if (thinkingMatch) {
+        thinkingContent = thinkingMatch[1].trim();
+        // For display, we still use the animated content but stripped of tags
+        mainResponse = contentToShow.replace(/<thinking>[\s\S]*?<\/thinking>/, "").trim();
+      } else if (rawContent.includes("<thinking>")) {
+        // Handle partial streaming thinking
+        const parts = rawContent.split("<thinking>");
+        if (parts.length > 1) {
+          const thinkingParts = parts[1].split("</thinking>");
+          thinkingContent = thinkingParts[0].trim();
+          
+          if (thinkingParts.length > 1) {
+            // Thinking finished, response started
+            mainResponse = thinkingParts[1].trim();
+          } else {
+            // Still thinking
+            mainResponse = "";
+          }
+        }
+      }
+    }
 
     return (
       <div className="w-full">
@@ -142,6 +179,32 @@ const MessageComponent = memo(
                   </div>
                 )}
 
+                {/* Thinking Bar */}
+                {!isUser && thinkingContent && (
+                  <div className="w-full">
+                    <ThinkingBar
+                      text={isThinkingExpanded ? "Reasoning Details" : (mainResponse ? "Deep reasoning complete" : "Deep reasoning in progress")}
+                      isExpanded={isThinkingExpanded}
+                      onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+                      onStop={!mainResponse ? () => setIsThinkingExpanded(true) : undefined}
+                    />
+                    <AnimatePresence>
+                      {isThinkingExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden px-1"
+                        >
+                          <div className="text-sm text-muted-foreground/80 leading-relaxed whitespace-pre-wrap font-mono py-2 border-l border-primary/5 pl-4 my-1">
+                            {thinkingContent}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
                 {/* Message Content */}
                 <div
                   className={cn(
@@ -153,30 +216,31 @@ const MessageComponent = memo(
                 >
                   {isUser ? (
                     <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere font-medium">
-                      {contentToShow}
+                      {mainResponse}
                     </div>
                   ) : (
                     <div className="w-full max-w-full">
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words prose-img:rounded-lg prose-img:max-w-full">
-                        <div className="w-full max-w-full overflow-x-auto scrollbar-thin">
-                          {/* Critical overflow container */}
-                          <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
-                            <ReactMarkdown
-                              remarkPlugins={remarkPlugins}
-                              rehypePlugins={rehypePlugins}
-                              components={markdownComponents}
-                            >
-                              {contentToShow}
-                            </ReactMarkdown>
+                      {mainResponse && (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:first:mt-0 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words prose-img:rounded-lg prose-img:max-w-full">
+                          <div className="w-full max-w-full overflow-x-auto scrollbar-thin">
+                            <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
+                              <ReactMarkdown
+                                remarkPlugins={remarkPlugins}
+                                rehypePlugins={rehypePlugins}
+                                components={markdownComponents}
+                              >
+                                {mainResponse}
+                              </ReactMarkdown>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
 
                 {/* Copy and Download buttons - Only show after response is complete */}
-                {!isUser && message.content.trim() && displayedContent.length === message.content.length && (
+                {!isUser && message.content.trim() && !isGenerating && displayedContent.length === message.content.length && (
                   <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200">
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
@@ -265,29 +329,36 @@ const MessagesList = memo(
     onModelSelect,
     isLoading,
     loadingStatus,
+    isThinking,
   }: {
     messages: Array<Message>;
     onCopy: (content: string) => void;
     onModelSelect: (modelId: string) => void;
-    isLoading?: boolean;
-    loadingStatus?: string;
+    isLoading: boolean;
+    loadingStatus: string;
+    isThinking: boolean;
   }) => {
     return (
       <div className="flex flex-col gap-2 pb-4">
         {messages.map((message, i) => {
-          const isLastAgent =
-            isLoading &&
-            i === messages.length - 1 &&
-            message.role === Role.Agent;
+          const isLast = i === messages.length - 1;
+          const isAgentGenerating = isLoading && isLast && message.role === Role.Agent;
+          
+          // Only show loading status if it's the very last message and it's empty
+          const showLoadingStatus = isAgentGenerating && !message.content.trim();
 
           return (
             <React.Fragment key={message.id || i}>
-              {isLastAgent && loadingStatus && (
+              {showLoadingStatus && loadingStatus && (
                 <div className="px-2 sm:px-4 md:px-6 lg:px-8">
                   <div className="max-w-4xl mx-auto">
-                    <TextShimmer className="text-sm font-medium" duration={1}>
-                      {loadingStatus}
-                    </TextShimmer>
+                    {isThinking ? (
+                      <ThinkingBar text="Preparing reasoning engine..." />
+                    ) : (
+                      <TextShimmer className="text-sm font-medium" duration={1}>
+                        {loadingStatus}
+                      </TextShimmer>
+                    )}
                   </div>
                 </div>
               )}
@@ -295,6 +366,7 @@ const MessagesList = memo(
                 message={message}
                 onCopy={onCopy}
                 onModelSelect={onModelSelect}
+                isGenerating={isAgentGenerating}
               />
             </React.Fragment>
           );
@@ -306,9 +378,13 @@ const MessagesList = memo(
           loadingStatus && (
             <div className="px-2 sm:px-4 md:px-6 lg:px-8">
               <div className="max-w-4xl mx-auto">
-                <TextShimmer className="text-sm font-medium" duration={1}>
-                  {loadingStatus}
-                </TextShimmer>
+                {isThinking ? (
+                  <ThinkingBar text="Initializing reasoning..." />
+                ) : (
+                  <TextShimmer className="text-sm font-medium" duration={1}>
+                    {loadingStatus}
+                  </TextShimmer>
+                )}
               </div>
             </div>
           )}
@@ -353,21 +429,32 @@ export default function ChatInterface({
   // Enterprise Features State (UI only)
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("AiBoT is thinking...");
 
   useEffect(() => {
     if (!isLoading) {
-      setLoadingStatus("AiBoT is thinking...");
+      setLoadingStatus(isThinking ? "AiBoT is thinking..." : "AiBoT is generating...");
       return;
     }
 
-    const statuses = [
+    const thinkingStatuses = [
       "AiBoT is thinking...",
+      "Reasoning about the query...",
+      "Analyzing the context...",
+      "Drafting thought process...",
+      "Finalizing details...",
+    ];
+
+    const normalStatuses = [
+      "AiBoT is generating...",
       "Searching for answers...",
       "Analyzing the context...",
       "Drafting a response...",
       "Finalizing details...",
     ];
+
+    const statuses = isThinking ? thinkingStatuses : normalStatuses;
 
     let i = 0;
     const interval = setInterval(() => {
@@ -602,7 +689,7 @@ export default function ChatInterface({
 
   const handleCreateChat = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSend();
+    handleSend(undefined, undefined, undefined, isThinking);
   };
 
   // NOTE: Logic successfully extracted to useChatSession
@@ -645,6 +732,7 @@ export default function ChatInterface({
                 onModelSelect={setModel}
                 isLoading={isLoading}
                 loadingStatus={loadingStatus}
+                isThinking={isThinking}
               />
               {/* Invisible element to scroll to */}
               <div ref={messagesEndRef} className="h-4" />
@@ -680,6 +768,8 @@ export default function ChatInterface({
         onSpeechToggle={handleSpeech}
         isEnhancing={isEnhancing}
         onEnhance={handleEnhance}
+        isThinking={isThinking}
+        onThinkingToggle={() => setIsThinking(!isThinking)}
         model={model}
         onModelChange={setModel}
         showModelSelector={true}

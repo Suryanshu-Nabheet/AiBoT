@@ -190,7 +190,9 @@ export function useChatSession({
 
   const handleSend = async (
     manualQuery?: string,
-    manualAttachments?: { name: string; content: string; type: string }[]
+    manualAttachments?: { name: string; content: string; type: string }[],
+    systemInstruction?: string,
+    isThinking?: boolean
   ) => {
     const inputQuery = manualQuery || query;
     if (!inputQuery.trim() || isLoading) return;
@@ -199,7 +201,7 @@ export function useChatSession({
     const currentQuery = inputQuery.trim();
     const currentAttachments = manualAttachments || attachments;
 
-    // Prepare content with attachments
+    // Prepare content with attachments for the API
     let apiContent = currentQuery;
     if (currentAttachments.length > 0) {
       const aiContext = currentAttachments
@@ -212,18 +214,21 @@ export function useChatSession({
       apiContent = `${aiContext}\n\n${currentQuery}`;
     }
 
+    // Append hidden instruction if provided
+    if (systemInstruction) {
+      apiContent = `${systemInstruction}\n\n${apiContent}`;
+    }
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: Role.User,
-      content: currentQuery,
+      content: currentQuery, // Keep visible content clean
       attachments: [...currentAttachments],
     };
 
     setMessages((prev) => [...prev, userMessage]);
 
     // Only clear local query state if we are depending on it.
-    // Use manualQuery trigger for external control without clearing local state immediately if needed,
-    // but here we assume sending consumes the input.
     setQuery("");
     setAttachments([]);
     setIsLoading(true);
@@ -257,6 +262,7 @@ export function useChatSession({
           ),
           model,
           conversationId,
+          isThinking,
         }),
         signal: abortControllerRef.current.signal,
       });
