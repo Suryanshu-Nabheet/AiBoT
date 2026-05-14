@@ -23,6 +23,9 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 interface UseMarkdownOptions {
   onCopy?: (content: string) => void;
@@ -258,8 +261,8 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
   );
 
   // Remark and rehype plugins
-  const remarkPlugins = useMemo(() => [remarkGfm, remarkBreaks], []);
-  const rehypePlugins = useMemo(() => [rehypeRaw, rehypeSanitize], []);
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkBreaks, remarkMath], []);
+  const rehypePlugins = useMemo(() => [rehypeRaw, rehypeSanitize, rehypeKatex], []);
 
   return {
     preprocessMarkdown,

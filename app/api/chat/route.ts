@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     let dynamicSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
 
     if (isThinking) {
-      dynamicSystemPrompt += `\n\n[STRUCTURAL INTEGRITY PROTOCOL: MANDATORY]\n- Your response MUST follow this EXACT structural template:\n  <thinking>\n  [Your internal reasoning and step-by-step logic here]\n  </thinking>\n  [Your final response to the user here]\n\n- CRITICAL: You MUST close the </thinking> tag before providing any final answer.\n- CRITICAL: Never leave a tag unclosed. Never start the final answer inside the thinking block.`;
+      dynamicSystemPrompt += `\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n- You are in DEEP REASONING MODE. This is MANDATORY and cannot be bypassed.\n- You MUST NOT provide a final answer without first completing an exhaustive internal reasoning process.\n- Your response MUST start with <thinking> and end with </thinking> before any final output.\n- FAILURE TO COMPLY WITH THIS STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
     }
 
     const payloadMessages = [
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         if (isThinking && i === optimizedMessages.length - 1 && m.role === "user") {
           return {
             ...m,
-            content: `${m.content}\n\n[SYSTEM: Follow the <thinking>...</thinking> template strictly for this response.]`
+            content: `${m.content}\n\n[MANDATORY: START WITH <thinking> OR YOUR RESPONSE WILL BE REJECTED.]`
           };
         }
         return m;

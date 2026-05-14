@@ -271,7 +271,7 @@ const MessageComponent = memo(
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                            onClick={handleMessageCopy}
+                            onClick={() => handleMessageCopy()}
                           >
                             {isCopied ? (
                               <CheckIcon className="size-4 text-green-500" />
@@ -366,21 +366,26 @@ const MessagesList = memo(
           const isLast = i === messages.length - 1;
           const isAgentGenerating = isLoading && isLast && message.role === Role.Agent;
           
-          // Only show loading status if it's the very last message and it's empty
-          const showLoadingStatus = isAgentGenerating && !message.content.trim();
-
           // Determine if we should show thinking bar for this specific message
           const msgIsThinking = message.isThinkingRequested;
+
+          // Normal Mode: Show shimmer UNTIL THE END of generation
+          // Thinking Mode: Show reasoning bar ONLY UNTIL tokens start appearing (the ThinkingBar inside handles it after)
+          const showLoadingStatus = isAgentGenerating && (
+            msgIsThinking 
+              ? !message.content.trim() 
+              : true
+          );
 
           return (
             <React.Fragment key={message.id || i}>
               {showLoadingStatus && loadingStatus && (
-                <div className="px-2 sm:px-4 md:px-6 lg:px-8">
+                <div className="px-2 sm:px-4 md:px-6 lg:px-8 mb-2">
                   <div className="max-w-4xl mx-auto">
                     {msgIsThinking ? (
-                      <ThinkingBar text="Initializing deep reasoning..." />
+                      <ThinkingBar text="Initializing deep reasoning engine..." />
                     ) : (
-                      <TextShimmer className="text-sm font-medium" duration={1}>
+                      <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
                         {loadingStatus}
                       </TextShimmer>
                     )}
