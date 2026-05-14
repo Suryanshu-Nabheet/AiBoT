@@ -100,7 +100,7 @@ const MessageComponent = memo(
     const contentToShow = isUser ? message.content : displayedContent;
 
     // Parsing Thinking blocks - Only for Agent responses
-    const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
+    const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
     
     let thinkingContent = "";
     let mainResponse = contentToShow;
@@ -108,27 +108,41 @@ const MessageComponent = memo(
     if (!isUser) {
       const rawContent = message.content;
       
-      // Use raw content for parsing tags to avoid smooth typing interference
-      const thinkingMatch = rawContent.match(/<thinking>([\s\S]*?)<\/thinking>/);
-      
-      if (thinkingMatch) {
-        thinkingContent = thinkingMatch[1].trim();
-        // For display, we still use the animated content but stripped of tags
-        mainResponse = contentToShow.replace(/<thinking>[\s\S]*?<\/thinking>/, "").trim();
-      } else if (rawContent.includes("<thinking>")) {
-        // Handle partial streaming thinking
-        const parts = rawContent.split("<thinking>");
-        if (parts.length > 1) {
-          const thinkingParts = parts[1].split("</thinking>");
-          thinkingContent = thinkingParts[0].trim();
+      // Super-Advance Harness: Universal Thinking Tag Support
+      // Matches: <thinking>, <|thinking|>, <thought>, [THOUGHT], etc.
+      const thinkingPatterns = [
+        { open: /<thinking>/i, close: /<\/thinking>/i },
+        { open: /<begin_of_thinking>/i, close: /<\/end_of_thinking>/i },
+        { open: /<\|thinking\|>/i, close: /<\|end_of_thought\|>/i },
+        { open: /<thought>/i, close: /<\/thought>/i },
+        { open: /\[THOUGHT\]/i, close: /\[\/THOUGHT\]/i }
+      ];
+
+      let matchFound = false;
+      for (const pattern of thinkingPatterns) {
+        const openMatch = rawContent.match(pattern.open);
+        if (openMatch) {
+          matchFound = true;
+          const openTag = openMatch[0];
+          const parts = rawContent.split(openTag);
           
-          if (thinkingParts.length > 1) {
-            // Thinking finished, response started
-            mainResponse = thinkingParts[1].trim();
-          } else {
-            // Still thinking
-            mainResponse = "";
+          if (parts.length > 1) {
+            const closeMatch = parts[1].match(pattern.close);
+            if (closeMatch) {
+              const closeTag = closeMatch[0];
+              const thinkingParts = parts[1].split(closeTag);
+              thinkingContent = thinkingParts[0].trim();
+              
+              // Remove the entire block from the main response
+              const blockPattern = new RegExp(`${openTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${closeTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, "gi");
+              mainResponse = contentToShow.replace(blockPattern, "").trim();
+            } else {
+              // Still thinking
+              thinkingContent = parts[1].trim();
+              mainResponse = "";
+            }
           }
+          break;
         }
       }
     }
@@ -186,7 +200,6 @@ const MessageComponent = memo(
                       text={isThinkingExpanded ? "Reasoning Details" : (mainResponse ? "Deep reasoning complete" : "Deep reasoning in progress")}
                       isExpanded={isThinkingExpanded}
                       onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
-                      onStop={!mainResponse ? () => setIsThinkingExpanded(true) : undefined}
                     />
                     <AnimatePresence>
                       {isThinkingExpanded && (
@@ -355,13 +368,16 @@ const MessagesList = memo(
           // Only show loading status if it's the very last message and it's empty
           const showLoadingStatus = isAgentGenerating && !message.content.trim();
 
+          // Determine if we should show thinking bar for this specific message
+          const msgIsThinking = message.isThinkingRequested;
+
           return (
             <React.Fragment key={message.id || i}>
               {showLoadingStatus && loadingStatus && (
                 <div className="px-2 sm:px-4 md:px-6 lg:px-8">
                   <div className="max-w-4xl mx-auto">
-                    {isThinking ? (
-                      <ThinkingBar text="Preparing reasoning engine..." />
+                    {msgIsThinking ? (
+                      <ThinkingBar text="Initializing deep reasoning..." />
                     ) : (
                       <TextShimmer className="text-sm font-medium" duration={1}>
                         {loadingStatus}
@@ -387,7 +403,7 @@ const MessagesList = memo(
             <div className="px-2 sm:px-4 md:px-6 lg:px-8">
               <div className="max-w-4xl mx-auto">
                 {isThinking ? (
-                  <ThinkingBar text="Initializing reasoning..." />
+                  <ThinkingBar text="Connecting to reasoning engine..." />
                 ) : (
                   <TextShimmer className="text-sm font-medium" duration={1}>
                     {loadingStatus}

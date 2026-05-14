@@ -84,10 +84,22 @@ export async function POST(req: NextRequest) {
     let dynamicSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
 
     if (isThinking) {
-      dynamicSystemPrompt += `\n\n[DEEP REASONING MODE: MANDATORY]\n- You MUST start your response with an internal reasoning process inside <thinking> tags.\n- ALWAYS start the very first token of your response with the opening <thinking> tag.\n- Provide your final response ONLY after closing the reasoning process.`;
+      dynamicSystemPrompt += `\n\n[STRUCTURAL INTEGRITY PROTOCOL: MANDATORY]\n- Your response MUST follow this EXACT structural template:\n  <thinking>\n  [Your internal reasoning and step-by-step logic here]\n  </thinking>\n  [Your final response to the user here]\n\n- CRITICAL: You MUST close the </thinking> tag before providing any final answer.\n- CRITICAL: Never leave a tag unclosed. Never start the final answer inside the thinking block.`;
     }
 
-    const payloadMessages = [{ role: "system", content: dynamicSystemPrompt }, ...optimizedMessages];
+    const payloadMessages = [
+      { role: "system", content: dynamicSystemPrompt },
+      ...optimizedMessages.map((m, i) => {
+        // Force reasoning instruction into the very last user message for absolute model compliance
+        if (isThinking && i === optimizedMessages.length - 1 && m.role === "user") {
+          return {
+            ...m,
+            content: `${m.content}\n\n[SYSTEM: Follow the <thinking>...</thinking> template strictly for this response.]`
+          };
+        }
+        return m;
+      })
+    ];
 
     const response = await fetch(providerUrl, {
       method: "POST",

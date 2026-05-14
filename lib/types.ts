@@ -197,6 +197,7 @@ export type Message = {
   content: string;
   role: Role;
   isError?: boolean;
+  isThinkingRequested?: boolean;
   errorType?: string;
   attachments?: { name: string; content: string; type: string }[];
   shouldAnimate?: boolean;

@@ -108,7 +108,7 @@ export function useChatSession({
     [setModelId]
   );
 
-  const processStream = async (response: globalThis.Response) => {
+  const processStream = async (response: globalThis.Response, isThinkingRequested: boolean = false) => {
     if (!response.ok || !response.body) {
       setIsLoading(false);
       return;
@@ -117,7 +117,12 @@ export function useChatSession({
     const tempId = `ai-${Date.now()}`;
     setMessages((prev) => [
       ...prev,
-      { id: tempId, role: Role.Agent, content: "" },
+      { 
+        id: tempId, 
+        role: Role.Agent, 
+        content: "",
+        isThinkingRequested,
+      },
     ]);
 
     const reader = response.body.getReader();
@@ -289,7 +294,7 @@ export function useChatSession({
         return;
       }
 
-      await processStream(res);
+      await processStream(res, !!isThinking);
     } catch (error: any) {
       if (error.name !== "AbortError") {
         setMessages((prev) => [
