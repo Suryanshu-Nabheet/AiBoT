@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect, useCallback, memo } from "react";
+import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { v4 } from "uuid";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,7 +27,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { cn } from "@/lib/utils";
-import ShinyText from "@/components/ui/shiny-text";
+import { ThinkingBar } from "@/components/core/thinking-bar";
+import { TextShimmer } from "@/components/core/text-shimmer";
 import { useChatSession } from "@/hooks/use-chat-session";
 import ReactMarkdown from "react-markdown";
 import { ChatInput } from "./chat-input";
@@ -59,9 +60,11 @@ const MessageComponent = memo(
   ({
     message,
     onCopy,
+    isGenerating,
   }: {
     message: Message;
     onCopy: (content: string) => void;
+    isGenerating?: boolean;
   }) => {
     // Simplified Markdown setup
     const { markdownComponents, remarkPlugins, rehypePlugins } = useMarkdown({
@@ -72,13 +75,66 @@ const MessageComponent = memo(
       geistMono,
     });
 
+    const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
     const isUser = message.role === Role.User;
     const displayedContent = useSmoothTyping(
       message.content,
       5,
       message.shouldAnimate
     );
-    const contentToShow = isUser ? message.content : displayedContent;
+
+    // Parsing Thinking blocks - Only for Agent responses
+    let thinkingContent = "";
+    let mainResponse = isUser ? message.content : displayedContent;
+
+    if (!isUser) {
+      const rawContent = displayedContent; // Use displayedContent to maintain typing animation
+      const isThinkingMode = message.isThinkingRequested;
+      
+      const transitionRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
+      const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
+      
+      const transitionMatch = rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
+
+      if (transitionMatch) {
+        const splitMarker = transitionMatch[0];
+        const parts = rawContent.split(splitMarker);
+        // Extract reasoning (strip opening tags)
+        thinkingContent = parts[0].replace(/<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi, "").trim();
+        // Extract main response (strip any remaining hallucinated tags)
+        mainResponse = parts.slice(1).join(splitMarker).replace(/<\/?[^>]+(>|$)/g, "").trim();
+      } else {
+        const anyOpenTag = /<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+        const openMatch = rawContent.match(anyOpenTag);
+        
+        if (openMatch) {
+          // If we have an opening tag but no closing tag yet, everything after it is thinking
+          thinkingContent = rawContent.split(openMatch[0])[1]?.trim() || "";
+          mainResponse = "";
+        } else {
+          // NO TAGS FOUND: 
+          // Even if thinking was requested, if the model isn't providing tags, 
+          // don't trap the answer in the reasoning bar. 
+          // Treat the entire thing as the main response.
+          thinkingContent = "";
+          mainResponse = rawContent;
+        }
+      }
+
+      // Cleanup common prompt leakage / hallucinations
+      const leakagePatterns = [
+        /\[CRITICAL SYSTEM OVERRIDE.*?\]/gi,
+        /NUCLEAR REASONING LOCK/gi,
+        /FAILURE TO COMPLY.*?DO NOT IGNORE THIS\./gi,
+        /\[MANDATORY: START WITH.*?\]/gi,
+        /The response must now begin with and end with/gi
+      ];
+      
+      leakagePatterns.forEach(pattern => {
+        mainResponse = mainResponse.replace(pattern, "").trim();
+        thinkingContent = thinkingContent.replace(pattern, "").trim();
+      });
+    }
 
     const [isCopied, setIsCopied] = useState(false);
     const handleCopy = useCallback(async () => {
@@ -94,6 +150,37 @@ const MessageComponent = memo(
           isUser ? "items-end" : "items-start"
         )}
       >
+        {!isUser && thinkingContent && (
+          <div className="w-full mb-2">
+            <ThinkingBar
+              text={isThinkingExpanded ? "Reasoning Details" : (mainResponse ? "Deep reasoning complete" : "Deep reasoning in progress")}
+              isExpanded={isThinkingExpanded}
+              onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+            />
+            <AnimatePresence>
+              {isThinkingExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden px-1"
+                >
+                  <div className="text-sm text-muted-foreground/75 leading-relaxed py-2 border-l border-primary/5 pl-4 my-1">
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words [&_*]:text-muted-foreground/75">
+                      <ReactMarkdown
+                        remarkPlugins={remarkPlugins}
+                        rehypePlugins={rehypePlugins}
+                        components={markdownComponents}
+                      >
+                        {thinkingContent}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
         <div
           className={cn(
             "text-sm overflow-hidden break-words",
@@ -103,7 +190,7 @@ const MessageComponent = memo(
           )}
         >
           {isUser ? (
-            <div className="whitespace-pre-wrap font-medium">{contentToShow}</div>
+            <div className="whitespace-pre-wrap font-medium">{mainResponse}</div>
           ) : (
             <div className="w-full max-w-full">
               <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
@@ -114,7 +201,7 @@ const MessageComponent = memo(
                       rehypePlugins={rehypePlugins}
                       components={markdownComponents}
                     >
-                      {contentToShow}
+                      {mainResponse}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -124,8 +211,8 @@ const MessageComponent = memo(
         </div>
         
         {/* Actions - Only show after response is complete */}
-        {!isUser && message.content.trim() && displayedContent.length === message.content.length && (
-          <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200">
+        {!isUser && message.content.trim() && !isGenerating && (
+          <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -206,45 +293,64 @@ export default function ArenaInterface({
   >([]);
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
 
-  const [leftLoadingStatus, setLeftLoadingStatus] = useState("Model A is thinking...");
-  const [rightLoadingStatus, setRightLoadingStatus] = useState("Model B is thinking...");
+  const [leftLoadingStatus, setLeftLoadingStatus] = useState("AiBoT is thinking...");
+  const [rightLoadingStatus, setRightLoadingStatus] = useState("AiBoT is thinking...");
 
   useEffect(() => {
     if (!leftChat.isLoading) {
-      setLeftLoadingStatus("Model A is thinking...");
+      setLeftLoadingStatus(isThinking ? "AiBoT is thinking..." : "AiBoT is generating...");
       return;
     }
-    const statuses = [
-      "Model A is thinking...",
-      "Model A is processing...",
-      "Model A is drafting...",
-    ];
+    const statuses = isThinking 
+      ? [
+          "AiBoT is thinking...",
+          "Analyzing logical branches...",
+          "Validating reasoning paths...",
+          "Exploring deeper context...",
+          "Synthesizing final thought...",
+        ]
+      : [
+          "AiBoT is generating...",
+          "Drafting response...",
+          "Finalizing details...",
+          "Polishing output...",
+        ];
     let i = 0;
     const interval = setInterval(() => {
       i = (i + 1) % statuses.length;
       setLeftLoadingStatus(statuses[i]);
-    }, 2800);
+    }, 2000);
     return () => clearInterval(interval);
-  }, [leftChat.isLoading]);
+  }, [leftChat.isLoading, isThinking]);
 
   useEffect(() => {
     if (!rightChat.isLoading) {
-      setRightLoadingStatus("Model B is thinking...");
+      setRightLoadingStatus(isThinking ? "AiBoT is thinking..." : "AiBoT is generating...");
       return;
     }
-    const statuses = [
-      "Model B is thinking...",
-      "Model B is processing...",
-      "Model B is drafting...",
-    ];
+    const statuses = isThinking 
+      ? [
+          "AiBoT is thinking...",
+          "Analyzing logical branches...",
+          "Validating reasoning paths...",
+          "Exploring deeper context...",
+          "Synthesizing final thought...",
+        ]
+      : [
+          "AiBoT is generating...",
+          "Drafting response...",
+          "Finalizing details...",
+          "Polishing output...",
+        ];
     let i = 0;
     const interval = setInterval(() => {
       i = (i + 1) % statuses.length;
       setRightLoadingStatus(statuses[i]);
-    }, 2800);
+    }, 2000);
     return () => clearInterval(interval);
-  }, [rightChat.isLoading]);
+  }, [rightChat.isLoading, isThinking]);
 
   // --- Refs ---
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -268,8 +374,8 @@ export default function ArenaInterface({
     setAttachments([]); // Clear immediately
 
     await Promise.all([
-      leftChat.handleSend(currentQuery, currentAttachments),
-      rightChat.handleSend(currentQuery, currentAttachments),
+      leftChat.handleSend(currentQuery, currentAttachments, undefined, isThinking),
+      rightChat.handleSend(currentQuery, currentAttachments, undefined, isThinking),
     ]);
   };
 
@@ -450,21 +556,46 @@ export default function ArenaInterface({
             />
           </div>
           <div className="flex-1 overflow-y-auto pt-12 pb-32 scrollbar-thin">
-            {leftChat.messages.map((m, i) => (
-              <MessageComponent
-                key={m.id || i}
-                message={m}
-                onCopy={handleCopy}
-              />
-            ))}
-            {leftChat.isLoading && (
-              <div className="px-6 py-4 flex items-center">
-                <ShinyText
-                  text={leftLoadingStatus}
-                  speed={2}
-                />
-              </div>
-            )}
+            {leftChat.messages.map((m, i) => {
+              const isLast = i === leftChat.messages.length - 1;
+              const isAgentGenerating = leftChat.isLoading && isLast && m.role === Role.Agent;
+              
+              // Only show shimmer if generating and (if thinking, show shimmer only until reasoning starts)
+              const showShimmer = isAgentGenerating && (m.isThinkingRequested ? !m.content.trim() : true);
+
+              return (
+                <React.Fragment key={m.id || i}>
+                  {showShimmer && leftLoadingStatus && (
+                    <div className="px-6 mb-2">
+                      <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                        {leftLoadingStatus}
+                      </TextShimmer>
+                    </div>
+                  )}
+                  <MessageComponent
+                    message={m}
+                    onCopy={handleCopy}
+                    isGenerating={isAgentGenerating}
+                  />
+                </React.Fragment>
+              );
+            })}
+            
+            {/* Initial Shimmer for Left Panel */}
+            {leftChat.isLoading &&
+              leftChat.messages.length > 0 &&
+              leftChat.messages[leftChat.messages.length - 1].role === Role.User &&
+              leftLoadingStatus && (
+                <div className="px-6 mb-4">
+                  {isThinking ? (
+                    <ThinkingBar text="Connecting to reasoning engine..." />
+                  ) : (
+                    <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                      {leftLoadingStatus}
+                    </TextShimmer>
+                  )}
+                </div>
+              )}
             <div
               ref={(el) => {
                 el?.scrollIntoView({ behavior: "smooth" });
@@ -482,21 +613,45 @@ export default function ArenaInterface({
             />
           </div>
           <div className="flex-1 overflow-y-auto pt-12 pb-32 scrollbar-thin">
-            {rightChat.messages.map((m, i) => (
-              <MessageComponent
-                key={m.id || i}
-                message={m}
-                onCopy={handleCopy}
-              />
-            ))}
-            {rightChat.isLoading && (
-              <div className="px-6 py-4 flex items-center">
-                <ShinyText
-                  text={rightLoadingStatus}
-                  speed={2}
-                />
-              </div>
-            )}
+            {rightChat.messages.map((m, i) => {
+              const isLast = i === rightChat.messages.length - 1;
+              const isAgentGenerating = rightChat.isLoading && isLast && m.role === Role.Agent;
+              
+              const showShimmer = isAgentGenerating && (m.isThinkingRequested ? !m.content.trim() : true);
+
+              return (
+                <React.Fragment key={m.id || i}>
+                  {showShimmer && rightLoadingStatus && (
+                    <div className="px-6 mb-2">
+                      <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                        {rightLoadingStatus}
+                      </TextShimmer>
+                    </div>
+                  )}
+                  <MessageComponent
+                    message={m}
+                    onCopy={handleCopy}
+                    isGenerating={isAgentGenerating}
+                  />
+                </React.Fragment>
+              );
+            })}
+
+            {/* Initial Shimmer for Right Panel */}
+            {rightChat.isLoading &&
+              rightChat.messages.length > 0 &&
+              rightChat.messages[rightChat.messages.length - 1].role === Role.User &&
+              rightLoadingStatus && (
+                <div className="px-6 mb-4">
+                  {isThinking ? (
+                    <ThinkingBar text="Connecting to reasoning engine..." />
+                  ) : (
+                    <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                      {rightLoadingStatus}
+                    </TextShimmer>
+                  )}
+                </div>
+              )}
             <div
               ref={(el) => {
                 el?.scrollIntoView({ behavior: "smooth" });
@@ -518,6 +673,8 @@ export default function ArenaInterface({
         onSpeechToggle={handleSpeech}
         isEnhancing={isEnhancing}
         onEnhance={handleEnhance}
+        isThinking={isThinking}
+        onThinkingToggle={() => setIsThinking(!isThinking)}
         // No Model Selector for Arena
         showModelSelector={false}
         placeholder={isListening ? "Listening..." : "Message both models..."}

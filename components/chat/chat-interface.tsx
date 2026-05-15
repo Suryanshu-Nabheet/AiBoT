@@ -98,62 +98,59 @@ const MessageComponent = memo(
       5,
       message.shouldAnimate
     );
+
+    const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
+
     const contentToShow = isUser ? message.content : displayedContent;
 
     // Parsing Thinking blocks - Only for Agent responses
-    const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
-    
     let thinkingContent = "";
-    let mainResponse = contentToShow;
+    let mainResponse = isUser ? message.content : contentToShow;
 
     if (!isUser) {
-      const rawContent = message.content;
+      const rawContent = contentToShow; // Use contentToShow (animated) to preserve typing flow
       const isThinkingMode = message.isThinkingRequested;
       
-      // Super-Advance Harness: Universal Thinking Tag Support
-      const thinkingPatterns = [
-        { open: /<thinking>/i, close: /<\/thinking>/i },
-        { open: /<begin_of_thinking>/i, close: /<\/end_of_thinking>/i },
-        { open: /<\|thinking\|>/i, close: /<\|end_of_thought\|>/i },
-        { open: /<thought>/i, close: /<\/thought>/i },
-        { open: /\[THOUGHT\]/i, close: /\[\/THOUGHT\]/i }
-      ];
-
-      let matchFound = false;
-
-      // 1. Universal Transition Detector
-      // This looks for ANY closing tags, specialized markers, or bracketed headers 
-      // that models typically use to transition from reasoning to answer.
       const transitionRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
-      const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i; // Matches any closing tag or "final" markers
+      const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
       
       const transitionMatch = rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
 
       if (transitionMatch) {
         const splitMarker = transitionMatch[0];
         const parts = rawContent.split(splitMarker);
-        
-        // The part before the first transition is ALWAYS reasoning
+        // Extract reasoning (strip opening tags)
         thinkingContent = parts[0].replace(/<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi, "").trim();
-        
-        // The part after is the main response, stripped of any remaining hallucinated tags
+        // Extract main response (strip any remaining hallucinated tags)
         mainResponse = parts.slice(1).join(splitMarker).replace(/<\/?[^>]+(>|$)/g, "").trim();
-        matchFound = true;
-      } else if (isThinkingMode && rawContent.length > 0) {
-        // 2. If no transition found yet, and we have an opening tag, extract what's inside
+      } else {
         const anyOpenTag = /<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
         const openMatch = rawContent.match(anyOpenTag);
         
         if (openMatch) {
+          // If we have an opening tag but no closing tag yet, everything after it is thinking
           thinkingContent = rawContent.split(openMatch[0])[1]?.trim() || "";
           mainResponse = "";
         } else {
-          // If no tags at all but thinking requested, assume all is thinking
-          thinkingContent = rawContent.trim();
-          mainResponse = "";
+          // NO TAGS FOUND: Treat as main response
+          thinkingContent = "";
+          mainResponse = rawContent;
         }
-        matchFound = true;
       }
+
+      // Cleanup common prompt leakage / hallucinations
+      const leakagePatterns = [
+        /\[CRITICAL SYSTEM OVERRIDE.*?\]/gi,
+        /NUCLEAR REASONING LOCK/gi,
+        /FAILURE TO COMPLY.*?DO NOT IGNORE THIS\./gi,
+        /\[MANDATORY: START WITH.*?\]/gi,
+        /The response must now begin with and end with/gi
+      ];
+      
+      leakagePatterns.forEach(pattern => {
+        mainResponse = mainResponse.replace(pattern, "").trim();
+        thinkingContent = thinkingContent.replace(pattern, "").trim();
+      });
     }
 
     return (
@@ -270,8 +267,8 @@ const MessageComponent = memo(
                 </div>
 
                 {/* Copy and Download buttons - Only show after response is complete */}
-                {!isUser && message.content.trim() && !isGenerating && displayedContent.length === message.content.length && (
-                  <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200">
+                {!isUser && message.content.trim() && !isGenerating && (
+                  <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>

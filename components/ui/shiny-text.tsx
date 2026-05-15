@@ -29,8 +29,8 @@ const ShinyText: React.FC<ShinyTextProps> = ({
           !disabled && "animate-shiny-text"
         )}
         style={{
-          color: "#b5b5b5",
-          background: "linear-gradient(90deg, #b5b5b5 0%, #b5b5b5 40%, rgba(255, 255, 255, 0.4) 50%, #b5b5b5 60%, #b5b5b5 100%)",
+          color: "#2563eb",
+          background: "linear-gradient(90deg, #2563eb 0%, #2563eb 40%, #93c5fd 50%, #2563eb 60%, #2563eb 100%)",
           backgroundSize: "200% 100%",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
