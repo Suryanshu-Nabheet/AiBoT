@@ -120,7 +120,7 @@ export function AIVoiceInput({
           ))}
         </div>
 
-        <p className="h-6 text-sm font-semibold text-slate-600 uppercase tracking-widest mt-2">
+        <p className="h-6 text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest mt-2">
           {statusText}
         </p>
       </div>

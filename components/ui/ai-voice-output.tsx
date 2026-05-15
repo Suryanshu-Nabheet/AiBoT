@@ -81,7 +81,7 @@ export default function AIVoiceOutput({
           ))}
         </div>
 
-        <p className="h-6 text-sm font-semibold text-slate-600 uppercase tracking-widest mt-2">
+        <p className="h-6 text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-widest mt-2">
           {isSpeaking ? "Speaking..." : "AI Ready"}
         </p>
       </div>
