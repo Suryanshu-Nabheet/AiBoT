@@ -20,11 +20,12 @@ export interface ApiKeys {
 }
 
 const PROVIDER_ICONS: Record<string, string> = {
-  openai: "/icons/chatgpt.svg",
+  openai: "/icons/openai.svg",
   anthropic: "/icons/anthropic.svg",
   google: "/icons/google.svg",
   deepseek: "/icons/deepseek.svg",
   openrouter: "/icons/openrouter.svg",
+  ollama: "/icons/ollama.svg",
 };
 
 interface SettingsContextType {
@@ -34,6 +35,10 @@ interface SettingsContextType {
   enabledModels: string[];
   toggleModel: (modelId: string) => void;
   verifyKey: (provider: keyof ApiKeys, key: string) => Promise<boolean>;
+  ollamaUrl: string;
+  setOllamaUrl: (url: string) => void;
+  ollamaModels: any[];
+  setOllamaModels: (models: any[]) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -41,6 +46,8 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [enabledModels, setEnabledModels] = useState<string[]>([]);
+  const [ollamaUrl, setOllamaUrlState] = useState<string>("http://localhost:11434");
+  const [ollamaModels, setOllamaModelsState] = useState<any[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
 
   // Compute available models based on keys
@@ -60,14 +67,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }));
     });
 
-    return [...platformModels, ...providerModels];
-  }, [apiKeys]);
+    const localOllamaModels = ollamaModels.map(m => ({
+      id: `ollama/${m.name}`,
+      name: m.name,
+      provider: "ollama",
+      isPremium: false,
+      summary: `Local Ollama model (${m.details?.parameter_size || "Unknown size"})`,
+      logo: "/icons/ollama.svg"
+    }));
+
+    return [...platformModels, ...providerModels, ...localOllamaModels];
+  }, [apiKeys, ollamaModels]);
 
   // Load from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedKeys = localStorage.getItem("aibot_api_keys");
       if (storedKeys) setApiKeys(JSON.parse(storedKeys));
+
+      const storedUrl = localStorage.getItem("aibot_ollama_url");
+      if (storedUrl) setOllamaUrlState(storedUrl);
+
+      const storedOllamaModels = localStorage.getItem("aibot_ollama_models");
+      if (storedOllamaModels) setOllamaModelsState(JSON.parse(storedOllamaModels));
 
       const storedModels = localStorage.getItem("aibot_enabled_models");
       if (storedModels) {
@@ -84,12 +106,28 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hasLoaded && typeof window !== "undefined") {
       localStorage.setItem("aibot_api_keys", JSON.stringify(apiKeys));
+      localStorage.setItem("aibot_ollama_url", ollamaUrl);
+      localStorage.setItem("aibot_ollama_models", JSON.stringify(ollamaModels));
       localStorage.setItem("aibot_enabled_models", JSON.stringify(enabledModels));
     }
-  }, [apiKeys, enabledModels, hasLoaded]);
+  }, [apiKeys, ollamaUrl, ollamaModels, enabledModels, hasLoaded]);
 
   const setApiKey = (provider: keyof ApiKeys, key: string) => {
     setApiKeys(prev => ({ ...prev, [provider]: key }));
+  };
+
+  const setOllamaUrl = (url: string) => {
+    setOllamaUrlState(url);
+  };
+
+  const setOllamaModels = (models: any[]) => {
+    setOllamaModelsState(models);
+    // Auto-enable any detected Ollama models so the user can use them immediately
+    setEnabledModels(prev => {
+      const newIds = models.map(m => `ollama/${m.name}`);
+      const filteredPrev = prev.filter(id => !id.startsWith("ollama/"));
+      return [...filteredPrev, ...newIds];
+    });
   };
 
   const toggleModel = (modelId: string) => {
@@ -113,7 +151,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       availableModels,
       enabledModels,
       toggleModel,
-      verifyKey
+      verifyKey,
+      ollamaUrl,
+      setOllamaUrl,
+      ollamaModels,
+      setOllamaModels
     }}>
       {children}
     </SettingsContext.Provider>

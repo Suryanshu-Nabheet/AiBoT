@@ -24,7 +24,8 @@ import {
   Plus,
   Trash,
   ArrowSquareOut,
-  Circle
+  Circle,
+  HardDrives
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,25 +36,26 @@ import { useSettings, ApiKeys } from "@/contexts/settings-context";
 import { MODELS, ModelFull } from "@/lib/types";
 import { PROVIDER_MODELS, ProviderModel } from "@/lib/provider-models";
 import { toast } from "sonner";
-
-type SettingsSection = "general" | "appearance" | "models" | "api-keys" | "about";
-
+ 
+type SettingsSection = "general" | "appearance" | "models" | "api-keys" | "local-llm" | "about";
+ 
 interface SectionItem {
   id: SettingsSection;
   label: string;
   icon: React.ElementType;
 }
-
+ 
 const SECTIONS: SectionItem[] = [
   { id: "general", label: "General", icon: User },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "models", label: "Model Preferences", icon: Cpu },
   { id: "api-keys", label: "API Keys & Secrets", icon: Key },
+  { id: "local-llm", label: "Local LLM", icon: HardDrives },
   { id: "about", label: "About AiBoT", icon: Info },
 ];
 
 const PROVIDERS = [
-  { id: "openai", name: "OpenAI", placeholder: "sk-proj-...", icon: "/icons/chatgpt.svg" },
+  { id: "openai", name: "OpenAI", placeholder: "sk-proj-...", icon: "/icons/openai.svg" },
   { id: "anthropic", name: "Anthropic", placeholder: "sk-ant-...", icon: "/icons/anthropic.svg" },
   { id: "google", name: "Google Gemini", placeholder: "AIzaSy...", icon: "/icons/google.svg" },
   { id: "deepseek", name: "DeepSeek", placeholder: "sk-...", icon: "/icons/deepseek.svg" },
@@ -68,11 +70,36 @@ export function SettingsPanel() {
     availableModels,
     enabledModels, 
     toggleModel, 
-    verifyKey 
+    verifyKey,
+    ollamaUrl,
+    setOllamaUrl,
+    ollamaModels,
+    setOllamaModels
   } = useSettings();
   
   const [activeSection, setActiveSection] = useState<SettingsSection>("general");
   const [verifyingProvider, setVerifyingProvider] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleAutoDetect = async () => {
+    setIsScanning(true);
+    try {
+      const res = await fetch(`${ollamaUrl}/api/tags`);
+      if (!res.ok) throw new Error("Connection failed");
+      const data = await res.json();
+      const models = data.models || [];
+      setOllamaModels(models);
+      if (models.length > 0) {
+        toast.success(`Success! Detected and auto-enabled ${models.length} local Ollama models.`);
+      } else {
+        toast.warning("Connected to Ollama, but no models were found. Try pulling a model first (e.g. \`ollama run llama3\`).");
+      }
+    } catch (e) {
+      toast.error(`Could not connect to Ollama at ${ollamaUrl}. Make sure it is running on your machine.`);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const handleVerifyKey = async (provider: keyof ApiKeys, key: string) => {
     if (!key) return;
@@ -212,7 +239,11 @@ export function SettingsPanel() {
                               >
                                 <div className="flex items-center gap-4 min-w-0">
                                   <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-sm">
-                                     <img src={provider?.icon} alt="" className="w-full h-full object-contain" />
+                                     <img 
+                                       src={provider?.icon} 
+                                       alt="" 
+                                       className="w-full h-full object-contain"
+                                     />
                                   </div>
                                   <div className="min-w-0">
                                     <p className="text-[14px] font-bold tracking-tight truncate">{m.name}</p>
@@ -310,6 +341,141 @@ export function SettingsPanel() {
           </div>
         );
 
+      case "local-llm":
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <header className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shadow-sm shrink-0">
+                  <img src="/icons/ollama.svg" alt="Ollama" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold tracking-tight text-foreground">Local LLM (Ollama)</h3>
+                  <p className="text-sm text-muted-foreground">Access open-weights model families directly on your own local device.</p>
+                </div>
+              </div>
+            </header>
+
+            <div className="p-6 rounded-2xl bg-muted/20 border border-border/40 space-y-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ollama Server Endpoint</label>
+                <div className="flex gap-3">
+                  <div className="relative flex-1 group">
+                    <Input 
+                      type="text" 
+                      placeholder="http://localhost:11434"
+                      value={ollamaUrl}
+                      onChange={(e) => setOllamaUrl(e.target.value)}
+                      className="bg-background/50 border-border/50 rounded-xl px-4 py-5 text-xs font-mono focus:ring-1 focus:ring-primary/30"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 size-2 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleAutoDetect}
+                    disabled={isScanning}
+                    className={cn(
+                      "rounded-xl border-border/50 text-[11px] font-bold h-auto py-2.5 px-6 transition-all duration-300",
+                      "hover:bg-primary hover:text-white hover:border-primary",
+                      isScanning && "opacity-80"
+                    )}
+                  >
+                    {isScanning ? (
+                      <span className="flex items-center gap-2">
+                        <span className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        Scanning Device...
+                      </span>
+                    ) : "Auto Detect"}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground opacity-70 leading-relaxed mt-1">
+                  Ensure Ollama is running on your machine. On macOS/Windows, make sure the Ollama application is active in the menu bar.
+                </p>
+              </div>
+            </div>
+
+            {ollamaModels.length > 0 ? (
+              <section className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Discovered Local Models ({ollamaModels.length})</h4>
+                  </div>
+                  <button 
+                    onClick={handleAutoDetect}
+                    className="text-[10px] font-bold uppercase text-primary hover:underline"
+                  >
+                    Refresh Scan
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {ollamaModels.map((m) => {
+                    const modelId = `ollama/${m.name}`;
+                    const sizeInGB = m.size ? `${(m.size / (1024 * 1024 * 1024)).toFixed(2)} GB` : "Unknown size";
+                    const isEnabled = enabledModels.includes(modelId);
+
+                    return (
+                      <div
+                        key={m.name}
+                        className={cn(
+                          "flex items-center justify-between p-4.5 rounded-2xl border transition-all duration-300",
+                          isEnabled 
+                            ? "bg-primary/[0.02] border-primary/10 shadow-sm" 
+                            : "bg-muted/10 border-border/20 opacity-50 grayscale"
+                        )}
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-sm">
+                            <img src="/icons/ollama.svg" alt="" className="w-full h-full object-contain" />
+                          </div>
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="text-[14px] font-bold tracking-tight truncate">{m.name}</p>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono truncate">
+                              <span className="px-1.5 py-0.5 rounded bg-muted/65 uppercase tracking-wider font-bold">
+                                {m.details?.parameter_size || "local"}
+                              </span>
+                              <span>{sizeInGB}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Switch 
+                          checked={isEnabled} 
+                          onCheckedChange={() => toggleModel(modelId)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : (
+              <div className="p-12 rounded-3xl border border-dashed border-border/60 bg-muted/5 flex flex-col items-center text-center space-y-4">
+                <div className="size-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground shadow-inner">
+                  <img src="/icons/ollama.svg" alt="" className="size-6 object-contain opacity-50" />
+                </div>
+                <div className="max-w-[320px] space-y-2">
+                  <p className="text-[15px] font-bold">No Local Models Detected</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Make sure Ollama is active on your device. Click <strong>Auto Detect</strong> to scan your local setup and immediately populate available local models.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="p-5 rounded-2xl bg-primary/[0.03] border border-primary/10 flex items-start gap-4 mt-8">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
+                <ShieldCheck className="size-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-primary mb-1">100% Privacy & Zero Limits</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Local execution is handled direct-to-device. Your prompts and code sessions never leave your local machine, and you enjoy zero API usage fees or latency thresholds.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+
       case "about":
         return (
           <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 max-w-3xl mx-auto">
@@ -401,7 +567,7 @@ export function SettingsPanel() {
                <div className="flex gap-10 grayscale opacity-30 hover:opacity-100 hover:grayscale-0 transition-all duration-700 cursor-default">
                   <img src="/icons/meta.svg" className="size-6" />
                   <img src="/icons/google.svg" className="size-6" />
-                  <img src="/icons/chatgpt.svg" className="size-6" />
+                  <img src="/icons/openai.svg" className="size-6" />
                   <img src="/icons/nvidia.svg" className="size-6" />
                </div>
             </div>
@@ -457,7 +623,7 @@ export function SettingsPanel() {
         {/* Navigation Header */}
         <div className="h-16 flex items-center justify-between px-10 border-b border-border/30 backdrop-blur-sm sticky top-0 z-10">
            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-30">Hub /</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-30">SETTINGS /</span>
               <span className="text-[10px] font-bold text-primary uppercase tracking-[0.3em]">{activeSection.replace("-", " ")}</span>
            </div>
            <button 

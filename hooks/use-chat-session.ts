@@ -45,7 +45,7 @@ export function useChatSession({
   const [attachments, setAttachments] = useState<
     { name: string; content: string; type: string }[]
   >([]);
-  const { apiKeys } = useSettings();
+  const { apiKeys, ollamaUrl } = useSettings();
   const [executionCreated, setExecutionCreated] = useState(false);
 
   // Initialize conversationId with session persistence logic
@@ -108,7 +108,11 @@ export function useChatSession({
     [setModelId]
   );
 
-  const processStream = async (response: globalThis.Response, isThinkingRequested: boolean = false) => {
+  const processStream = async (
+    response: globalThis.Response,
+    isThinkingRequested: boolean = false,
+    isOllama: boolean = false
+  ) => {
     if (!response.ok || !response.body) {
       setIsLoading(false);
       return;
@@ -145,9 +149,18 @@ export function useChatSession({
 
         for (const line of lines) {
           const trimmedLine = line.trim();
-          if (!trimmedLine || trimmedLine === "data: [DONE]") continue;
+          if (!trimmedLine) continue;
 
-          if (trimmedLine.startsWith("data: ")) {
+          if (isOllama) {
+            try {
+              const data = JSON.parse(trimmedLine);
+              const content = data.message?.content || data.response;
+              if (content) accumulated += content;
+            } catch (e) {
+              // Silently ignore parse errors for partial/malformed JSON in stream
+            }
+          } else if (trimmedLine.startsWith("data: ")) {
+            if (trimmedLine === "data: [DONE]") continue;
             try {
               const data = JSON.parse(trimmedLine.slice(6));
               const content = data.choices?.[0]?.delta?.content || data.content;
@@ -271,20 +284,39 @@ export function useChatSession({
 
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, { ...userMessage, content: apiContent }].map(
-            (m) => ({ role: m.role, content: m.content })
-          ),
-          model,
-          conversationId,
-          isThinking,
-          customKeys: apiKeys,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
+      let res;
+      const isOllama = model.startsWith("ollama/");
+
+      if (isOllama) {
+        const ollamaModelName = model.replace("ollama/", "");
+        res = await fetch(`${ollamaUrl}/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: ollamaModelName,
+            messages: [...messages, { ...userMessage, content: apiContent }].map(
+              (m) => ({ role: m.role, content: m.content })
+            ),
+            stream: true,
+          }),
+          signal: abortControllerRef.current.signal,
+        });
+      } else {
+        res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [...messages, { ...userMessage, content: apiContent }].map(
+              (m) => ({ role: m.role, content: m.content })
+            ),
+            model,
+            conversationId,
+            isThinking,
+            customKeys: apiKeys,
+          }),
+          signal: abortControllerRef.current.signal,
+        });
+      }
 
       if (!res.ok) {
         // ... (Error handling logic same as before, simplified for brevity here, but vital in prod)
@@ -304,7 +336,7 @@ export function useChatSession({
         return;
       }
 
-      await processStream(res, !!isThinking);
+      await processStream(res, !!isThinking, isOllama);
     } catch (error: any) {
       if (error.name !== "AbortError") {
         setMessages((prev) => [

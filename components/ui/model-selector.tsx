@@ -162,13 +162,13 @@ export function ModelSelector({
                       className="cursor-pointer py-2.5 px-2 text-xs flex justify-between items-center rounded-lg my-0.5 hover:bg-emerald-500/[0.03]"
                     >
                       <div className="flex items-center gap-3 w-full">
-                        <div className="size-8 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/20 flex items-center justify-center p-1.5 shrink-0 text-emerald-500 overflow-hidden">
+                         <div className="size-8 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/20 flex items-center justify-center p-1.5 shrink-0 text-emerald-500 overflow-hidden">
                            {model.logo ? (
                              <img src={model.logo} className="w-full h-full object-contain" />
                            ) : (
                              <Cpu className="size-5" />
                            )}
-                        </div>
+                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="font-bold text-[13px] text-foreground truncate">
                             {model.name}

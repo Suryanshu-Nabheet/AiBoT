@@ -83,14 +83,14 @@ export const MODELS: ModelFull[] = [
     name: "GPT-OSS 120B",
     isPremium: false,
     summary: "OpenAI's open-weight 117B MoE for agentic production use",
-    logo: "/icons/chatgpt.svg",
+    logo: "/icons/openai.svg",
   },
   {
     id: "openai/gpt-oss-20b:free",
     name: "GPT-OSS 20B",
     isPremium: false,
     summary: "Efficient 21B MoE model release by OpenAI under Apache 2.0",
-    logo: "/icons/chatgpt.svg",
+    logo: "/icons/openai.svg",
   },
   {
     id: "z-ai/glm-4.5-air:free",
