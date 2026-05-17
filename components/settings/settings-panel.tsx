@@ -11,7 +11,6 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, 
-  Palette, 
   Cpu, 
   Key, 
   Info, 
@@ -37,7 +36,7 @@ import { MODELS, ModelFull } from "@/lib/types";
 import { PROVIDER_MODELS, ProviderModel } from "@/lib/provider-models";
 import { toast } from "sonner";
  
-type SettingsSection = "general" | "appearance" | "models" | "api-keys" | "local-llm" | "about";
+type SettingsSection = "general" | "models" | "api-keys" | "local-llm" | "about";
  
 interface SectionItem {
   id: SettingsSection;
@@ -47,7 +46,6 @@ interface SectionItem {
  
 const SECTIONS: SectionItem[] = [
   { id: "general", label: "General", icon: User },
-  { id: "appearance", label: "Appearance", icon: Palette },
   { id: "models", label: "Model Preferences", icon: Cpu },
   { id: "api-keys", label: "API Keys & Secrets", icon: Key },
   { id: "local-llm", label: "Local LLM", icon: HardDrives },
