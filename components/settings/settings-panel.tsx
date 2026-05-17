@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, 
@@ -24,7 +24,9 @@ import {
   Trash,
   ArrowSquareOut,
   Circle,
-  HardDrives
+  HardDrives,
+  WarningCircle,
+  Copy
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -78,22 +80,78 @@ export function SettingsPanel() {
   const [activeSection, setActiveSection] = useState<SettingsSection>("general");
   const [verifyingProvider, setVerifyingProvider] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const [selectedOS, setSelectedOS] = useState<"macos" | "windows" | "linux">("macos");
+
+  // Automatically detect user OS on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const ua = window.navigator.userAgent.toLowerCase();
+      if (ua.includes("win")) setSelectedOS("windows");
+      else if (ua.includes("linux")) setSelectedOS("linux");
+      else setSelectedOS("macos");
+    }
+  }, []);
 
   const handleAutoDetect = async () => {
     setIsScanning(true);
+    setShowTroubleshooter(false);
+
+    // Normalize URL
+    let targetUrl = ollamaUrl.trim();
+    if (!targetUrl) {
+      targetUrl = "http://localhost:11434";
+    }
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      targetUrl = `http://${targetUrl}`;
+    }
+
     try {
-      const res = await fetch(`${ollamaUrl}/api/tags`);
-      if (!res.ok) throw new Error("Connection failed");
+      console.log("Scanning Ollama at:", targetUrl);
+      const res = await fetch(`${targetUrl}/api/tags`, {
+        mode: "cors",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!res.ok) throw new Error("Status " + res.status);
       const data = await res.json();
       const models = data.models || [];
       setOllamaModels(models);
       if (models.length > 0) {
         toast.success(`Success! Detected and auto-enabled ${models.length} local Ollama models.`);
+        return;
       } else {
-        toast.warning("Connected to Ollama, but no models were found. Try pulling a model first (e.g. \`ollama run llama3\`).");
+        toast.warning("Connected to Ollama, but no models were found. Try pulling a model first (e.g. `ollama run llama3`).");
+        return;
       }
-    } catch (e) {
-      toast.error(`Could not connect to Ollama at ${ollamaUrl}. Make sure it is running on your machine.`);
+    } catch (primaryErr) {
+      console.warn("Primary connection to Ollama failed:", primaryErr);
+
+      // Fallback: If "localhost" was tried, attempt "127.0.0.1" as it is often bypassed by local network settings/CORS
+      if (targetUrl.includes("localhost")) {
+        const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
+        try {
+          console.log("Scanning fallback Ollama at:", fallbackUrl);
+          const res = await fetch(`${fallbackUrl}/api/tags`, {
+            mode: "cors",
+            headers: { "Content-Type": "application/json" }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const models = data.models || [];
+            setOllamaModels(models);
+            if (models.length > 0) {
+              setOllamaUrl(fallbackUrl);
+              toast.success(`Success! Connected to local Ollama via 127.0.0.1 loopback.`);
+              return;
+            }
+          }
+        } catch (fallbackErr) {
+          console.warn("Fallback loopback fetch failed:", fallbackErr);
+        }
+      }
+
+      setShowTroubleshooter(true);
+      toast.error("Could not connect to Ollama. Production secure connections require CORS setup. Read troubleshooting steps below.");
     } finally {
       setIsScanning(false);
     }
@@ -391,6 +449,155 @@ export function SettingsPanel() {
                 </p>
               </div>
             </div>
+
+            {showTroubleshooter && (
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-6 rounded-2xl bg-red-500/[0.02] border border-red-500/10 space-y-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-xl bg-red-500/10 text-red-500 shrink-0">
+                    <WarningCircle className="size-6 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-[14px] font-bold text-foreground">Local Connection Diagnostics</h4>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Deployed secure websites (<span className="text-primary font-bold">HTTPS</span>) are blocked from accessing local API endpoints (<span className="text-red-400 font-bold font-mono">http://localhost:11434</span>) unless Cross-Origin Resource Sharing (CORS) is explicitly enabled on your machine.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/40 pt-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select Operating System</p>
+                    <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/30">
+                      {(["macos", "windows", "linux"] as const).map((os) => (
+                        <button
+                          key={os}
+                          onClick={() => setSelectedOS(os)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] font-bold rounded-md capitalize transition-all duration-200",
+                            selectedOS === os 
+                              ? "bg-background text-foreground shadow-sm" 
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {os}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
+                    {selectedOS === "macos" && (
+                      <div className="space-y-3">
+                        <p>1. Quit the <strong>Ollama</strong> app completely from your menu bar icon.</p>
+                        <p>2. Open your <strong>Terminal</strong> app and paste this command to allow your browser to communicate with the local server:</p>
+                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
+                          <span>launchctl setenv OLLAMA_ORIGINS "*"</span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText('launchctl setenv OLLAMA_ORIGINS "*"');
+                              toast.success("Command copied!");
+                            }}
+                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Copy className="size-3.5" />
+                          </button>
+                        </div>
+                        <p>3. Restart the Ollama app by opening it from your Applications folder or running:</p>
+                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
+                          <span>open -a Ollama</span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText('open -a Ollama');
+                              toast.success("Command copied!");
+                            }}
+                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Copy className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedOS === "windows" && (
+                      <div className="space-y-3">
+                        <p>1. Right-click the <strong>Ollama</strong> tray icon in your Windows taskbar and choose <strong>Quit</strong>.</p>
+                        <p>2. Open <strong>PowerShell</strong> and run this command to configure user variables:</p>
+                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
+                          <span>[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "*", "User")</span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText('[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "*", "User")');
+                              toast.success("Command copied!");
+                            }}
+                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Copy className="size-3.5" />
+                          </button>
+                        </div>
+                        <p>3. Relaunch <strong>Ollama</strong> from your Start menu.</p>
+                      </div>
+                    )}
+
+                    {selectedOS === "linux" && (
+                      <div className="space-y-3">
+                        <p>1. Open your terminal and open the service configuration editor:</p>
+                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
+                          <span>sudo systemctl edit ollama.service</span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText('sudo systemctl edit ollama.service');
+                              toast.success("Command copied!");
+                            }}
+                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Copy className="size-3.5" />
+                          </button>
+                        </div>
+                        <p>2. Add the environment variable in the file under the <code>[Service]</code> block and save it:</p>
+                        <pre className="bg-muted/30 border border-border/40 rounded-xl p-3 text-[10px] text-foreground font-mono">
+{`[Service]
+Environment="OLLAMA_ORIGINS=*"`}
+                        </pre>
+                        <p>3. Reload systemd configurations and restart the Ollama service:</p>
+                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
+                          <span>sudo systemctl daemon-reload && sudo systemctl restart ollama</span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText('sudo systemctl daemon-reload && sudo systemctl restart ollama');
+                              toast.success("Command copied!");
+                            }}
+                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Copy className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowTroubleshooter(false)}
+                    className="text-[11px] font-bold rounded-xl"
+                  >
+                    Hide Diagnostics
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleAutoDetect}
+                    className="text-[11px] font-bold rounded-xl border-red-500/20 hover:bg-red-500/5 hover:border-red-500/30 text-red-400"
+                  >
+                    Retry Connection Scan
+                  </Button>
+                </div>
+              </motion.div>
+            )}
 
             {ollamaModels.length > 0 ? (
               <section className="space-y-6">

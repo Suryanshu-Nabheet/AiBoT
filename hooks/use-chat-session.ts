@@ -286,21 +286,48 @@ export function useChatSession({
     try {
       let res;
       const isOllama = model.startsWith("ollama/");
-
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
-        res = await fetch(`${ollamaUrl}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: ollamaModelName,
-            messages: [...messages, { ...userMessage, content: apiContent }].map(
-              (m) => ({ role: m.role, content: m.content })
-            ),
-            stream: true,
-          }),
-          signal: abortControllerRef.current.signal,
-        });
+        
+        // Normalize URL
+        let targetUrl = ollamaUrl.trim();
+        if (!targetUrl) {
+          targetUrl = "http://localhost:11434";
+        }
+        if (!/^https?:\/\//i.test(targetUrl)) {
+          targetUrl = `http://${targetUrl}`;
+        }
+
+        const chatPayload = {
+          model: ollamaModelName,
+          messages: [...messages, { ...userMessage, content: apiContent }].map(
+            (m) => ({ role: m.role, content: m.content })
+          ),
+          stream: true,
+        };
+
+        try {
+          res = await fetch(`${targetUrl}/api/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(chatPayload),
+            signal: abortControllerRef.current.signal,
+          });
+          if (!res.ok) throw new Error("Status " + res.status);
+        } catch (err) {
+          console.warn("Primary Ollama chat connection failed, trying loopback fallback...", err);
+          if (targetUrl.includes("localhost")) {
+            const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
+            res = await fetch(`${fallbackUrl}/api/chat`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(chatPayload),
+              signal: abortControllerRef.current.signal,
+            });
+          } else {
+            throw err;
+          }
+        }
       } else {
         res = await fetch("/api/chat", {
           method: "POST",
