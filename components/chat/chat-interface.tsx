@@ -508,30 +508,70 @@ export default function ChatInterface({
 
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+  const messagesLengthRef = useRef<number>(messages.length);
+  useEffect(() => {
+    messagesLengthRef.current = messages.length;
+  }, [messages.length]);
+
+  const scrollRafRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        window.cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
   }, []);
+
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const container = scrollContainerRef.current;
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior,
+        });
+        return;
+      }
+
+      // Fallback when the container ref isn't ready yet.
+      messagesEndRef.current?.scrollIntoView({ behavior });
+    },
+    []
+  );
 
   // Handle scroll visibility
   const handleScroll = useCallback(() => {
-    if (!scrollContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } =
-      scrollContainerRef.current;
-    const isBottom = scrollHeight - scrollTop - clientHeight < 100;
-    setShowScrollButton(!isBottom && messages.length > 0);
-  }, [messages.length]);
+    if (scrollRafRef.current !== null) return;
+
+    scrollRafRef.current = window.requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Distance from the bottom. When close enough, hide the button.
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const isBottom = distanceFromBottom < 100;
+
+      const hasMessages = messagesLengthRef.current > 0;
+      const next = !isBottom && hasMessages;
+
+      setShowScrollButton((prev) => (prev === next ? prev : next));
+    });
+  }, []);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
-      container.addEventListener("scroll", handleScroll);
+      container.addEventListener("scroll", handleScroll, { passive: true });
       return () => container.removeEventListener("scroll", handleScroll);
     }
   }, [handleScroll]);
 
   // Auto-scroll on new messages
   useEffect(() => {
-    scrollToBottom("instant");
+    scrollToBottom("auto");
   }, [messages.length, scrollToBottom]);
 
   useGlobalKeyPress({
@@ -780,6 +820,7 @@ export default function ChatInterface({
       <AnimatePresence>
         {showScrollButton && (
           <motion.button
+            type="button"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
