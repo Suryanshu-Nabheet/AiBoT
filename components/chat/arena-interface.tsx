@@ -86,6 +86,8 @@ const MessageComponent = memo(
     // Parsing Thinking blocks - Only for Agent responses
     let thinkingContent = "";
     let mainResponse = isUser ? message.content : displayedContent;
+    let hasThinkingTag = false;
+    let hasClosingThinkingTag = false;
 
     if (!isUser) {
       const rawContent = displayedContent; // Use displayedContent to maintain typing animation
@@ -93,21 +95,30 @@ const MessageComponent = memo(
       
       const transitionRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
       const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
+      const closingThinkingRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
+      hasClosingThinkingTag = closingThinkingRegex.test(rawContent);
       
       const transitionMatch = rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
 
       if (transitionMatch) {
+        hasThinkingTag = true;
         const splitMarker = transitionMatch[0];
         const parts = rawContent.split(splitMarker);
         // Extract reasoning (strip opening tags)
-        thinkingContent = parts[0].replace(/<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi, "").trim();
+        thinkingContent = parts[0]
+          .replace(
+            /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi,
+            ""
+          )
+          .trim();
         // Extract main response (strip any remaining hallucinated tags)
         mainResponse = parts.slice(1).join(splitMarker).replace(/<\/?[^>]+(>|$)/g, "").trim();
       } else {
-        const anyOpenTag = /<thinking>|<thought>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+        const anyOpenTag = /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
         const openMatch = rawContent.match(anyOpenTag);
         
         if (openMatch) {
+          hasThinkingTag = true;
           // If we have an opening tag but no closing tag yet, everything after it is thinking
           thinkingContent = rawContent.split(openMatch[0])[1]?.trim() || "";
           mainResponse = "";
@@ -127,14 +138,28 @@ const MessageComponent = memo(
         /NUCLEAR REASONING LOCK/gi,
         /FAILURE TO COMPLY.*?DO NOT IGNORE THIS\./gi,
         /\[MANDATORY: START WITH.*?\]/gi,
-        /The response must now begin with and end with/gi
+        /The response must now begin with and end with/gi,
+        /IMPORTANT:\s*When you respond[^\n]*/gi,
+        /All reasoning MUST be inside <thinking>\.\.\.<\/thinking>\.?/gi,
+        /After <\/thinking>, provide the final answer[^\n]*/gi
       ];
       
       leakagePatterns.forEach(pattern => {
         mainResponse = mainResponse.replace(pattern, "").trim();
         thinkingContent = thinkingContent.replace(pattern, "").trim();
       });
+
+      // Stage 1 (thinking-only) must never render a visible "final response"
+      // alongside the reasoning panel.
+      if (message.isThinkingRequested && hasThinkingTag) {
+        mainResponse = "";
+      }
     }
+
+    const hasThinkingPanel = !isUser && (hasThinkingTag || thinkingContent);
+    const compactAgentContentClass = hasThinkingPanel
+      ? "bg-transparent text-foreground px-0 pt-0 pb-2 shadow-none border-none w-full max-w-full"
+      : "bg-transparent text-foreground px-0 py-2 shadow-none border-none w-full max-w-full";
 
     const [isCopied, setIsCopied] = useState(false);
     const handleCopy = useCallback(async () => {
@@ -150,10 +175,16 @@ const MessageComponent = memo(
           isUser ? "items-end" : "items-start"
         )}
       >
-        {!isUser && thinkingContent && (
-          <div className="w-full mb-2">
+        {!isUser && (hasThinkingTag || thinkingContent) && (
+          <div className="w-full mb-1">
             <ThinkingBar
-              text={isThinkingExpanded ? "Reasoning Details" : (mainResponse ? "Deep reasoning complete" : "Deep reasoning in progress")}
+              text={
+                isThinkingExpanded
+                  ? "Reasoning Details"
+                  : hasClosingThinkingTag
+                    ? "Deep reasoning complete"
+                    : "Deep reasoning in progress"
+              }
               isExpanded={isThinkingExpanded}
               onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
             />
@@ -165,7 +196,7 @@ const MessageComponent = memo(
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden px-1"
                 >
-                  <div className="text-sm text-muted-foreground/75 leading-relaxed py-2 border-l border-primary/5 pl-4 my-1">
+                    <div className="text-sm text-muted-foreground/75 leading-relaxed py-1.5 border-l border-primary/5 pl-4 my-0.5">
                     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words [&_*]:text-muted-foreground/75">
                       <ReactMarkdown
                         remarkPlugins={remarkPlugins}
@@ -181,37 +212,43 @@ const MessageComponent = memo(
             </AnimatePresence>
           </div>
         )}
-        <div
-          className={cn(
-            "text-sm overflow-hidden break-words",
-            isUser
-              ? "bg-muted text-foreground border border-border/50 rounded-2xl px-4 py-2.5 md:px-5 md:py-3 shadow-sm max-w-[85%]"
-              : "bg-transparent text-foreground px-0 py-2 shadow-none border-none w-full max-w-full"
-          )}
-        >
-          {isUser ? (
-            <div className="whitespace-pre-wrap font-medium">{mainResponse}</div>
-          ) : (
-            <div className="w-full max-w-full">
-              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
-                <div className="w-full max-w-full overflow-hidden">
-                  <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_p]:break-words [&_li]:break-words [&_h1]:break-words [&_h2]:break-words">
-                    <ReactMarkdown
-                      remarkPlugins={remarkPlugins}
-                      rehypePlugins={rehypePlugins}
-                      components={markdownComponents}
-                    >
-                      {mainResponse}
-                    </ReactMarkdown>
+        {(!isUser && !!message.isThinkingRequested && hasThinkingTag) ? null : (
+          <div
+            className={cn(
+              "text-sm overflow-hidden break-words",
+              isUser
+                ? "bg-muted text-foreground border border-border/50 rounded-2xl px-4 py-2.5 md:px-5 md:py-3 shadow-sm max-w-[85%]"
+                : compactAgentContentClass
+            )}
+          >
+            {isUser ? (
+              <div className="whitespace-pre-wrap font-medium">{mainResponse}</div>
+            ) : (
+              <div className="w-full max-w-full">
+                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
+                  <div className="w-full max-w-full overflow-hidden">
+                    <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_p]:break-words [&_li]:break-words [&_h1]:break-words [&_h2]:break-words">
+                      <ReactMarkdown
+                        remarkPlugins={remarkPlugins}
+                        rehypePlugins={rehypePlugins}
+                        components={markdownComponents}
+                      >
+                        {mainResponse}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
         
-        {/* Actions - Only show after response is complete */}
-        {!isUser && message.content.trim() && !isGenerating && (
+        {/* Actions - Only show after final response is complete */}
+        {!isUser &&
+          !message.isThinkingRequested &&
+          message.content.trim() &&
+          !isGenerating &&
+          !/<thinking>|<thought>|<reasoning>|<\/\|thinking\|>|\[THOUGHT\]/i.test(message.content) && (
           <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
             <TooltipProvider delayDuration={0}>
               <Tooltip>
@@ -674,7 +711,7 @@ export default function ArenaInterface({
         isEnhancing={isEnhancing}
         onEnhance={handleEnhance}
         isThinking={isThinking}
-        onThinkingToggle={() => setIsThinking(!isThinking)}
+        onThinkingToggle={() => setIsThinking((prev) => !prev)}
         // No Model Selector for Arena
         showModelSelector={false}
         placeholder={isListening ? "Listening..." : "Message both models..."}

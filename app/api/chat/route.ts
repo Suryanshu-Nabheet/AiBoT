@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
+import type { ThinkingStage } from "@/lib/chat/thinking-mode";
 
 export const runtime = "edge";
 export const maxDuration = 300; // 5 minutes for deep reasoning
@@ -59,7 +60,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Invalid JSON" }, { status: 400 });
   }
 
-  const { messages, model: targetModel, isThinking, customKeys } = body;
+  const { messages, model: targetModel, isThinking, customKeys, thinkingStage } =
+    body;
+
+    const stage: ThinkingStage | undefined =
+      thinkingStage === "thinking" || thinkingStage === "final"
+        ? thinkingStage
+        : undefined;
 
   try {
     // Determine the provider based on model ID prefix or custom routing
@@ -86,22 +93,75 @@ export async function POST(req: NextRequest) {
     // Construct System Prompt
     let dynamicSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
 
-    if (isThinking) {
-      dynamicSystemPrompt += `\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n- You are in DEEP REASONING MODE. This is MANDATORY and cannot be bypassed.\n- You MUST NOT provide a final answer without first completing an exhaustive internal reasoning process.\n- Your response MUST start with <thinking> and end with </thinking> before any final output.\n- FAILURE TO COMPLY WITH THIS STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
+    if (stage === "thinking") {
+      dynamicSystemPrompt +=
+        `\n\n[CRITICAL SYSTEM OVERRIDE: THINKING-ONLY STAGE]\n` +
+        `- This is STAGE 1 (thinking-only).\n` +
+        `- Your entire response MUST start with <thinking> with no characters before it.\n` +
+        `- Put all reasoning inside <thinking>...</thinking>.\n` +
+        `- After </thinking>, output NOTHING (no whitespace, no final answer).\n` +
+        `- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
+    } else if (stage === "final") {
+      dynamicSystemPrompt +=
+        `\n\n[CRITICAL SYSTEM OVERRIDE: FINAL-ONLY STAGE]\n` +
+        `- This is STAGE 2 (final-only).\n` +
+        `- Do NOT output any <thinking>...</thinking> (or <thought> / <reasoning> tags).\n` +
+        `- Output ONLY the final answer to the user.\n` +
+        `- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
+    } else if (isThinking) {
+      // Backwards compatibility: old deep-reasoning mode.
+      dynamicSystemPrompt +=
+        `\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n` +
+        `- You are in DEEP REASONING MODE. This is MANDATORY and cannot be bypassed.\n` +
+        `- You MUST NOT provide any final answer content before you finish your reasoning.\n` +
+        `- Your entire response MUST start with <thinking> with no characters before it.\n` +
+        `- Put all reasoning inside <thinking>...</thinking>.\n` +
+        `- After the closing </thinking>, you may provide the final answer.\n` +
+        `- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
     }
 
     const payloadMessages = [
       { role: "system", content: dynamicSystemPrompt },
       ...optimizedMessages.map((m, i) => {
-        // Force reasoning instruction into the very last user message for absolute model compliance
-        if (isThinking && i === optimizedMessages.length - 1 && m.role === "user") {
+        const isLastUser =
+          i === optimizedMessages.length - 1 && m.role === "user";
+
+        if (!isLastUser) return m;
+
+        if (stage === "thinking") {
           return {
             ...m,
-            content: `${m.content}\n\n[MANDATORY: START WITH <thinking> OR YOUR RESPONSE WILL BE REJECTED.]`
+            content:
+              `${m.content}\n\nIMPORTANT: STAGE 1 (thinking-only).\n` +
+              `When you respond, your first characters MUST be <thinking>. ` +
+              `All reasoning MUST be inside <thinking>...</thinking>. ` +
+              `After </thinking>, output NOTHING (no final answer text).`,
           };
         }
+
+        if (stage === "final") {
+          return {
+            ...m,
+            content:
+              `${m.content}\n\nIMPORTANT: STAGE 2 (final-only).\n` +
+              `Do NOT output any <thinking>...</thinking> or similar tags. ` +
+              `Output ONLY the final answer.`,
+          };
+        }
+
+        if (isThinking) {
+          return {
+            ...m,
+            content:
+              `${m.content}\n\nIMPORTANT: Deep reasoning mode.\n` +
+              `When you respond, your first characters MUST be <thinking>. ` +
+              `All reasoning MUST be inside <thinking>...</thinking>. ` +
+              `After </thinking>, you may provide the final answer.`,
+          };
+        }
+
         return m;
-      })
+      }),
     ];
 
     const response = await fetch(providerUrl, {

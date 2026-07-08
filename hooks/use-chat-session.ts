@@ -15,6 +15,8 @@ import { useSettings } from "@/contexts/settings-context";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { Message, Role } from "@/lib/types";
+import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
+import { getThinkingModeUserSuffix, type ThinkingStage } from "@/lib/chat/thinking-mode";
 
 export interface UseChatSessionOptions {
   conversationId?: string;
@@ -111,23 +113,32 @@ export function useChatSession({
   const processStream = async (
     response: globalThis.Response,
     isThinkingRequested: boolean = false,
-    isOllama: boolean = false
+    isOllama: boolean = false,
+    options?: {
+      finalize?: boolean;
+      tempId?: string;
+      contentPrefix?: string;
+    }
   ) => {
+    const finalize = options?.finalize ?? true;
     if (!response.ok || !response.body) {
-      setIsLoading(false);
-      return;
+      if (finalize) setIsLoading(false);
+      return "";
     }
 
-    const tempId = `ai-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      { 
-        id: tempId, 
-        role: Role.Agent, 
-        content: "",
-        isThinkingRequested,
-      },
-    ]);
+    const tempId = options?.tempId ?? `ai-${Date.now()}`;
+    const shouldCreatePlaceholder = !options?.tempId;
+    if (shouldCreatePlaceholder) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          role: Role.Agent,
+          content: "",
+          isThinkingRequested,
+        },
+      ]);
+    }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -174,20 +185,30 @@ export function useChatSession({
         updateCounter++;
         if (updateCounter >= UPDATE_BATCH_SIZE || done) {
           updateCounter = 0;
+          const prefix = options?.contentPrefix ?? "";
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === tempId ? { ...m, content: accumulated } : m
+              m.id === tempId
+                ? {
+                    ...m,
+                    content: prefix + accumulated,
+                    isThinkingRequested,
+                  }
+                : m
             )
           );
         }
       }
 
       setMessages((prev) => {
+        const prefix = options?.contentPrefix ?? "";
         const updatedMessages = prev.map((m) =>
-          m.id === tempId ? { ...m, content: accumulated } : m
+          m.id === tempId
+            ? { ...m, content: prefix + accumulated, isThinkingRequested }
+            : m
         );
 
-        if (conversationId) {
+        if (finalize && conversationId) {
           saveConversation({
             id: conversationId,
             title:
@@ -201,20 +222,33 @@ export function useChatSession({
         }
         return updatedMessages;
       });
+      return (options?.contentPrefix ?? "") + accumulated;
     } catch (e) {
       console.error("Stream error", e);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-stream-${Date.now()}`,
-          role: Role.Agent,
-          content:
-            "**Connection Error:** The stream was interrupted. Please try again.",
-        },
-      ]);
+      const errorContent =
+        "**Connection Error:** The stream was interrupted. Please try again.";
+      if (options?.tempId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId ? { ...m, content: errorContent, isThinkingRequested } : m
+          )
+        );
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `error-stream-${Date.now()}`,
+            role: Role.Agent,
+            content: errorContent,
+          },
+        ]);
+      }
+      return "";
     } finally {
-      setIsLoading(false);
-      refreshExecutions();
+      if (finalize) {
+        setIsLoading(false);
+        refreshExecutions();
+      }
     }
   };
 
@@ -227,6 +261,7 @@ export function useChatSession({
     const inputQuery = manualQuery || query;
     if (!inputQuery.trim() || isLoading) return;
 
+    const thinkingRequested = !!isThinking;
     setShowWelcome(false);
     const currentQuery = inputQuery.trim();
     const currentAttachments = manualAttachments || attachments;
@@ -284,11 +319,13 @@ export function useChatSession({
 
 
     try {
-      let res;
       const isOllama = model.startsWith("ollama/");
+      const stage1Content = `${apiContent}${getThinkingModeUserSuffix("thinking")}`;
+      const stage2Content = `${apiContent}${getThinkingModeUserSuffix("final")}`;
+
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
-        
+
         // Normalize URL
         let targetUrl = ollamaUrl.trim();
         if (!targetUrl) {
@@ -298,14 +335,150 @@ export function useChatSession({
           targetUrl = `http://${targetUrl}`;
         }
 
+        const baseSystemPrompt =
+          `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
+
+        const stage1SystemPrompt = `${baseSystemPrompt}\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n- Stage 1: thinking-only.\n- Your response MUST start with <thinking> with no characters before it.\n- Put all reasoning inside <thinking>...</thinking>.\n- You MUST NOT output any final answer content outside of </thinking> for this stage.\n- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
+
+        const stage2SystemPrompt =
+          `${baseSystemPrompt}\n\nIMPORTANT: Stage 2: final-only.\n- Do not include any <thinking>...</thinking> or related tags.\n- Output ONLY the final answer.`;
+
+        const buildOllamaPayload = (stage: ThinkingStage, content: string) => {
+          const systemPrompt = stage === "thinking" ? stage1SystemPrompt : stage2SystemPrompt;
+          return {
+            model: ollamaModelName,
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...messages,
+              { ...userMessage, content },
+            ].map((m) => ({ role: m.role, content: m.content })),
+            stream: true,
+          };
+        };
+
+        // Stage 1 + Stage 2 (merged into one assistant message)
+        if (thinkingRequested) {
+          const tempId = `ai-${Date.now()}`;
+
+          // Create the placeholder once so UI renders as a single message bubble.
+          setMessages((prev) => [
+            ...prev,
+            { id: tempId, role: Role.Agent, content: "", isThinkingRequested: true },
+          ]);
+
+          // Stage 1: thinking-only
+          const chatPayload1 = buildOllamaPayload("thinking", stage1Content);
+          let res1: Response;
+          try {
+            res1 = await fetch(`${targetUrl}/api/chat`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(chatPayload1),
+              signal: abortControllerRef.current.signal,
+            });
+          } catch (err) {
+            console.warn(
+              "Primary Ollama chat connection failed (stage 1), trying loopback fallback...",
+              err
+            );
+            if (targetUrl.includes("localhost")) {
+              const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
+              res1 = await fetch(`${fallbackUrl}/api/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(chatPayload1),
+                signal: abortControllerRef.current.signal,
+              });
+            } else {
+              throw err;
+            }
+          }
+
+          if (!res1.ok) {
+            const errorText = await res1.text();
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `error-${Date.now()}`,
+                role: Role.Agent,
+                content: `**Error ${res1.status}**: ${errorText.substring(0, 200)}`,
+                isError: true,
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          const stage1Final = await processStream(res1, true, true, {
+            finalize: false,
+            tempId,
+            contentPrefix: "",
+          });
+
+          // Stage 2: final-only (append to same message)
+          const chatPayload2 = buildOllamaPayload("final", stage2Content);
+          let res2: Response;
+          try {
+            res2 = await fetch(`${targetUrl}/api/chat`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(chatPayload2),
+              signal: abortControllerRef.current.signal,
+            });
+          } catch (err) {
+            console.warn(
+              "Primary Ollama chat connection failed (stage 2), trying loopback fallback...",
+              err
+            );
+            if (targetUrl.includes("localhost")) {
+              const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
+              res2 = await fetch(`${fallbackUrl}/api/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(chatPayload2),
+                signal: abortControllerRef.current.signal,
+              });
+            } else {
+              throw err;
+            }
+          }
+
+          if (!res2.ok) {
+            const errorText = await res2.text();
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `error-${Date.now()}`,
+                role: Role.Agent,
+                content: `**Error ${res2.status}**: ${errorText.substring(0, 200)}`,
+                isError: true,
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          await processStream(res2, false, true, {
+            finalize: true,
+            tempId,
+            contentPrefix: stage1Final,
+          });
+
+          return;
+        }
+
+        // Non-thinking Ollama (single phase)
         const chatPayload = {
           model: ollamaModelName,
-          messages: [...messages, { ...userMessage, content: apiContent }].map(
-            (m) => ({ role: m.role, content: m.content })
-          ),
+          messages: [
+            { role: "system", content: baseSystemPrompt },
+            ...messages,
+            { ...userMessage, content: apiContent },
+          ].map((m) => ({ role: m.role, content: m.content })),
           stream: true,
         };
 
+        let res: Response;
         try {
           res = await fetch(`${targetUrl}/api/chat`, {
             method: "POST",
@@ -313,7 +486,6 @@ export function useChatSession({
             body: JSON.stringify(chatPayload),
             signal: abortControllerRef.current.signal,
           });
-          if (!res.ok) throw new Error("Status " + res.status);
         } catch (err) {
           console.warn("Primary Ollama chat connection failed, trying loopback fallback...", err);
           if (targetUrl.includes("localhost")) {
@@ -328,27 +500,131 @@ export function useChatSession({
             throw err;
           }
         }
-      } else {
-        res = await fetch("/api/chat", {
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `error-${Date.now()}`,
+              role: Role.Agent,
+              content: `**Error ${res.status}**: ${errorText.substring(0, 200)}`,
+              isError: true,
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
+        await processStream(res, false, true);
+        return;
+      }
+
+      // Non-Ollama provider (single OpenAI/OpenRouter proxy)
+      if (thinkingRequested) {
+        const tempId = `ai-${Date.now()}`;
+
+        // Create placeholder once so Stage 1 + Stage 2 render as one bubble.
+        setMessages((prev) => [
+          ...prev,
+          { id: tempId, role: Role.Agent, content: "", isThinkingRequested: true },
+        ]);
+
+        // Stage 1: thinking-only
+        const res1 = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [...messages, { ...userMessage, content: apiContent }].map(
+            messages: [...messages, { ...userMessage, content: stage1Content }].map(
               (m) => ({ role: m.role, content: m.content })
             ),
             model,
             conversationId,
-            isThinking,
+            isThinking: true,
+            thinkingStage: "thinking",
             customKeys: apiKeys,
           }),
           signal: abortControllerRef.current.signal,
         });
+
+        if (!res1.ok) {
+          const errorText = await res1.text();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `error-${Date.now()}`,
+              role: Role.Agent,
+              content: `**Error ${res1.status}**: ${errorText.substring(0, 200)}`,
+              isError: true,
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
+        const stage1Final = await processStream(res1, true, false, {
+          finalize: false,
+          tempId,
+          contentPrefix: "",
+        });
+
+        // Stage 2: final-only (append to same message)
+        const res2 = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [...messages, { ...userMessage, content: stage2Content }].map(
+              (m) => ({ role: m.role, content: m.content })
+            ),
+            model,
+            conversationId,
+            isThinking: false,
+            thinkingStage: "final",
+            customKeys: apiKeys,
+          }),
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!res2.ok) {
+          const errorText = await res2.text();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `error-${Date.now()}`,
+              role: Role.Agent,
+              content: `**Error ${res2.status}**: ${errorText.substring(0, 200)}`,
+              isError: true,
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
+        await processStream(res2, false, false, {
+          finalize: true,
+          tempId,
+          contentPrefix: stage1Final,
+        });
+        return;
       }
 
+      // Non-thinking single phase
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, { ...userMessage, content: apiContent }].map(
+            (m) => ({ role: m.role, content: m.content })
+          ),
+          model,
+          conversationId,
+          isThinking: false,
+          customKeys: apiKeys,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
       if (!res.ok) {
-        // ... (Error handling logic same as before, simplified for brevity here, but vital in prod)
-        // I'm keeping it concise for the hook but should copy full logic.
-        // For now, simple error feedback.
         const errorText = await res.text();
         setMessages((prev) => [
           ...prev,
@@ -363,7 +639,7 @@ export function useChatSession({
         return;
       }
 
-      await processStream(res, !!isThinking, isOllama);
+      await processStream(res, false, false);
     } catch (error: any) {
       if (error.name !== "AbortError") {
         setMessages((prev) => [
