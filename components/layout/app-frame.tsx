@@ -13,6 +13,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { UIStructure } from "@/components/ui/ui-structure";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { HeaderModeToggle } from "@/components/home/header-mode-toggle";
+import { CommandPalette } from "@/components/command-palette";
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -22,6 +23,7 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full max-w-full overflow-hidden">
       <SidebarProvider>
         <UIStructure />
+        <CommandPalette />
         <SidebarInset className="bg-sidebar p-0 md:p-2 relative flex-col">
           <div className="flex h-full flex-col w-full max-w-full relative overflow-hidden bg-background md:rounded-2xl border border-sidebar-border/50 shadow-sm">
             <header className="flex h-11 w-full items-center gap-0 shrink-0 z-10 overflow-hidden select-none">

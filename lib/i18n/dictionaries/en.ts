@@ -127,6 +127,22 @@ export const en = {
   "header.arenaMode": "Arena Mode",
   "header.appSettings": "App Settings",
 
+  // Command palette (⌘K)
+  "command.title": "Command Palette",
+  "command.description": "Search chats and run quick actions",
+  "command.placeholder": "What do you need?",
+  "command.empty": "No actions found.",
+  "command.group.actions": "Create",
+  "command.group.navigate": "Navigate",
+  "command.group.system": "System",
+  "command.group.history": "Recent chats",
+  "command.newChat": "New Chat",
+  "command.layout.direct": "Switch to Direct Chat",
+  "command.layout.arena": "Switch to Arena Mode",
+  "command.theme.light": "Switch to Light Mode",
+  "command.theme.dark": "Switch to Dark Mode",
+  "command.footer.hint": "↑↓ navigate · ↵ select · esc close",
+
   // Chat
   "chat.welcome.tagline": "The world's fastest, smartest, and most premium AI chatbot. Start a conversation below.",
   "chat.defaultTitle": "New Chat",

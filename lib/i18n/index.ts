@@ -7,16 +7,15 @@
 
 import { en, type EnDictionary, type TranslationKey } from "./dictionaries/en";
 import { hi } from "./dictionaries/hi";
-import { ja } from "./dictionaries/ja";
 import { DEFAULT_LOCALE, LOCALES, getLanguageName, type Locale } from "./types";
 
 export type { Locale, EnDictionary, TranslationKey };
 export { DEFAULT_LOCALE, LOCALES, getLanguageName };
 
-const DICTIONARIES: Record<Locale, EnDictionary> = { en, hi, ja };
+const DICTIONARIES: Record<Locale, EnDictionary> = { en, hi };
 
 export function isLocale(value: unknown): value is Locale {
-  return value === "en" || value === "hi" || value === "ja";
+  return value === "en" || value === "hi";
 }
 
 export function getDictionary(locale: Locale): EnDictionary {

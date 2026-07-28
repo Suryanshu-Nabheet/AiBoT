@@ -715,7 +715,7 @@ export default function ChatInterface({
     const recognition = new (window as any).webkitSpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = locale === "hi" ? "hi-IN" : locale === "ja" ? "ja-JP" : "en-US";
+    recognition.lang = locale === "hi" ? "hi-IN" : "en-US";
 
     recognitionRef.current = recognition;
 

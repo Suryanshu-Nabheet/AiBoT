@@ -5,7 +5,7 @@
  * See LICENSE file for details
  */
 
-export type Locale = "en" | "hi" | "ja";
+export type Locale = "en" | "hi";
 
 export const LOCALES: {
   id: Locale;
@@ -17,7 +17,6 @@ export const LOCALES: {
 }[] = [
   { id: "en", label: "English (US)", nativeLabel: "English (US)", htmlLang: "en", languageName: "English" },
   { id: "hi", label: "Hindi (India)", nativeLabel: "हिन्दी (भारत)", htmlLang: "hi", languageName: "Hindi" },
-  { id: "ja", label: "Japanese", nativeLabel: "日本語", htmlLang: "ja", languageName: "Japanese" },
 ];
 
 export const DEFAULT_LOCALE: Locale = "en";
