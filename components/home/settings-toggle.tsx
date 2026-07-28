@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/hooks/use-translation";
 
 export type ViewMode = "direct" | "side-by-side" | "settings";
 
@@ -69,6 +70,7 @@ const ArenaLayoutIcon = ({ active }: { active: boolean }) => (
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function SettingsToggle({ mode, onChange, className }: SettingsToggleProps) {
+  const { t } = useTranslation();
   return (
     <DropdownMenu>
       <Tooltip>
@@ -86,11 +88,11 @@ export function SettingsToggle({ mode, onChange, className }: SettingsToggleProp
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold"> Settings</TooltipContent>
+        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">{t("header.settings")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5 shadow-xl border-sidebar-border/50">
         <DropdownMenuLabel className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 px-2 py-1.5">
-          Architecture
+          {t("header.architecture")}
         </DropdownMenuLabel>
         <div className="grid grid-cols-2 gap-1.5 p-0.5">
           <button
@@ -103,7 +105,7 @@ export function SettingsToggle({ mode, onChange, className }: SettingsToggleProp
             )}
           >
             <DirectLayoutIcon active={mode === "direct"} />
-            <span className="text-[10px] font-bold tracking-tight">Direct Chat</span>
+            <span className="text-[10px] font-bold tracking-tight">{t("header.directChat")}</span>
           </button>
           <button
             onClick={() => onChange("side-by-side")}
@@ -115,7 +117,7 @@ export function SettingsToggle({ mode, onChange, className }: SettingsToggleProp
             )}
           >
             <ArenaLayoutIcon active={mode === "side-by-side"} />
-            <span className="text-[10px] font-bold tracking-tight">Arena Mode</span>
+            <span className="text-[10px] font-bold tracking-tight">{t("header.arenaMode")}</span>
           </button>
         </div>
         <DropdownMenuSeparator className="my-1.5 bg-sidebar-border/50" />
@@ -131,7 +133,7 @@ export function SettingsToggle({ mode, onChange, className }: SettingsToggleProp
           <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted/50 text-muted-foreground group-hover:text-primary transition-colors">
             <Gear className="size-3.5" weight="bold" />
           </div>
-          <span className="text-[11px] font-bold tracking-tight">App Settings</span>
+          <span className="text-[11px] font-bold tracking-tight">{t("header.appSettings")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

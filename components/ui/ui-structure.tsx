@@ -48,8 +48,10 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
 import { useViewMode } from "@/contexts/view-mode-context";
+import { useTranslation } from "@/hooks/use-translation";
 
 export const UIStructure = () => {
+  const { t } = useTranslation();
   const {
     executions,
     loading,
@@ -75,13 +77,13 @@ export const UIStructure = () => {
     if (executionId === currentConversationId) {
       router.push("/");
     }
-    toast.success("Chat deleted");
+    toast.success(t("nav.chatDeleted"));
   };
 
   const handleSaveTitle = (id: string) => {
     updateExecution(id, { title: editTitle });
     setEditingId("");
-    toast.success("Title updated");
+    toast.success(t("nav.titleUpdated"));
   };
 
   const { setViewMode } = useViewMode();
@@ -110,7 +112,7 @@ export const UIStructure = () => {
               <div className="relative w-full">
                 <MagnifyingGlass className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <SidebarInput
-                  placeholder="Search chats..."
+                  placeholder={t("nav.search.placeholder")}
                   className="pl-9 h-10 bg-background/50 border-sidebar-border/50 focus-visible:ring-0 focus-visible:ring-offset-0"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -133,7 +135,7 @@ export const UIStructure = () => {
                   <div className="flex items-center justify-center size-5 rounded-lg bg-sidebar-accent border border-sidebar-border/50 group-hover:bg-background transition-colors">
                     <Plus className="size-3.5 text-primary" weight="bold" />
                   </div>
-                  New Chat
+                  {t("nav.newChat")}
                 </Button>
 
                 <div className="w-full">
@@ -159,7 +161,7 @@ export const UIStructure = () => {
                             )}
                             weight="bold"
                           />
-                          <span className="font-bold tracking-tight">Agent Mode</span>
+                          <span className="font-bold tracking-tight">{t("nav.agentMode")}</span>
                         </div>
                         <CaretDown
                           className={cn(
@@ -178,7 +180,7 @@ export const UIStructure = () => {
                           onClick={() => router.push("/agent/summarizer")}
                         >
                           <FileText className="size-4.5 text-primary" weight="bold" />
-                          Summarizer
+                          {t("nav.agent.summarizer")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -186,7 +188,7 @@ export const UIStructure = () => {
                           onClick={() => router.push("/agent/coder")}
                         >
                           <TerminalWindow className="size-4.5 text-primary" weight="bold" />
-                          Coder
+                          {t("nav.agent.coder")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -194,7 +196,7 @@ export const UIStructure = () => {
                           onClick={() => router.push("/agent/coach")}
                         >
                           <SpeakerHigh className="size-4.5 text-primary" weight="bold" />
-                          Coach
+                          {t("nav.agent.coach")}
                         </Button>
                       </div>
                     </CollapsibleContent>
@@ -306,15 +308,22 @@ export const UIStructure = () => {
       <SidebarFooter className="border-t border-sidebar-border/50 p-4">
         <div className="w-full text-center">
           <p className="text-[11px] text-sidebar-foreground/40 font-medium">
-            Made by{" "}
-            <a
-              href="https://github.com/Suryanshu-Nabheet"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold hover:underline transition-all"
-            >
-              Suryanshu Nabheet
-            </a>
+            {t("nav.madeBy").includes("Suryanshu Nabheet") ? (
+              <>
+                {t("nav.madeBy").split("Suryanshu Nabheet")[0]}
+                <a
+                  href="https://github.com/Suryanshu-Nabheet"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold hover:underline transition-all"
+                >
+                  Suryanshu Nabheet
+                </a>
+                {t("nav.madeBy").split("Suryanshu Nabheet")[1] || ""}
+              </>
+            ) : (
+              t("nav.madeBy")
+            )}
           </p>
         </div>
       </SidebarFooter>

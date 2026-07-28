@@ -17,6 +17,19 @@ import { useExecutionContext } from "@/contexts/execution-context";
 import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import { getThinkingModeUserSuffix, type ThinkingStage } from "@/lib/chat/thinking-mode";
+import {
+  LONG_TASK_MS,
+  playCompletionChime,
+  showDesktopNotification,
+} from "@/lib/desktop-notifications";
+import { translate, localeReplyDirective } from "@/lib/i18n";
+
+function httpErrorMessage(locale: Parameters<typeof translate>[0], status: number, detail: string) {
+  return translate(locale, "errors.http", {
+    status,
+    detail: detail.substring(0, 200),
+  });
+}
 
 export interface UseChatSessionOptions {
   conversationId?: string;
@@ -47,7 +60,13 @@ export function useChatSession({
   const [attachments, setAttachments] = useState<
     { name: string; content: string; type: string }[]
   >([]);
-  const { apiKeys, ollamaUrl } = useSettings();
+  const {
+    apiKeys,
+    ollamaUrl,
+    desktopNotifications,
+    completionSound,
+    locale,
+  } = useSettings();
   const [executionCreated, setExecutionCreated] = useState(false);
 
   // Initialize conversationId with session persistence logic
@@ -77,6 +96,8 @@ export function useChatSession({
 
   // --- Refs ---
   const abortControllerRef = useRef<AbortController | null>(null);
+  const requestStartedAtRef = useRef<number | null>(null);
+  const thinkingRequestedRef = useRef(false);
 
   // --- Hooks ---
   const { conversation } = useConversationById(initialConversationId);
@@ -214,7 +235,7 @@ export function useChatSession({
             title:
               updatedMessages
                 .find((m) => m.role === Role.User)
-                ?.content.substring(0, 50) || "New Chat",
+                ?.content.substring(0, 50) || translate(locale, "chat.defaultTitle"),
             createdAt: new Date().toISOString(),
             messages: updatedMessages,
             updatedAt: new Date().toISOString(),
@@ -225,8 +246,7 @@ export function useChatSession({
       return (options?.contentPrefix ?? "") + accumulated;
     } catch (e) {
       console.error("Stream error", e);
-      const errorContent =
-        "**Connection Error:** The stream was interrupted. Please try again.";
+      const errorContent = translate(locale, "errors.connectionInterrupted");
       if (options?.tempId) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -248,6 +268,38 @@ export function useChatSession({
       if (finalize) {
         setIsLoading(false);
         refreshExecutions();
+
+        const wasAborted = abortControllerRef.current?.signal.aborted;
+        const startedAt = requestStartedAtRef.current;
+        const elapsed = startedAt ? Date.now() - startedAt : 0;
+        const wasLong =
+          thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
+
+        if (!wasAborted && wasLong) {
+          if (desktopNotifications) {
+            showDesktopNotification({
+              title: translate(
+                locale,
+                thinkingRequestedRef.current
+                  ? "notify.thinking.title"
+                  : "notify.complete.title"
+              ),
+              body: translate(
+                locale,
+                thinkingRequestedRef.current
+                  ? "notify.thinking.body"
+                  : "notify.complete.body"
+              ),
+              tag: `aibot-${conversationId || "chat"}`,
+            });
+          }
+          if (completionSound) {
+            playCompletionChime();
+          }
+        }
+
+        requestStartedAtRef.current = null;
+        thinkingRequestedRef.current = false;
       }
     }
   };
@@ -262,6 +314,8 @@ export function useChatSession({
     if (!inputQuery.trim() || isLoading) return;
 
     const thinkingRequested = !!isThinking;
+    thinkingRequestedRef.current = thinkingRequested;
+    requestStartedAtRef.current = Date.now();
     setShowWelcome(false);
     const currentQuery = inputQuery.trim();
     const currentAttachments = manualAttachments || attachments;
@@ -336,7 +390,7 @@ export function useChatSession({
         }
 
         const baseSystemPrompt =
-          `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
+          `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}${localeReplyDirective(locale)}`;
 
         const stage1SystemPrompt = `${baseSystemPrompt}\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n- Stage 1: thinking-only.\n- Your response MUST start with <thinking> with no characters before it.\n- Put all reasoning inside <thinking>...</thinking>.\n- You MUST NOT output any final answer content outside of </thinking> for this stage.\n- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
 
@@ -401,7 +455,7 @@ export function useChatSession({
               {
                 id: `error-${Date.now()}`,
                 role: Role.Agent,
-                content: `**Error ${res1.status}**: ${errorText.substring(0, 200)}`,
+                content: httpErrorMessage(locale, res1.status, errorText),
                 isError: true,
               },
             ]);
@@ -450,7 +504,7 @@ export function useChatSession({
               {
                 id: `error-${Date.now()}`,
                 role: Role.Agent,
-                content: `**Error ${res2.status}**: ${errorText.substring(0, 200)}`,
+                content: httpErrorMessage(locale, res2.status, errorText),
                 isError: true,
               },
             ]);
@@ -508,7 +562,7 @@ export function useChatSession({
             {
               id: `error-${Date.now()}`,
               role: Role.Agent,
-              content: `**Error ${res.status}**: ${errorText.substring(0, 200)}`,
+              content: httpErrorMessage(locale, res.status, errorText),
               isError: true,
             },
           ]);
@@ -543,6 +597,7 @@ export function useChatSession({
             isThinking: true,
             thinkingStage: "thinking",
             customKeys: apiKeys,
+            locale,
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -554,7 +609,7 @@ export function useChatSession({
             {
               id: `error-${Date.now()}`,
               role: Role.Agent,
-              content: `**Error ${res1.status}**: ${errorText.substring(0, 200)}`,
+              content: httpErrorMessage(locale, res1.status, errorText),
               isError: true,
             },
           ]);
@@ -581,6 +636,7 @@ export function useChatSession({
             isThinking: false,
             thinkingStage: "final",
             customKeys: apiKeys,
+            locale,
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -592,7 +648,7 @@ export function useChatSession({
             {
               id: `error-${Date.now()}`,
               role: Role.Agent,
-              content: `**Error ${res2.status}**: ${errorText.substring(0, 200)}`,
+              content: httpErrorMessage(locale, res2.status, errorText),
               isError: true,
             },
           ]);
@@ -620,6 +676,7 @@ export function useChatSession({
           conversationId,
           isThinking: false,
           customKeys: apiKeys,
+          locale,
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -631,7 +688,7 @@ export function useChatSession({
           {
             id: `error-${Date.now()}`,
             role: Role.Agent,
-            content: `**Error ${res.status}**: ${errorText.substring(0, 200)}`,
+            content: httpErrorMessage(locale, res.status, errorText),
             isError: true,
           },
         ]);
@@ -647,7 +704,7 @@ export function useChatSession({
           {
             id: `error-fetch-${Date.now()}`,
             role: Role.Agent,
-            content: `**Network Error**: ${error.message}`,
+            content: translate(locale, "errors.network", { message: error.message }),
           },
         ]);
       }

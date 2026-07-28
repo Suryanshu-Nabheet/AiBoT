@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { toast } from "sonner";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ChatInputProps {
   query: string;
@@ -64,9 +65,11 @@ export function ChatInput({
   model,
   onModelChange,
   showModelSelector = false,
-  placeholder = "Message...",
+  placeholder,
   className,
 }: ChatInputProps) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("composer.placeholder");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,11 +113,11 @@ export function ChatInput({
                 content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n*For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
                 type: "text/plain",
               });
-              toast.success(`Extracted text from ${file.name}`);
+              toast.success(t("toast.file.extracted", { name: file.name }));
             } catch (extractError) {
               console.error(`Failed to extract ${file.name}:`, extractError);
               toast.error(
-                `Could not extract text from ${file.name}. Try the Summarizer feature.`
+                t("toast.file.extractFail", { name: file.name })
               );
             }
           } else {
@@ -127,7 +130,7 @@ export function ChatInput({
           }
         } catch (err) {
           console.error(`Error reading ${file.name}:`, err);
-          toast.error(`Failed to read ${file.name}`);
+          toast.error(t("toast.file.readFail", { name: file.name }));
         }
       }
 
@@ -195,7 +198,7 @@ export function ChatInput({
             ref={textareaRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             className="min-h-[60px] max-h-[200px] w-full bg-transparent border-0 focus-visible:ring-0 resize-none py-4 px-4 md:px-5 text-base md:text-[15px] placeholder:text-muted-foreground/60 leading-relaxed scrollbar-thin scrollbar-thumb-muted-foreground/20"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -233,7 +236,7 @@ export function ChatInput({
                 variant="ghost"
                 className="size-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 onClick={() => fileInputRef.current?.click()}
-                title="Attach files"
+                title={t("composer.attach")}
               >
                 <PaperclipIcon className="size-[18px]" />
               </Button>
@@ -250,7 +253,7 @@ export function ChatInput({
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
                 onClick={onSpeechToggle}
-                title="Voice input"
+                title={t("composer.voice")}
               >
                 {isListening ? (
                   <StopIcon weight="fill" className="size-[18px]" />
@@ -271,7 +274,7 @@ export function ChatInput({
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
                 onClick={onThinkingToggle}
-                title="Thinking mode"
+                title={t("composer.thinking")}
               >
                 <LightbulbIcon
                   weight={isThinking ? "fill" : "regular"}
@@ -296,7 +299,7 @@ export function ChatInput({
                 )}
                 onClick={onEnhance}
                 disabled={isEnhancing || !query.trim()}
-                title="Enhance prompt"
+                title={t("composer.enhance")}
               >
                 <MagicWandIcon
                   className={cn("size-[18px]", isEnhancing && "animate-pulse")}

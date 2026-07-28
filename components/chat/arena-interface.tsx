@@ -36,6 +36,7 @@ import { Geist_Mono } from "next/font/google";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
 import { Message, Role } from "@/lib/types";
 import { useMarkdown } from "@/hooks/useMarkdown";
+import { useTranslation } from "@/hooks/use-translation";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -304,6 +305,7 @@ export default function ArenaInterface({
 }: {
   conversationId?: string;
 }) {
+  const { t } = useTranslation();
   // Shared conversation ID for both panels to keep history unified
   const [arenaConversationId] = useState(() => initialConversationId || v4());
 
@@ -714,7 +716,7 @@ export default function ArenaInterface({
         onThinkingToggle={() => setIsThinking((prev) => !prev)}
         // No Model Selector for Arena
         showModelSelector={false}
-        placeholder={isListening ? "Listening..." : "Message both models..."}
+        placeholder={isListening ? t("composer.placeholder.listening") : t("composer.placeholder.arena")}
         className="absolute bottom-0 left-0" // Ensure positioning is correct
       />
     </div>

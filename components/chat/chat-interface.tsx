@@ -47,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThinkingBar } from "@/components/core/thinking-bar";
+import { useTranslation } from "@/hooks/use-translation";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -68,6 +69,7 @@ const MessageComponent = memo(
     onModelSelect?: (modelId: string) => void;
     isGenerating?: boolean;
   }) => {
+    const { t } = useTranslation();
     const [isCopied, setIsCopied] = useState(false);
 
     const handleMessageCopy = useCallback(async (content?: string) => {
@@ -231,10 +233,10 @@ const MessageComponent = memo(
                     <ThinkingBar
                       text={
                         isThinkingExpanded
-                          ? "Reasoning Details"
+                          ? t("chat.thinking.details")
                           : hasClosingThinkingTag
-                            ? "Deep reasoning complete"
-                            : "Deep reasoning in progress"
+                            ? t("chat.thinking.complete")
+                            : t("chat.thinking.inProgress")
                       }
                       isExpanded={isThinkingExpanded}
                       onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
@@ -323,7 +325,7 @@ const MessageComponent = memo(
                             )}
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Copy message</TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">{t("chat.message.copy")}</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -336,17 +338,17 @@ const MessageComponent = memo(
                               try {
                                 const { generatePDF } = await import("@/lib/pdf-utils");
                                 await generatePDF(message.content, "ai-response.pdf", "AI Response");
-                                toast.success("PDF downloaded successfully!");
+                                toast.success(t("toast.pdf.success"));
                               } catch (error) {
                                 console.error("PDF generation error:", error);
-                                toast.error("Failed to generate PDF");
+                                toast.error(t("toast.pdf.fail"));
                               }
                             }}
                           >
                             <DownloadIcon className="size-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Download as PDF</TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">{t("chat.message.downloadPdf")}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
@@ -403,6 +405,7 @@ const MessagesList = memo(
     loadingStatus: string;
     isThinking: boolean;
   }) => {
+    const { t } = useTranslation();
     return (
       <div className="flex flex-col gap-2 pb-4">
         {messages.map((message, i) => {
@@ -452,7 +455,7 @@ const MessagesList = memo(
             <div className="px-2 sm:px-4 md:px-6 lg:px-8">
               <div className="max-w-4xl mx-auto">
                 {isThinking ? (
-                  <ThinkingBar text="Connecting to reasoning engine..." />
+                  <ThinkingBar text={t("chat.status.connecting")} />
                 ) : (
                   <TextShimmer className="text-sm font-medium" duration={1}>
                     {loadingStatus}
@@ -478,6 +481,7 @@ export default function ChatInterface({
   storageKey = "preferredModel",
   className,
 }: ChatInterfaceProps = {}) {
+  const { t, locale } = useTranslation();
   const {
     model,
     setModel,
@@ -503,28 +507,28 @@ export default function ChatInterface({
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState("AiBoT is thinking...");
+  const [loadingStatus, setLoadingStatus] = useState(() => t("chat.status.thinking"));
 
   useEffect(() => {
     if (!isLoading) {
-      setLoadingStatus(isThinking ? "AiBoT is thinking..." : "AiBoT is generating...");
+      setLoadingStatus(isThinking ? t("chat.status.thinking") : t("chat.status.generating"));
       return;
     }
 
     const thinkingStatuses = [
-      "AiBoT is thinking...",
-      "Reasoning about the query...",
-      "Analyzing the context...",
-      "Drafting thought process...",
-      "Finalizing details...",
+      t("chat.status.thinking"),
+      t("chat.status.reasoningQuery"),
+      t("chat.status.analyzing"),
+      t("chat.status.crafting"),
+      t("chat.status.polishing"),
     ];
 
     const normalStatuses = [
-      "AiBoT is generating...",
-      "Searching for answers...",
-      "Analyzing the context...",
-      "Drafting a response...",
-      "Finalizing details...",
+      t("chat.status.generating"),
+      t("chat.status.writing"),
+      t("chat.status.analyzing"),
+      t("chat.status.crafting"),
+      t("chat.status.polishing"),
     ];
 
     const statuses = isThinking ? thinkingStatuses : normalStatuses;
@@ -536,7 +540,7 @@ export default function ChatInterface({
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, isThinking, t]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -664,11 +668,11 @@ export default function ChatInterface({
                 content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n*For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
                 type: "text/plain",
               });
-              toast.success(`Extracted text from ${file.name}`);
+              toast.success(t("toast.file.extracted", { name: file.name }));
             } catch (extractError) {
               console.error(`Failed to extract ${file.name}:`, extractError);
               toast.error(
-                `Could not extract text from ${file.name}. Try the Summarizer feature.`
+                t("toast.file.extractFail", { name: file.name })
               );
             }
           } else {
@@ -682,7 +686,7 @@ export default function ChatInterface({
           }
         } catch (err) {
           console.error(`Error reading ${file.name}:`, err);
-          toast.error(`Failed to read ${file.name}`);
+          toast.error(t("toast.file.readFail", { name: file.name }));
         }
       }
 
@@ -704,20 +708,20 @@ export default function ChatInterface({
     }
 
     if (!("webkitSpeechRecognition" in window)) {
-      toast.error("Speech recognition is not supported in this browser.");
+      toast.error(t("toast.speech.unsupported"));
       return;
     }
 
     const recognition = new (window as any).webkitSpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = "en-US";
+    recognition.lang = locale === "hi" ? "hi-IN" : locale === "ja" ? "ja-JP" : "en-US";
 
     recognitionRef.current = recognition;
 
     recognition.onstart = () => {
       setIsListening(true);
-      toast.info("Listening...");
+      toast.info(t("toast.speech.listening"));
     };
 
     recognition.onend = () => {
@@ -738,11 +742,11 @@ export default function ChatInterface({
     };
 
     recognition.start();
-  }, [isListening]);
+  }, [isListening, t, locale]);
 
   const handleEnhance = async () => {
     if (!query.trim()) {
-      toast.warning("Please type something to enhance first.");
+      toast.warning(t("toast.enhance.empty"));
       return;
     }
 
@@ -753,11 +757,11 @@ export default function ChatInterface({
       const res = await fetch("/api/enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: query }),
+        body: JSON.stringify({ prompt: query, locale }),
       });
 
       if (!res.ok) {
-        toast.error("Failed to enhance prompt. Please try again.");
+        toast.error(t("toast.enhance.fail"));
         return;
       }
 
@@ -785,14 +789,14 @@ export default function ChatInterface({
         } else {
           // Valid enhancement - replace the message
           setQuery(enhanced);
-          toast.success("Prompt enhanced!");
+          toast.success(t("toast.enhance.success"));
         }
       } else {
-        toast.error("No enhancement received. Please try again.");
+        toast.error(t("toast.enhance.none"));
       }
     } catch (error) {
       console.error("Enhancement error:", error);
-      toast.error("Failed to enhance prompt. Please try again.");
+      toast.error(t("toast.enhance.fail"));
     } finally {
       setIsEnhancing(false);
     }
@@ -832,8 +836,7 @@ export default function ChatInterface({
                   Ai<span className="text-primary">BoT</span>
                 </h1>
                 <p className="text-muted-foreground text-base md:text-lg max-w-lg mx-auto leading-relaxed">
-                  The world's fastest, smartest, and most premium AI chatbot.
-                  Start a conversation below.
+                  {t("chat.welcome.tagline")}
                 </p>
               </div>
             </div>
@@ -887,7 +890,7 @@ export default function ChatInterface({
         model={model}
         onModelChange={setModel}
         showModelSelector={true}
-        placeholder={isListening ? "Listening..." : "Message AiBoT..."}
+        placeholder={isListening ? t("composer.placeholder.listening") : t("composer.placeholder")}
         className="absolute bottom-0 left-0"
       />
     </div>

@@ -7,9 +7,15 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { MODELS, ModelFull } from "@/lib/types";
 import { PROVIDER_MODELS } from "@/lib/provider-models";
+import {
+  applyDocumentLocale,
+  DEFAULT_LOCALE,
+  isLocale,
+  type Locale,
+} from "@/lib/i18n";
 
 export interface ApiKeys {
   openai?: string;
@@ -17,6 +23,14 @@ export interface ApiKeys {
   google?: string;
   deepseek?: string;
   openrouter?: string;
+}
+
+export type OllamaConnectionStatus = "unknown" | "connected" | "disconnected";
+
+export interface GeneralPreferences {
+  locale: Locale;
+  desktopNotifications: boolean;
+  completionSound: boolean;
 }
 
 const PROVIDER_ICONS: Record<string, string> = {
@@ -39,6 +53,15 @@ interface SettingsContextType {
   setOllamaUrl: (url: string) => void;
   ollamaModels: any[];
   setOllamaModels: (models: any[]) => void;
+  ollamaStatus: OllamaConnectionStatus;
+  setOllamaStatus: (status: OllamaConnectionStatus) => void;
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+  desktopNotifications: boolean;
+  setDesktopNotifications: (enabled: boolean) => Promise<boolean>;
+  completionSound: boolean;
+  setCompletionSound: (enabled: boolean) => void;
+  hasLoaded: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -48,40 +71,44 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [enabledModels, setEnabledModels] = useState<string[]>([]);
   const [ollamaUrl, setOllamaUrlState] = useState<string>("http://localhost:11434");
   const [ollamaModels, setOllamaModelsState] = useState<any[]>([]);
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaConnectionStatus>("unknown");
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  const [desktopNotifications, setDesktopNotificationsState] = useState(false);
+  const [completionSound, setCompletionSoundState] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Compute available models based on keys
   const availableModels = React.useMemo(() => {
-    const platformModels = MODELS.map(m => ({ ...m, provider: "platform" }));
-    
+    const platformModels = MODELS.map((m) => ({ ...m, provider: "platform" }));
+
     const providerModels = Object.entries(apiKeys).flatMap(([providerId, key]) => {
       if (!key) return [];
       const models = PROVIDER_MODELS[providerId] || [];
-      return models.map(m => ({
+      return models.map((m) => ({
         id: m.id,
         name: m.name,
         provider: m.provider,
         isPremium: true,
         summary: m.summary,
-        logo: PROVIDER_ICONS[m.provider]
+        logo: PROVIDER_ICONS[m.provider],
       }));
     });
 
-    const localOllamaModels = ollamaModels.map(m => ({
+    const localOllamaModels = ollamaModels.map((m) => ({
       id: `ollama/${m.name}`,
       name: m.name,
       provider: "ollama",
       isPremium: false,
       summary: `Local Ollama model (${m.details?.parameter_size || "Unknown size"})`,
-      logo: "/icons/ollama.svg"
+      logo: "/icons/ollama.svg",
     }));
 
     return [...platformModels, ...providerModels, ...localOllamaModels];
   }, [apiKeys, ollamaModels]);
 
-  // Load from localStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+
+    try {
       const storedKeys = localStorage.getItem("aibot_api_keys");
       if (storedKeys) setApiKeys(JSON.parse(storedKeys));
 
@@ -91,29 +118,71 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const storedOllamaModels = localStorage.getItem("aibot_ollama_models");
       if (storedOllamaModels) setOllamaModelsState(JSON.parse(storedOllamaModels));
 
+      const storedStatus = localStorage.getItem("aibot_ollama_status");
+      if (storedStatus === "connected" || storedStatus === "disconnected" || storedStatus === "unknown") {
+        setOllamaStatus(storedStatus);
+      }
+
       const storedModels = localStorage.getItem("aibot_enabled_models");
       if (storedModels) {
         setEnabledModels(JSON.parse(storedModels));
       } else {
-        // Default: Enable all platform models
-        setEnabledModels(MODELS.map(m => m.id));
+        setEnabledModels(MODELS.map((m) => m.id));
       }
-      setHasLoaded(true);
+
+      const storedGeneral = localStorage.getItem("aibot_general");
+      if (storedGeneral) {
+        const parsed = JSON.parse(storedGeneral) as Partial<GeneralPreferences>;
+        if (isLocale(parsed.locale)) setLocaleState(parsed.locale);
+        if (typeof parsed.desktopNotifications === "boolean") {
+          setDesktopNotificationsState(parsed.desktopNotifications);
+        }
+        if (typeof parsed.completionSound === "boolean") {
+          setCompletionSoundState(parsed.completionSound);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load settings from localStorage", e);
     }
+
+    setHasLoaded(true);
   }, []);
 
-  // Save to localStorage
   useEffect(() => {
-    if (hasLoaded && typeof window !== "undefined") {
-      localStorage.setItem("aibot_api_keys", JSON.stringify(apiKeys));
-      localStorage.setItem("aibot_ollama_url", ollamaUrl);
-      localStorage.setItem("aibot_ollama_models", JSON.stringify(ollamaModels));
-      localStorage.setItem("aibot_enabled_models", JSON.stringify(enabledModels));
-    }
-  }, [apiKeys, ollamaUrl, ollamaModels, enabledModels, hasLoaded]);
+    if (!hasLoaded || typeof window === "undefined") return;
+
+    localStorage.setItem("aibot_api_keys", JSON.stringify(apiKeys));
+    localStorage.setItem("aibot_ollama_url", ollamaUrl);
+    localStorage.setItem("aibot_ollama_models", JSON.stringify(ollamaModels));
+    localStorage.setItem("aibot_ollama_status", ollamaStatus);
+    localStorage.setItem("aibot_enabled_models", JSON.stringify(enabledModels));
+    localStorage.setItem(
+      "aibot_general",
+      JSON.stringify({
+        locale,
+        desktopNotifications,
+        completionSound,
+      } satisfies GeneralPreferences)
+    );
+  }, [
+    apiKeys,
+    ollamaUrl,
+    ollamaModels,
+    ollamaStatus,
+    enabledModels,
+    locale,
+    desktopNotifications,
+    completionSound,
+    hasLoaded,
+  ]);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    applyDocumentLocale(locale);
+  }, [locale, hasLoaded]);
 
   const setApiKey = (provider: keyof ApiKeys, key: string) => {
-    setApiKeys(prev => ({ ...prev, [provider]: key }));
+    setApiKeys((prev) => ({ ...prev, [provider]: key }));
   };
 
   const setOllamaUrl = (url: string) => {
@@ -122,41 +191,84 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const setOllamaModels = (models: any[]) => {
     setOllamaModelsState(models);
-    // Auto-enable any detected Ollama models so the user can use them immediately
-    setEnabledModels(prev => {
-      const newIds = models.map(m => `ollama/${m.name}`);
-      const filteredPrev = prev.filter(id => !id.startsWith("ollama/"));
+    setEnabledModels((prev) => {
+      const newIds = models.map((m) => `ollama/${m.name}`);
+      const filteredPrev = prev.filter((id) => !id.startsWith("ollama/"));
       return [...filteredPrev, ...newIds];
     });
   };
 
   const toggleModel = (modelId: string) => {
-    setEnabledModels(prev => 
-      prev.includes(modelId) 
-        ? prev.filter(id => id !== modelId) 
-        : [...prev, modelId]
+    setEnabledModels((prev) =>
+      prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]
     );
   };
 
+  const setLocale = (next: Locale) => {
+    setLocaleState(next);
+  };
+
+  const setDesktopNotifications = useCallback(async (enabled: boolean): Promise<boolean> => {
+    if (!enabled) {
+      setDesktopNotificationsState(false);
+      return true;
+    }
+
+    const { ensureNotificationPermission } = await import("@/lib/desktop-notifications");
+    const permission = await ensureNotificationPermission();
+    if (permission !== "granted") {
+      setDesktopNotificationsState(false);
+      return false;
+    }
+
+    setDesktopNotificationsState(true);
+    return true;
+  }, []);
+
+  const setCompletionSound = (enabled: boolean) => {
+    setCompletionSoundState(enabled);
+  };
+
   const verifyKey = async (provider: keyof ApiKeys, key: string): Promise<boolean> => {
-    if (!key || key.length < 10) return false;
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return true; 
+    if (!key || key.trim().length < 8) return false;
+
+    try {
+      const res = await fetch("/api/keys/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, key: key.trim() }),
+      });
+      const data = (await res.json()) as { ok?: boolean };
+      return !!data.ok;
+    } catch {
+      return false;
+    }
   };
 
   return (
-    <SettingsContext.Provider value={{
-      apiKeys,
-      setApiKey,
-      availableModels,
-      enabledModels,
-      toggleModel,
-      verifyKey,
-      ollamaUrl,
-      setOllamaUrl,
-      ollamaModels,
-      setOllamaModels
-    }}>
+    <SettingsContext.Provider
+      value={{
+        apiKeys,
+        setApiKey,
+        availableModels,
+        enabledModels,
+        toggleModel,
+        verifyKey,
+        ollamaUrl,
+        setOllamaUrl,
+        ollamaModels,
+        setOllamaModels,
+        ollamaStatus,
+        setOllamaStatus,
+        locale,
+        setLocale,
+        desktopNotifications,
+        setDesktopNotifications,
+        completionSound,
+        setCompletionSound,
+        hasLoaded,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

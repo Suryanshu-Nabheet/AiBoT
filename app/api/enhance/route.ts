@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { isLocale, localeReplyDirective } from "@/lib/i18n";
 
 export const runtime = "edge";
 
@@ -63,7 +64,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, locale: rawLocale } = await req.json();
+    const locale = isLocale(rawLocale) ? rawLocale : undefined;
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return NextResponse.json(
@@ -71,6 +73,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const systemPrompt = locale
+      ? `${PROMPT_ENGINEER_SYSTEM}${localeReplyDirective(locale)}`
+      : PROMPT_ENGINEER_SYSTEM;
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -85,7 +91,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model: "openrouter/free",
           messages: [
-            { role: "system", content: PROMPT_ENGINEER_SYSTEM },
+            { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
           ],
           temperature: 0.7,
