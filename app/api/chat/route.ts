@@ -10,11 +10,14 @@ import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import type { ThinkingStage } from "@/lib/chat/thinking-mode";
 import {
   anthropicToOpenAISSE,
+  findProviderForModel,
+  isPlatformModel,
   resolveProviderRoute,
 } from "@/lib/chat/resolve-provider";
 import { isLocale, localeReplyDirective, type Locale } from "@/lib/i18n";
+import { protectApiRequest } from "@/lib/server/request-security";
+import { chatRequestSchema } from "@/lib/server/request-schemas";
 
-export const runtime = "edge";
 export const maxDuration = 300; // 5 minutes for deep reasoning
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
@@ -56,7 +59,11 @@ const formatMessagesForProvider = (messages: any[]) => {
   });
 };
 
-function buildSystemPrompt(stage?: ThinkingStage, isThinking?: boolean, locale?: Locale) {
+function buildSystemPrompt(
+  stage?: ThinkingStage,
+  isThinking?: boolean,
+  locale?: Locale,
+) {
   let dynamicSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
 
   if (locale) {
@@ -95,7 +102,7 @@ function buildSystemPrompt(stage?: ThinkingStage, isThinking?: boolean, locale?:
 function annotateLastUserMessage(
   messages: any[],
   stage?: ThinkingStage,
-  isThinking?: boolean
+  isThinking?: boolean,
 ) {
   return messages.map((m, i) => {
     const isLastUser = i === messages.length - 1 && m.role === "user";
@@ -149,19 +156,60 @@ function toAnthropicContent(content: unknown): string {
 }
 
 export async function POST(req: NextRequest) {
-  let body;
+  const blocked = protectApiRequest(req, {
+    scope: "chat",
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (blocked) return blocked;
+
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ message: "Invalid JSON" }, { status: 400 });
   }
 
-  const { messages, model: targetModel, isThinking, customKeys, thinkingStage, locale: rawLocale } = body;
+  const parsed = chatRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: "Invalid chat request", issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const {
+    messages,
+    model: targetModel,
+    isThinking,
+    customKeys,
+    thinkingStage,
+    locale: rawLocale,
+  } = parsed.data;
+
+  const selectedProvider = findProviderForModel(targetModel);
+  const hasProviderKey =
+    selectedProvider &&
+    customKeys?.[selectedProvider as keyof NonNullable<typeof customKeys>];
+  if (
+    !isPlatformModel(targetModel) &&
+    !hasProviderKey &&
+    !customKeys?.openrouter
+  ) {
+    return NextResponse.json(
+      { message: "The selected model requires its provider API key." },
+      { status: 400 },
+    );
+  }
 
   const stage: ThinkingStage | undefined =
-    thinkingStage === "thinking" || thinkingStage === "final" ? thinkingStage : undefined;
+    thinkingStage === "thinking" || thinkingStage === "final"
+      ? thinkingStage
+      : undefined;
 
-  const locale: Locale | undefined = isLocale(rawLocale) ? rawLocale : undefined;
+  const locale: Locale | undefined = isLocale(rawLocale)
+    ? rawLocale
+    : undefined;
 
   try {
     const route = resolveProviderRoute(targetModel, customKeys, {
@@ -176,13 +224,17 @@ export async function POST(req: NextRequest) {
           message:
             "No API key available. Add a provider key in Settings or configure OPENROUTER_API_KEY.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const optimizedMessages = formatMessagesForProvider(messages);
     const dynamicSystemPrompt = buildSystemPrompt(stage, isThinking, locale);
-    const annotated = annotateLastUserMessage(optimizedMessages, stage, isThinking);
+    const annotated = annotateLastUserMessage(
+      optimizedMessages,
+      stage,
+      isThinking,
+    );
 
     if (route.kind === "anthropic") {
       const anthropicMessages = annotated
@@ -206,13 +258,14 @@ export async function POST(req: NextRequest) {
           max_tokens: 4096,
           stream: true,
         }),
+        signal: AbortSignal.timeout(285_000),
       });
 
       if (!response.ok || !response.body) {
         const errorText = await response.text();
         return NextResponse.json(
           { message: errorText, code: response.status },
-          { status: response.status }
+          { status: response.status },
         );
       }
 
@@ -242,6 +295,7 @@ export async function POST(req: NextRequest) {
         messages: payloadMessages,
         stream: true,
       }),
+      signal: AbortSignal.timeout(285_000),
     });
 
     if (response.ok) {
@@ -257,7 +311,7 @@ export async function POST(req: NextRequest) {
     const errorText = await response.text();
     return NextResponse.json(
       { message: errorText, code: response.status },
-      { status: response.status }
+      { status: response.status },
     );
   } catch (error) {
     return NextResponse.json({ message: String(error) }, { status: 500 });

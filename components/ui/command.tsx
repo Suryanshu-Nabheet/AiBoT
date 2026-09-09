@@ -5,20 +5,20 @@
  * See LICENSE file for details
  */
 
-"use client"
+"use client";
 
-import * as React from "react"
-import { Command as CommandPrimitive } from "cmdk"
-import { SearchIcon } from "lucide-react"
+import * as React from "react";
+import { Command as CommandPrimitive } from "cmdk";
+import { SearchIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 function Command({
   className,
@@ -29,11 +29,11 @@ function Command({
       data-slot="command"
       className={cn(
         "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-xl",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandDialog({
@@ -46,18 +46,18 @@ function CommandDialog({
   instant = true,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
-  title?: string
-  description?: string
-  className?: string
-  showCloseButton?: boolean
-  instant?: boolean
+  title?: string;
+  description?: string;
+  className?: string;
+  showCloseButton?: boolean;
+  instant?: boolean;
 }) {
   const instantOverlay = instant
     ? "data-[state=open]:animate-none data-[state=closed]:animate-none duration-0"
-    : undefined
+    : undefined;
   const instantContent = instant
     ? "duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
-    : undefined
+    : undefined;
 
   return (
     <Dialog {...props}>
@@ -70,7 +70,7 @@ function CommandDialog({
           "gap-0 overflow-hidden rounded-xl border bg-popover p-0 shadow-2xl sm:max-w-lg",
           "top-[min(20vh,7.5rem)] translate-y-0",
           instantContent,
-          className
+          className,
         )}
         overlayClassName={cn("bg-black/40", instantOverlay)}
         showCloseButton={showCloseButton}
@@ -78,7 +78,7 @@ function CommandDialog({
         {children}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function CommandInput({
@@ -96,12 +96,12 @@ function CommandInput({
         data-slot="command-input"
         className={cn(
           "placeholder:text-muted-foreground flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
-          className
+          className,
         )}
         {...props}
       />
     </div>
-  )
+  );
 }
 
 function CommandList({
@@ -113,11 +113,11 @@ function CommandList({
       data-slot="command-list"
       className={cn(
         "max-h-[min(360px,50vh)] scroll-py-1 overflow-x-hidden overflow-y-auto",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandEmpty({
@@ -129,7 +129,7 @@ function CommandEmpty({
       className="py-6 text-center text-sm text-muted-foreground"
       {...props}
     />
-  )
+  );
 }
 
 function CommandGroup({
@@ -141,11 +141,11 @@ function CommandGroup({
       data-slot="command-group"
       className={cn(
         "text-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandSeparator({
@@ -158,7 +158,7 @@ function CommandSeparator({
       className={cn("bg-border -mx-1 h-px", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CommandItem({
@@ -174,11 +174,11 @@ function CommandItem({
         "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         "[&_svg:not([class*='text-'])]:text-muted-foreground",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandShortcut({
@@ -190,11 +190,11 @@ function CommandShortcut({
       data-slot="command-shortcut"
       className={cn(
         "text-muted-foreground ml-auto text-xs tracking-widest",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -207,4 +207,4 @@ export {
   CommandItem,
   CommandShortcut,
   CommandSeparator,
-}
+};

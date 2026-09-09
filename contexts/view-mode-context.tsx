@@ -16,7 +16,7 @@ interface ViewModeContextType {
 }
 
 const ViewModeContext = createContext<ViewModeContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function ViewModeProvider({ children }: { children: ReactNode }) {

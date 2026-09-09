@@ -5,7 +5,7 @@
  * See LICENSE file for details
  */
 
-import { useEffect, RefObject } from 'react';
+import { useEffect, RefObject } from "react";
 
 interface UseGlobalKeyPressOptions {
   inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
@@ -25,12 +25,13 @@ export const useGlobalKeyPress = ({
   useEffect(() => {
     const handleGlobalKeyPress = (event: KeyboardEvent) => {
       const activeElement = document.activeElement;
-      const isInputFocused = 
-        activeElement?.tagName.toLowerCase() === 'input' ||
-        activeElement?.tagName.toLowerCase() === 'textarea' ||
-        activeElement?.hasAttribute('contenteditable') ||
-        activeElement?.closest('[contenteditable]') ||
-        activeElement?.hasAttribute('role') && activeElement.getAttribute('role') === 'textbox';
+      const isInputFocused =
+        activeElement?.tagName.toLowerCase() === "input" ||
+        activeElement?.tagName.toLowerCase() === "textarea" ||
+        activeElement?.hasAttribute("contenteditable") ||
+        activeElement?.closest("[contenteditable]") ||
+        (activeElement?.hasAttribute("role") &&
+          activeElement.getAttribute("role") === "textbox");
       // Only focus input if:
       // 1. No input is currently focused
       // 2. The key is a printable character (not special keys)
@@ -50,16 +51,16 @@ export const useGlobalKeyPress = ({
         !event.altKey
       ) {
         inputRef.current.focus();
-        
+
         onKeyPress(event.key);
-        
+
         event.preventDefault();
       }
     };
-    document.addEventListener('keydown', handleGlobalKeyPress);
+    document.addEventListener("keydown", handleGlobalKeyPress);
 
     return () => {
-      document.removeEventListener('keydown', handleGlobalKeyPress);
+      document.removeEventListener("keydown", handleGlobalKeyPress);
     };
   }, [inputRef, onKeyPress, disabled, loading, preventFocus]);
 };

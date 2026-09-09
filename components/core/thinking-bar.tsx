@@ -30,10 +30,10 @@ export function ThinkingBar({
       animate={{ opacity: 1 }}
       className={cn(
         "flex items-center justify-between w-full py-2 group select-none",
-        className
+        className,
       )}
     >
-      <div 
+      <div
         className="flex items-center gap-2.5 cursor-pointer transition-colors hover:text-primary"
         onClick={onClick}
       >

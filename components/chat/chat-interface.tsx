@@ -72,12 +72,16 @@ const MessageComponent = memo(
     const { t } = useTranslation();
     const [isCopied, setIsCopied] = useState(false);
 
-    const handleMessageCopy = useCallback(async (content?: string) => {
-      const textToCopy = typeof content === 'string' ? content : message.content;
-      await onCopy(textToCopy);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    }, [onCopy, message.content]);
+    const handleMessageCopy = useCallback(
+      async (content?: string) => {
+        const textToCopy =
+          typeof content === "string" ? content : message.content;
+        await onCopy(textToCopy);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      },
+      [onCopy, message.content],
+    );
     // Simplified Markdown usage for now, ensuring robustness
     const {
       preprocessMarkdown,
@@ -98,7 +102,7 @@ const MessageComponent = memo(
     const displayedContent = useSmoothTyping(
       message.content,
       5,
-      message.shouldAnimate
+      message.shouldAnimate,
     );
 
     const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
@@ -114,13 +118,16 @@ const MessageComponent = memo(
     if (!isUser) {
       const rawContent = contentToShow; // Use contentToShow (animated) to preserve typing flow
       const isThinkingMode = message.isThinkingRequested;
-      
-      const transitionRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
+
+      const transitionRegex =
+        /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
       const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
-      const closingThinkingRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
+      const closingThinkingRegex =
+        /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
       hasClosingThinkingTag = closingThinkingRegex.test(rawContent);
-      
-      const transitionMatch = rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
+
+      const transitionMatch =
+        rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
 
       if (transitionMatch) {
         hasThinkingTag = true;
@@ -130,15 +137,20 @@ const MessageComponent = memo(
         thinkingContent = parts[0]
           .replace(
             /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi,
-            ""
+            "",
           )
           .trim();
         // Extract main response (strip any remaining hallucinated tags)
-        mainResponse = parts.slice(1).join(splitMarker).replace(/<\/?[^>]+(>|$)/g, "").trim();
+        mainResponse = parts
+          .slice(1)
+          .join(splitMarker)
+          .replace(/<\/?[^>]+(>|$)/g, "")
+          .trim();
       } else {
-        const anyOpenTag = /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+        const anyOpenTag =
+          /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
         const openMatch = rawContent.match(anyOpenTag);
-        
+
         if (openMatch) {
           hasThinkingTag = true;
           // If we have an opening tag but no closing tag yet, everything after it is thinking
@@ -160,10 +172,10 @@ const MessageComponent = memo(
         /The response must now begin with and end with/gi,
         /IMPORTANT:\s*When you respond[^\n]*/gi,
         /All reasoning MUST be inside <thinking>\.\.\.<\/thinking>\.?/gi,
-        /After <\/thinking>, provide the final answer[^\n]*/gi
+        /After <\/thinking>, provide the final answer[^\n]*/gi,
       ];
-      
-      leakagePatterns.forEach(pattern => {
+
+      leakagePatterns.forEach((pattern) => {
         mainResponse = mainResponse.replace(pattern, "").trim();
         thinkingContent = thinkingContent.replace(pattern, "").trim();
       });
@@ -193,7 +205,7 @@ const MessageComponent = memo(
               <div
                 className={cn(
                   "flex flex-col max-w-full",
-                  isUser ? "items-end ml-auto" : "items-start mr-auto"
+                  isUser ? "items-end ml-auto" : "items-start mr-auto",
                 )}
               >
                 {/* Attachments Rendering */}
@@ -222,7 +234,7 @@ const MessageComponent = memo(
                             {att.name}
                           </span>
                         </div>
-                      )
+                      ),
                     )}
                   </div>
                 )}
@@ -267,13 +279,15 @@ const MessageComponent = memo(
                 )}
 
                 {/* Message Content */}
-                {(!isUser && !!message.isThinkingRequested && hasThinkingTag) ? null : (
+                {!isUser &&
+                !!message.isThinkingRequested &&
+                hasThinkingTag ? null : (
                   <div
                     className={cn(
                       "text-sm w-full max-w-full overflow-hidden break-words",
                       isUser
                         ? "bg-muted text-foreground border border-border/50 rounded-2xl px-3.5 py-2.5 md:px-5 md:py-3.5 shadow-sm"
-                        : compactAgentContentClass
+                        : compactAgentContentClass,
                     )}
                   >
                     {isUser ? (
@@ -306,53 +320,67 @@ const MessageComponent = memo(
                 {!isUser &&
                   !message.isThinkingRequested &&
                   mainResponse.trim() &&
-                  !isGenerating &&
-                  (
-                  <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                            onClick={() => handleMessageCopy()}
+                  !isGenerating && (
+                    <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                              onClick={() => handleMessageCopy()}
+                            >
+                              {isCopied ? (
+                                <CheckIcon className="size-4 text-green-500" />
+                              ) : (
+                                <CopyIcon className="size-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="bottom"
+                            className="text-[10px] px-2 py-1 font-bold"
                           >
-                            {isCopied ? (
-                              <CheckIcon className="size-4 text-green-500" />
-                            ) : (
-                              <CopyIcon className="size-4" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">{t("chat.message.copy")}</TooltipContent>
-                      </Tooltip>
+                            {t("chat.message.copy")}
+                          </TooltipContent>
+                        </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                            onClick={async () => {
-                              try {
-                                const { generatePDF } = await import("@/lib/pdf-utils");
-                                await generatePDF(message.content, "ai-response.pdf", "AI Response");
-                                toast.success(t("toast.pdf.success"));
-                              } catch (error) {
-                                console.error("PDF generation error:", error);
-                                toast.error(t("toast.pdf.fail"));
-                              }
-                            }}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                              onClick={async () => {
+                                try {
+                                  const { generatePDF } =
+                                    await import("@/lib/pdf-utils");
+                                  await generatePDF(
+                                    message.content,
+                                    "ai-response.pdf",
+                                    "AI Response",
+                                  );
+                                  toast.success(t("toast.pdf.success"));
+                                } catch (error) {
+                                  console.error("PDF generation error:", error);
+                                  toast.error(t("toast.pdf.fail"));
+                                }
+                              }}
+                            >
+                              <DownloadIcon className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="bottom"
+                            className="text-[10px] px-2 py-1 font-bold"
                           >
-                            <DownloadIcon className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">{t("chat.message.downloadPdf")}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
+                            {t("chat.message.downloadPdf")}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  )}
               </div>
             </div>
           </div>
@@ -385,7 +413,7 @@ const MessageComponent = memo(
           )}
       </div>
     );
-  }
+  },
 );
 MessageComponent.displayName = "MessageComponent";
 
@@ -410,18 +438,17 @@ const MessagesList = memo(
       <div className="flex flex-col gap-2 pb-4">
         {messages.map((message, i) => {
           const isLast = i === messages.length - 1;
-          const isAgentGenerating = isLoading && isLast && message.role === Role.Agent;
-          
+          const isAgentGenerating =
+            isLoading && isLast && message.role === Role.Agent;
+
           // Determine if we should show thinking bar for this specific message
           const msgIsThinking = message.isThinkingRequested;
 
           // Normal Mode: Show shimmer UNTIL THE END of generation
           // Thinking Mode: Show reasoning bar ONLY UNTIL tokens start appearing (the ThinkingBar inside handles it after)
-          const showLoadingStatus = isAgentGenerating && (
-            msgIsThinking 
-              ? !message.content.trim() 
-              : true
-          );
+          const showLoadingStatus =
+            isAgentGenerating &&
+            (msgIsThinking ? !message.content.trim() : true);
 
           return (
             <React.Fragment key={message.id || i}>
@@ -431,7 +458,10 @@ const MessagesList = memo(
                     {msgIsThinking ? (
                       <ThinkingBar text="Initializing deep reasoning engine..." />
                     ) : (
-                      <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                      <TextShimmer
+                        className="text-sm font-medium opacity-60"
+                        duration={1.2}
+                      >
                         {loadingStatus}
                       </TextShimmer>
                     )}
@@ -466,7 +496,7 @@ const MessagesList = memo(
           )}
       </div>
     );
-  }
+  },
 );
 MessagesList.displayName = "MessagesList";
 
@@ -501,17 +531,19 @@ export default function ChatInterface({
     viewMode: "direct",
   });
 
-
-
   // Enterprise Features State (UI only)
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState(() => t("chat.status.thinking"));
+  const [loadingStatus, setLoadingStatus] = useState(() =>
+    t("chat.status.thinking"),
+  );
 
   useEffect(() => {
     if (!isLoading) {
-      setLoadingStatus(isThinking ? t("chat.status.thinking") : t("chat.status.generating"));
+      setLoadingStatus(
+        isThinking ? t("chat.status.thinking") : t("chat.status.generating"),
+      );
       return;
     }
 
@@ -564,22 +596,19 @@ export default function ChatInterface({
     };
   }, []);
 
-  const scrollToBottom = useCallback(
-    (behavior: ScrollBehavior = "smooth") => {
-      const container = scrollContainerRef.current;
-      if (container) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior,
-        });
-        return;
-      }
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior,
+      });
+      return;
+    }
 
-      // Fallback when the container ref isn't ready yet.
-      messagesEndRef.current?.scrollIntoView({ behavior });
-    },
-    []
-  );
+    // Fallback when the container ref isn't ready yet.
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
 
   // Handle scroll visibility
   const handleScroll = useCallback(() => {
@@ -671,9 +700,7 @@ export default function ChatInterface({
               toast.success(t("toast.file.extracted", { name: file.name }));
             } catch (extractError) {
               console.error(`Failed to extract ${file.name}:`, extractError);
-              toast.error(
-                t("toast.file.extractFail", { name: file.name })
-              );
+              toast.error(t("toast.file.extractFail", { name: file.name }));
             }
           } else {
             // Text based files (txt, md, json, etc.)
@@ -820,7 +847,7 @@ export default function ChatInterface({
     <div
       className={cn(
         "flex flex-col h-full w-full max-w-full relative overflow-hidden bg-background touch-none",
-        className
+        className,
       )}
     >
       {/* Scrollable Message Area - independent scroll */}
@@ -828,7 +855,7 @@ export default function ChatInterface({
         ref={scrollContainerRef}
         className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden scroll-smooth overscroll-contain"
       >
-        <div className="w-full max-w-4xl mx-auto pb-40 sm:pb-48 pt-6 md:pt-8">
+        <div className="mx-auto w-full max-w-4xl px-2 pb-6 pt-4 sm:px-4 sm:pt-6 md:pt-8">
           {showWelcome && messages.length === 0 ? (
             <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-8 text-center px-4">
               <div className="space-y-4">
@@ -865,7 +892,7 @@ export default function ChatInterface({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-32 right-6 z-20 p-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+            className="absolute bottom-28 right-3 z-20 rounded-full bg-primary p-2 text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 sm:right-6"
             onClick={() => scrollToBottom()}
           >
             <ArrowDownIcon className="size-5" />
@@ -890,8 +917,12 @@ export default function ChatInterface({
         model={model}
         onModelChange={setModel}
         showModelSelector={true}
-        placeholder={isListening ? t("composer.placeholder.listening") : t("composer.placeholder")}
-        className="absolute bottom-0 left-0"
+        placeholder={
+          isListening
+            ? t("composer.placeholder.listening")
+            : t("composer.placeholder")
+        }
+        className="shrink-0"
       />
     </div>
   );

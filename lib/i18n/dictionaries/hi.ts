@@ -20,12 +20,15 @@ export const hi = {
   "general.title": "सामान्य सेटिंग्स",
   "general.subtitle": "अपने मुख्य ऐप अनुभव को प्रबंधित करें।",
   "general.language.title": "डिस्प्ले भाषा",
-  "general.language.desc": "इंटरफ़ेस और AI जवाबों के लिए उपयोग की जाने वाली भाषा।",
+  "general.language.desc":
+    "इंटरफ़ेस और AI जवाबों के लिए उपयोग की जाने वाली भाषा।",
   "general.notifications.title": "डेस्कटॉप सूचनाएँ",
-  "general.notifications.desc": "जब AI लंबा रीज़निंग काम पूरा करे तो अलर्ट पाएँ।",
+  "general.notifications.desc":
+    "जब AI लंबा रीज़निंग काम पूरा करे तो अलर्ट पाएँ।",
   "general.notifications.enabled": "डेस्कटॉप सूचनाएँ चालू हैं",
   "general.notifications.denied": "ब्राउज़र में सूचना अनुमति अस्वीकृत है",
-  "general.notifications.unsupported": "इस ब्राउज़र में डेस्कटॉप सूचनाएँ समर्थित नहीं हैं",
+  "general.notifications.unsupported":
+    "इस ब्राउज़र में डेस्कटॉप सूचनाएँ समर्थित नहीं हैं",
   "general.notifications.disabled": "डेस्कटॉप सूचनाएँ बंद हैं",
   "general.theme.title": "दिखावट",
   "general.theme.desc": "लाइट, डार्क, या सिस्टम प्राथमिकता चुनें।",
@@ -33,7 +36,8 @@ export const hi = {
   "general.theme.light": "लाइट",
   "general.theme.dark": "डार्क",
   "general.sound.title": "पूर्णता ध्वनि",
-  "general.sound.desc": "लंबा जवाब पूरा होने पर छोटी ध्वनि बजाएँ (टैब ऑडिबल होना चाहिए)।",
+  "general.sound.desc":
+    "लंबा जवाब पूरा होने पर छोटी ध्वनि बजाएँ (टैब ऑडिबल होना चाहिए)।",
   "models.title": "मॉडल प्राथमिकताएँ",
   "models.subtitle": "चैट सिलेक्टर साफ़ रखने के लिए मॉडल चालू/बंद करें।",
   "models.platform": "AiBoT प्लेटफ़ॉर्म मॉडल",
@@ -42,10 +46,12 @@ export const hi = {
   "models.externalDesc": "आपकी कस्टम API कॉन्फ़िगरेशन से अनलॉक मॉडल।",
   "models.ecosystem": "इकोसिस्टम",
   "models.unlock.title": "प्रोवाइडर मॉडल अनलॉक करें",
-  "models.unlock.desc": "OpenAI, Anthropic और अन्य मॉडल दिखाने के लिए API कुंजियाँ जोड़ें।",
+  "models.unlock.desc":
+    "OpenAI, Anthropic और अन्य मॉडल दिखाने के लिए API कुंजियाँ जोड़ें।",
   "models.unlock.link": "API कुंजियाँ",
   "apiKeys.title": "API कुंजियाँ और सीक्रेट्स",
-  "apiKeys.subtitle": "विशेष मॉडल या अधिक सीमाओं के लिए अपनी कुंजियाँ उपयोग करें।",
+  "apiKeys.subtitle":
+    "विशेष मॉडल या अधिक सीमाओं के लिए अपनी कुंजियाँ उपयोग करें।",
   "apiKeys.enterKey": "अपनी {provider} सीक्रेट कुंजी दर्ज करें।",
   "apiKeys.active": "सक्रिय",
   "apiKeys.verify": "सत्यापित करें और सहेजें",
@@ -53,28 +59,36 @@ export const hi = {
   "apiKeys.verified": "{provider} कुंजी सत्यापित और सहेजी गई!",
   "apiKeys.invalid": "अमान्य {provider} कुंजी।",
   "apiKeys.storage.title": "इस ब्राउज़र में स्थानीय रूप से संग्रहीत",
-  "apiKeys.storage.desc": "आपकी API कुंजियाँ इस डिवाइस पर लोकल स्टोरेज में रहती हैं। चैट के समय ही मिलान वाले प्रोवाइडर को भेजी जाती हैं — AiBoT सर्वर पर संग्रहीत नहीं होतीं।",
+  "apiKeys.storage.desc":
+    "आपकी API कुंजियाँ इस डिवाइस पर लोकल स्टोरेज में रहती हैं। चैट के समय ही मिलान वाले प्रोवाइडर को भेजी जाती हैं — AiBoT सर्वर पर संग्रहीत नहीं होतीं।",
   "localLlm.title": "लोकल LLM (Ollama)",
   "localLlm.subtitle": "अपने डिवाइस पर सीधे ओपन-वेट मॉडल परिवारों तक पहुँचें।",
   "localLlm.endpoint": "Ollama सर्वर एंडपॉइंट",
-  "localLlm.hint": "सुनिश्चित करें कि आपके मशीन पर Ollama चल रहा है। macOS/Windows पर मेनू बार में ऐप सक्रिय होना चाहिए।",
+  "localLlm.hint":
+    "सुनिश्चित करें कि आपके मशीन पर Ollama चल रहा है। macOS/Windows पर मेनू बार में ऐप सक्रिय होना चाहिए।",
   "localLlm.autoDetect": "ऑटो डिटेक्ट",
   "localLlm.scanning": "डिवाइस स्कैन हो रहा है...",
   "localLlm.refresh": "स्कैन रिफ़्रेश करें",
   "localLlm.discovered": "पाए गए लोकल मॉडल ({count})",
   "localLlm.empty.title": "कोई लोकल मॉडल नहीं मिला",
-  "localLlm.empty.desc": "सुनिश्चित करें कि Ollama सक्रिय है। उपलब्ध मॉडल भरने के लिए ऑटो डिटेक्ट पर क्लिक करें।",
+  "localLlm.empty.desc":
+    "सुनिश्चित करें कि Ollama सक्रिय है। उपलब्ध मॉडल भरने के लिए ऑटो डिटेक्ट पर क्लिक करें।",
   "localLlm.privacy.title": "100% गोपनीयता और शून्य सीमाएँ",
-  "localLlm.privacy.desc": "लोकल निष्पादन सीधे डिवाइस पर होता है। आपके प्रॉम्प्ट और कोड सत्र मशीन नहीं छोड़ते, और कोई API शुल्क नहीं लगता।",
+  "localLlm.privacy.desc":
+    "लोकल निष्पादन सीधे डिवाइस पर होता है। आपके प्रॉम्प्ट और कोड सत्र मशीन नहीं छोड़ते, और कोई API शुल्क नहीं लगता।",
   "localLlm.status.connected": "कनेक्टेड",
   "localLlm.status.disconnected": "कनेक्ट नहीं",
   "localLlm.status.unknown": "अभी स्कैन नहीं हुआ",
-  "localLlm.scan.success": "सफल! {count} लोकल Ollama मॉडल पाए और ऑटो-एनेबल किए गए।",
-  "localLlm.scan.empty": "Ollama से कनेक्ट हुआ, लेकिन कोई मॉडल नहीं मिला। पहले कोई मॉडल पुल करें (जैसे `ollama run llama3`)।",
+  "localLlm.scan.success":
+    "सफल! {count} लोकल Ollama मॉडल पाए और ऑटो-एनेबल किए गए।",
+  "localLlm.scan.empty":
+    "Ollama से कनेक्ट हुआ, लेकिन कोई मॉडल नहीं मिला। पहले कोई मॉडल पुल करें (जैसे `ollama run llama3`)।",
   "localLlm.scan.loopback": "सफल! 127.0.0.1 लूपबैक से लोकल Ollama कनेक्ट हुआ।",
-  "localLlm.scan.fail": "Ollama से कनेक्ट नहीं हो सका। प्रोडक्शन HTTPS के लिए CORS सेटअप आवश्यक है। नीचे समस्या निवारण पढ़ें।",
+  "localLlm.scan.fail":
+    "Ollama से कनेक्ट नहीं हो सका। प्रोडक्शन HTTPS के लिए CORS सेटअप आवश्यक है। नीचे समस्या निवारण पढ़ें।",
   "localLlm.diagnostics.title": "लोकल कनेक्शन डायग्नोस्टिक्स",
-  "localLlm.diagnostics.desc": "सुरक्षित वेबसाइटें (HTTPS) लोकल API (http://localhost:11434) तक तब तक नहीं पहुँच सकतीं जब तक मशीन पर CORS सक्षम न हो।",
+  "localLlm.diagnostics.desc":
+    "सुरक्षित वेबसाइटें (HTTPS) लोकल API (http://localhost:11434) तक तब तक नहीं पहुँच सकतीं जब तक मशीन पर CORS सक्षम न हो।",
   "localLlm.diagnostics.os": "ऑपरेटिंग सिस्टम चुनें",
   "localLlm.diagnostics.hide": "डायग्नोस्टिक्स छिपाएँ",
   "localLlm.diagnostics.retry": "कनेक्शन स्कैन दोबारा करें",
@@ -83,15 +97,19 @@ export const hi = {
   "about.version": "संस्करण {version}",
   "about.edition": "कम्युनिटी कोर",
   "about.developer": "डेवलपर",
-  "about.developer.bio": "एक विज़नरी सॉफ़्टवेयर आर्किटेक्ट और AI इंजीनियर जो स्वायत्त कोडिंग और उच्च-प्रदर्शन बुद्धिमान सिस्टम की सीमाओं को आगे बढ़ाते हैं।",
+  "about.developer.bio":
+    "एक विज़नरी सॉफ़्टवेयर आर्किटेक्ट और AI इंजीनियर जो स्वायत्त कोडिंग और उच्च-प्रदर्शन बुद्धिमान सिस्टम की सीमाओं को आगे बढ़ाते हैं।",
   "about.stack": "तकनीकी स्टैक",
   "about.foundation": "आर्किटेक्चरल आधार",
   "about.feature.orchestration.title": "इंटेलिजेंट मॉडल ऑर्केस्ट्रेशन",
-  "about.feature.orchestration.desc": "कार्य जटिलता और प्रदर्शन के आधार पर फ्रंटियर LLM के बीच गतिशील रूप से स्विच करने वाला रूटिंग इंजन।",
+  "about.feature.orchestration.desc":
+    "कार्य जटिलता और प्रदर्शन के आधार पर फ्रंटियर LLM के बीच गतिशील रूप से स्विच करने वाला रूटिंग इंजन।",
   "about.feature.coding.title": "स्वायत्त कोडिंग वातावरण",
-  "about.feature.coding.desc": "प्राकृतिक भाषा से रीयल-टाइम वेब प्रोटोटाइपिंग और फ़ंक्शनल ऐप जनरेशन।",
+  "about.feature.coding.desc":
+    "प्राकृतिक भाषा से रीयल-टाइम वेब प्रोटोटाइपिंग और फ़ंक्शनल ऐप जनरेशन।",
   "about.feature.research.title": "रिसर्च-ग्रेड दस्तावेज़ इंटेलिजेंस",
-  "about.feature.research.desc": "व्यापक, क्रॉस-रेफ़रेंस्ड शोध अंतर्दृष्टि के लिए मल्टी-फ़ॉर्मैट डेटा निष्कर्षण और संश्लेषण।",
+  "about.feature.research.desc":
+    "व्यापक, क्रॉस-रेफ़रेंस्ड शोध अंतर्दृष्टि के लिए मल्टी-फ़ॉर्मैट डेटा निष्कर्षण और संश्लेषण।",
   "notify.complete.title": "AiBoT ने जवाब पूरा किया",
   "notify.complete.body": "आपका लंबा रीज़निंग काम तैयार है।",
   "notify.thinking.title": "गहरी रीज़निंग पूर्ण",
@@ -125,7 +143,8 @@ export const hi = {
   "command.theme.light": "लाइट मोड पर स्विच करें",
   "command.theme.dark": "डार्क मोड पर स्विच करें",
   "command.footer.hint": "↑↓ नेविगेट · ↵ चुनें · esc बंद",
-  "chat.welcome.tagline": "दुनिया का सबसे तेज़, स्मार्ट और प्रीमियम AI चैटबॉट। नीचे बातचीत शुरू करें।",
+  "chat.welcome.tagline":
+    "दुनिया का सबसे तेज़, स्मार्ट और प्रीमियम AI चैटबॉट। नीचे बातचीत शुरू करें।",
   "chat.defaultTitle": "नई चैट",
   "chat.message.copy": "संदेश कॉपी करें",
   "chat.message.downloadPdf": "PDF के रूप में डाउनलोड करें",
@@ -155,7 +174,8 @@ export const hi = {
   "model.external": "बाहरी मॉडल",
   "toast.pdf.success": "PDF सफलतापूर्वक डाउनलोड हुई!",
   "toast.pdf.fail": "PDF बनाने में विफल",
-  "toast.speech.unsupported": "इस ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है।",
+  "toast.speech.unsupported":
+    "इस ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है।",
   "toast.speech.listening": "सुन रहा है...",
   "toast.enhance.empty": "पहले कुछ टाइप करें जिसे बेहतर बनाना है।",
   "toast.enhance.fail": "प्रॉम्प्ट बेहतर बनाने में विफल। फिर कोशिश करें।",
@@ -163,12 +183,15 @@ export const hi = {
   "toast.enhance.none": "कोई सुधार नहीं मिला। फिर कोशिश करें।",
   "toast.file.extracted": "{name} से टेक्स्ट निकाला गया",
   "toast.file.readFail": "{name} पढ़ने में विफल",
-  "toast.file.extractFail": "{name} से टेक्स्ट नहीं निकाला जा सका। सारांशक आज़माएँ।",
+  "toast.file.extractFail":
+    "{name} से टेक्स्ट नहीं निकाला जा सका। सारांशक आज़माएँ।",
   "toast.clipboard": "क्लिपबोर्ड पर कॉपी हुआ",
-  "errors.connectionInterrupted": "**कनेक्शन त्रुटि:** स्ट्रीम बाधित हुई। कृपया फिर कोशिश करें।",
+  "errors.connectionInterrupted":
+    "**कनेक्शन त्रुटि:** स्ट्रीम बाधित हुई। कृपया फिर कोशिश करें।",
   "errors.network": "**नेटवर्क त्रुटि**: {message}",
   "errors.http": "**त्रुटि {status}**: {detail}",
-  "errors.noApiKey": "कोई API कुंजी उपलब्ध नहीं। सेटिंग्स में प्रोवाइडर कुंजी जोड़ें या OPENROUTER_API_KEY कॉन्फ़िगर करें।",
+  "errors.noApiKey":
+    "कोई API कुंजी उपलब्ध नहीं। सेटिंग्स में प्रोवाइडर कुंजी जोड़ें या OPENROUTER_API_KEY कॉन्फ़िगर करें।",
   "voice.clickToSpeak": "बोलने के लिए क्लिक करें",
   "voice.listening": "सुन रहा है...",
   "voice.speaking": "बोल रहा है...",
@@ -176,19 +199,23 @@ export const hi = {
   "voice.aria.start": "वॉइस इनपुट शुरू करें",
   "voice.aria.stop": "वॉइस इनपुट बंद करें",
   "agent.summarizer.title": "दस्तावेज़ सारांशक",
-  "agent.summarizer.subtitle": "रिसर्च-ग्रेड संश्लेषण के लिए दस्तावेज़ अपलोड करें।",
-  "agent.summarizer.dropHint": "फ़ाइलें यहाँ छोड़ें या अपलोड करने के लिए क्लिक करें",
+  "agent.summarizer.subtitle":
+    "रिसर्च-ग्रेड संश्लेषण के लिए दस्तावेज़ अपलोड करें।",
+  "agent.summarizer.dropHint":
+    "फ़ाइलें यहाँ छोड़ें या अपलोड करने के लिए क्लिक करें",
   "agent.summarizer.start": "विश्लेषण शुरू करें",
   "agent.summarizer.processing": "दस्तावेज़ प्रोसेस हो रहा है...",
   "agent.coder.title": "AI कोडर",
-  "agent.coder.placeholder": "उस ऐप या कंपोनेंट का वर्णन करें जो आप बनाना चाहते हैं...",
+  "agent.coder.placeholder":
+    "उस ऐप या कंपोनेंट का वर्णन करें जो आप बनाना चाहते हैं...",
   "agent.coder.tab.code": "कोड",
   "agent.coder.tab.preview": "प्रीव्यू",
   "agent.coder.edit": "संपादित करें",
   "agent.coder.save": "सहेजें",
   "agent.coder.export": "एक्सपोर्ट",
   "agent.coder.reset": "रीसेट",
-  "agent.coder.disclaimer": "जनरेटेड कोड आपके ब्राउज़र प्रीव्यू में चलता है। शिप करने से पहले समीक्षा करें।",
+  "agent.coder.disclaimer":
+    "जनरेटेड कोड आपके ब्राउज़र प्रीव्यू में चलता है। शिप करने से पहले समीक्षा करें।",
   "agent.coach.title": "AI कोच",
   "agent.coach.transcript": "ट्रांसक्रिप्ट",
   "agent.coach.toggleTranscript": "ट्रांसक्रिप्ट टॉगल करें",

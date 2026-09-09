@@ -36,16 +36,16 @@ We will respond within 48 hours and work to address the issue promptly.
 
 1. **HTTPS Only:** Always deploy with SSL/TLS
 2. **Environment Variables:** Use platform-specific secret management
-3. **CORS:** Configure appropriate CORS policies
-4. **Rate Limiting:** Implement rate limiting on API routes
-5. **Input Validation:** All user inputs are validated
+3. **CORS:** Requests with a cross-origin browser `Origin` are rejected.
+4. **Rate Limiting:** API routes have per-instance, IP-based limits. Use a shared store such as Redis for production deployments that scale horizontally.
+5. **Input Validation:** API request bodies are schema-validated and size-limited.
 
 ### <kbd>CODE SECURITY</kbd>
 
 - **XSS Prevention:** All user content is sanitized
-- **Iframe Sandboxing:** Generated code runs in sandboxed iframes
-- **CSP Headers:** Content Security Policy configured
-- **Dependency Audits:** Regular `npm audit` checks
+- **Iframe Sandboxing:** Generated preview code runs in an opaque-origin sandbox.
+- **CSP Headers:** Content Security Policy and browser hardening headers are configured.
+- **Dependency Audits:** Run `pnpm audit` as part of release preparation.
 
 ## <kbd>SUPPORTED VERSIONS</kbd>
 
@@ -58,7 +58,7 @@ We will respond within 48 hours and work to address the issue promptly.
 
 ### <kbd>BUILT-IN PROTECTION</kbd>
 
-1. **API Key Validation:** Server-side validation of API keys
+1. **API Key Validation:** Server-side format validation and provider verification.
 2. **Sanitized Outputs:** All AI-generated content is sanitized
 3. **Sandboxed Execution:** Code preview runs in isolated iframe
 4. **Session Management:** Secure session handling

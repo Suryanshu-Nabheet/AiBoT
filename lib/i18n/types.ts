@@ -15,8 +15,20 @@ export const LOCALES: {
   /** English name of the language — used in AI system prompts */
   languageName: string;
 }[] = [
-  { id: "en", label: "English (US)", nativeLabel: "English (US)", htmlLang: "en", languageName: "English" },
-  { id: "hi", label: "Hindi (India)", nativeLabel: "हिन्दी (भारत)", htmlLang: "hi", languageName: "Hindi" },
+  {
+    id: "en",
+    label: "English (US)",
+    nativeLabel: "English (US)",
+    htmlLang: "en",
+    languageName: "English",
+  },
+  {
+    id: "hi",
+    label: "Hindi (India)",
+    nativeLabel: "हिन्दी (भारत)",
+    htmlLang: "hi",
+    languageName: "Hindi",
+  },
 ];
 
 export const DEFAULT_LOCALE: Locale = "en";

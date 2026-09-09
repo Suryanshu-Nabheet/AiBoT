@@ -7,7 +7,7 @@
 ### Enterprise-Grade AI Orchestration Platform
 
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)](https://github.com/Suryanshu-Nabheet/AiBoT)
-[![Next.js](https://img.shields.io/badge/Next.js-15.5.7-black?style=for-the-badge)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
@@ -41,7 +41,7 @@ graph TB
 
 - **Frontend**: Developed with React 19, featuring server components, streaming SSR, and progressive hydration for optimal performance.
 - **Backend**: Edge-optimized API routes implementing Server-Sent Events (SSE) for real-time response delivery.
-- **State Management**: Utilizes Zustand and React Query for efficient client and server state synchronization.
+- **State Management**: Uses React Context and React Query for client and server state synchronization.
 - **Rendering Engine**: Custom-built markdown processor supporting syntax highlighting, LaTeX, and high-frequency UI updates.
 
 ---
@@ -65,22 +65,13 @@ graph TB
 
 ---
 
-## Performance Metrics
-
-The platform is engineered for high-performance delivery:
-- **Lighthouse Performance**: 95+
-- **First Contentful Paint**: < 1.2s
-- **Initial Bundle Size**: < 100KB (gzipped)
-
----
-
 ## Technical Stack
 
-- **Framework**: Next.js 15.5.7, React 19
+- **Framework**: Next.js 15, React 19
 - **Language**: TypeScript 5.8
 - **AI Gateway**: OpenRouter API
 - **Styling**: Tailwind CSS 4.0, Framer Motion
-- **Data Handling**: Zustand, React Query, Zod
+- **Data Handling**: React Context, React Query, Zod
 
 ---
 
@@ -102,7 +93,7 @@ cd AiBoT
 ## Security and Compliance
 
 AiBoT implements industry-standard security protocols:
-- **Input Sanitization**: Multi-layer validation using Zod and DOMPurify.
+- **Input Validation**: Server-side request schemas and payload limits.
 - **Environment Isolation**: Secure handling of API credentials via server-side execution.
 - **Data Privacy**: Local-first persistence ensuring user conversations remain within the client environment.
 

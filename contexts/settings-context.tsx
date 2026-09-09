@@ -7,7 +7,14 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
 import { MODELS, ModelFull } from "@/lib/types";
 import { PROVIDER_MODELS } from "@/lib/provider-models";
 import {
@@ -64,14 +71,19 @@ interface SettingsContextType {
   hasLoaded: boolean;
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+const SettingsContext = createContext<SettingsContextType | undefined>(
+  undefined,
+);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [enabledModels, setEnabledModels] = useState<string[]>([]);
-  const [ollamaUrl, setOllamaUrlState] = useState<string>("http://localhost:11434");
+  const [ollamaUrl, setOllamaUrlState] = useState<string>(
+    "http://localhost:11434",
+  );
   const [ollamaModels, setOllamaModelsState] = useState<any[]>([]);
-  const [ollamaStatus, setOllamaStatus] = useState<OllamaConnectionStatus>("unknown");
+  const [ollamaStatus, setOllamaStatus] =
+    useState<OllamaConnectionStatus>("unknown");
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   const [desktopNotifications, setDesktopNotificationsState] = useState(false);
   const [completionSound, setCompletionSoundState] = useState(false);
@@ -80,18 +92,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const availableModels = React.useMemo(() => {
     const platformModels = MODELS.map((m) => ({ ...m, provider: "platform" }));
 
-    const providerModels = Object.entries(apiKeys).flatMap(([providerId, key]) => {
-      if (!key) return [];
-      const models = PROVIDER_MODELS[providerId] || [];
-      return models.map((m) => ({
-        id: m.id,
-        name: m.name,
-        provider: m.provider,
-        isPremium: true,
-        summary: m.summary,
-        logo: PROVIDER_ICONS[m.provider],
-      }));
-    });
+    const providerModels = Object.entries(apiKeys).flatMap(
+      ([providerId, key]) => {
+        if (!key) return [];
+        const models = PROVIDER_MODELS[providerId] || [];
+        return models.map((m) => ({
+          id: m.id,
+          name: m.name,
+          provider: m.provider,
+          isPremium: true,
+          summary: m.summary,
+          logo: PROVIDER_ICONS[m.provider],
+        }));
+      },
+    );
 
     const localOllamaModels = ollamaModels.map((m) => ({
       id: `ollama/${m.name}`,
@@ -116,10 +130,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (storedUrl) setOllamaUrlState(storedUrl);
 
       const storedOllamaModels = localStorage.getItem("aibot_ollama_models");
-      if (storedOllamaModels) setOllamaModelsState(JSON.parse(storedOllamaModels));
+      if (storedOllamaModels)
+        setOllamaModelsState(JSON.parse(storedOllamaModels));
 
       const storedStatus = localStorage.getItem("aibot_ollama_status");
-      if (storedStatus === "connected" || storedStatus === "disconnected" || storedStatus === "unknown") {
+      if (
+        storedStatus === "connected" ||
+        storedStatus === "disconnected" ||
+        storedStatus === "unknown"
+      ) {
         setOllamaStatus(storedStatus);
       }
 
@@ -162,7 +181,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         locale,
         desktopNotifications,
         completionSound,
-      } satisfies GeneralPreferences)
+      } satisfies GeneralPreferences),
     );
   }, [
     apiKeys,
@@ -200,7 +219,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const toggleModel = (modelId: string) => {
     setEnabledModels((prev) =>
-      prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]
+      prev.includes(modelId)
+        ? prev.filter((id) => id !== modelId)
+        : [...prev, modelId],
     );
   };
 
@@ -208,28 +229,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setLocaleState(next);
   };
 
-  const setDesktopNotifications = useCallback(async (enabled: boolean): Promise<boolean> => {
-    if (!enabled) {
-      setDesktopNotificationsState(false);
+  const setDesktopNotifications = useCallback(
+    async (enabled: boolean): Promise<boolean> => {
+      if (!enabled) {
+        setDesktopNotificationsState(false);
+        return true;
+      }
+
+      const { ensureNotificationPermission } =
+        await import("@/lib/desktop-notifications");
+      const permission = await ensureNotificationPermission();
+      if (permission !== "granted") {
+        setDesktopNotificationsState(false);
+        return false;
+      }
+
+      setDesktopNotificationsState(true);
       return true;
-    }
-
-    const { ensureNotificationPermission } = await import("@/lib/desktop-notifications");
-    const permission = await ensureNotificationPermission();
-    if (permission !== "granted") {
-      setDesktopNotificationsState(false);
-      return false;
-    }
-
-    setDesktopNotificationsState(true);
-    return true;
-  }, []);
+    },
+    [],
+  );
 
   const setCompletionSound = (enabled: boolean) => {
     setCompletionSoundState(enabled);
   };
 
-  const verifyKey = async (provider: keyof ApiKeys, key: string): Promise<boolean> => {
+  const verifyKey = async (
+    provider: keyof ApiKeys,
+    key: string,
+  ): Promise<boolean> => {
     if (!key || key.trim().length < 8) return false;
 
     try {

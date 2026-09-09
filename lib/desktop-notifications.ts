@@ -17,12 +17,16 @@ export function supportsDesktopNotifications(): boolean {
   return typeof window !== "undefined" && "Notification" in window;
 }
 
-export function getNotificationPermission(): NotificationPermission | "unsupported" {
+export function getNotificationPermission():
+  | NotificationPermission
+  | "unsupported" {
   if (!supportsDesktopNotifications()) return "unsupported";
   return Notification.permission;
 }
 
-export async function ensureNotificationPermission(): Promise<NotificationPermission | "unsupported"> {
+export async function ensureNotificationPermission(): Promise<
+  NotificationPermission | "unsupported"
+> {
   if (!supportsDesktopNotifications()) return "unsupported";
   if (Notification.permission === "granted") return "granted";
   if (Notification.permission === "denied") return "denied";
@@ -33,12 +37,17 @@ export async function ensureNotificationPermission(): Promise<NotificationPermis
   }
 }
 
-export function showDesktopNotification(payload: DesktopNotifyPayload): boolean {
+export function showDesktopNotification(
+  payload: DesktopNotifyPayload,
+): boolean {
   if (!supportsDesktopNotifications()) return false;
   if (Notification.permission !== "granted") return false;
 
   // Only nudge when the user isn't already looking at the tab.
-  if (typeof document !== "undefined" && document.visibilityState === "visible") {
+  if (
+    typeof document !== "undefined" &&
+    document.visibilityState === "visible"
+  ) {
     return false;
   }
 
@@ -62,12 +71,20 @@ export function showDesktopNotification(payload: DesktopNotifyPayload): boolean 
 export function playCompletionChime() {
   if (typeof window === "undefined") return;
   try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
     if (!Ctx) return;
     const ctx = new Ctx();
     const now = ctx.currentTime;
 
-    const tone = (freq: number, start: number, duration: number, gain = 0.04) => {
+    const tone = (
+      freq: number,
+      start: number,
+      duration: number,
+      gain = 0.04,
+    ) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       osc.type = "sine";

@@ -25,4 +25,3 @@ export function getThinkingModeUserSuffix(stage: ThinkingStage): string {
     "Output ONLY the final answer to the user.",
   ].join("\n");
 }
-

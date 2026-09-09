@@ -10,13 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import {
-  Columns2,
-  MessageSquare,
-  Moon,
-  Plus,
-  Sun,
-} from "lucide-react";
+import { Columns2, MessageSquare, Moon, Plus, Sun } from "lucide-react";
 import {
   Command,
   CommandDialog,

@@ -65,7 +65,7 @@ export function AIVoiceInput({
             "group w-24 h-24 rounded-2xl flex items-center justify-center transition-all z-50 shadow-sm",
             isActive
               ? "bg-transparent cursor-default shadow-none"
-              : "bg-white hover:bg-slate-50 border border-slate-200 cursor-pointer shadow-md"
+              : "bg-white hover:bg-slate-50 border border-slate-200 cursor-pointer shadow-md",
           )}
           type="button"
           onClick={handleClick}
@@ -77,7 +77,7 @@ export function AIVoiceInput({
               {/* Stop Icon for active state - Blue Background */}
               <div
                 className={cn(
-                  "w-14 h-14 rounded-full flex items-center justify-center transition-colors bg-blue-100 text-blue-600"
+                  "w-14 h-14 rounded-full flex items-center justify-center transition-colors bg-blue-100 text-blue-600",
                 )}
               >
                 {isModeSpeaking ? (
@@ -104,7 +104,7 @@ export function AIVoiceInput({
                 "w-1.5 rounded-full transition-all duration-300",
                 isActive
                   ? `${pulseColor} ${darkPulseColor} animate-pulse`
-                  : "bg-slate-200 h-1.5"
+                  : "bg-slate-200 h-1.5",
               )}
               style={
                 isActive && isClient

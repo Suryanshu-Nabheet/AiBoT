@@ -10,10 +10,10 @@ import { useState, useEffect, useRef } from "react";
 export function useSmoothTyping(
   targetText: string,
   charsPerFrame = 3,
-  shouldAnimate = true
+  shouldAnimate = true,
 ) {
   const [displayedText, setDisplayedText] = useState(
-    shouldAnimate ? "" : targetText
+    shouldAnimate ? "" : targetText,
   );
   const indexRef = useRef(0);
   const rafRef = useRef<number | undefined>(undefined);
@@ -38,7 +38,7 @@ export function useSmoothTyping(
         // Advance by multiple characters per frame for speed while maintaining smoothness
         indexRef.current = Math.min(
           indexRef.current + charsPerFrame,
-          targetText.length
+          targetText.length,
         );
         setDisplayedText(targetText.substring(0, indexRef.current));
         rafRef.current = requestAnimationFrame(animate);

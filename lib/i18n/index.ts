@@ -25,13 +25,14 @@ export function getDictionary(locale: Locale): EnDictionary {
 export function translate(
   locale: Locale,
   key: TranslationKey,
-  vars?: Record<string, string | number>
+  vars?: Record<string, string | number>,
 ): string {
-  const template = getDictionary(locale)[key] ?? getDictionary(DEFAULT_LOCALE)[key] ?? key;
+  const template =
+    getDictionary(locale)[key] ?? getDictionary(DEFAULT_LOCALE)[key] ?? key;
   if (!vars) return template;
   return Object.entries(vars).reduce(
     (acc, [name, value]) => acc.replaceAll(`{${name}}`, String(value)),
-    template
+    template,
   );
 }
 
@@ -51,4 +52,3 @@ export function localeReplyDirective(locale: Locale): string {
     `- Structural tags such as <thinking>...</thinking> stay as instructed; only the content and final answer use ${language}.`
   );
 }
-

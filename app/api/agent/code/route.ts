@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { MODELS } from "@/lib/types";
+import { protectApiRequest } from "@/lib/server/request-security";
+import { coderRequestSchema } from "@/lib/server/request-schemas";
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -44,22 +46,28 @@ GOAL:
 Deliver stunning, professional-grade code that executes perfectly on the first attempt.`;
 
 export async function POST(req: NextRequest) {
+  const blocked = protectApiRequest(req, {
+    scope: "coder",
+    limit: 5,
+    windowMs: 60_000,
+  });
+  if (blocked) return blocked;
+
   if (!OPENROUTER_KEY) {
     return NextResponse.json(
       { message: "OpenRouter API Key not configured" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   try {
-    const { prompt } = await req.json();
-
-    if (!prompt) {
+    const parsed = coderRequestSchema.safeParse(await req.json());
+    if (!parsed.success)
       return NextResponse.json(
-        { message: "Prompt is required" },
-        { status: 400 }
+        { message: "Invalid code request" },
+        { status: 400 },
       );
-    }
+    const { prompt } = parsed.data;
 
     // Try each model in fallback chain
     let lastError = null;
@@ -92,7 +100,8 @@ export async function POST(req: NextRequest) {
               temperature: 0.4,
               max_tokens: 8000,
             }),
-          }
+            signal: AbortSignal.timeout(120_000),
+          },
         );
 
         if (response.ok) {
@@ -106,9 +115,11 @@ export async function POST(req: NextRequest) {
         }
 
         // If rate limited or error, try next model
-        const errorText = await response.text();
+        const errorText = response.bodyUsed
+          ? "Empty completion"
+          : await response.text();
         console.log(
-          `Coder: Model ${model.id} failed (${response.status}), trying next...`
+          `Coder: Model ${model.id} failed (${response.status}), trying next...`,
         );
         lastError = errorText;
       } catch (modelError) {
@@ -125,13 +136,13 @@ export async function POST(req: NextRequest) {
         message:
           "All AI models are currently unavailable. Please try again in a moment.",
       },
-      { status: 503 }
+      { status: 503 },
     );
   } catch (error) {
     console.error("API Error:", error);
     return NextResponse.json(
       { message: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

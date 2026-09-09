@@ -34,7 +34,7 @@ export function useModel({
   }, [persistToLocalStorage, storageKey]);
 
   const [model, setModel] = useState(() =>
-    MODELS.find((m) => m.id === modelId)
+    MODELS.find((m) => m.id === modelId),
   );
 
   useEffect(() => {

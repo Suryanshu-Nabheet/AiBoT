@@ -58,7 +58,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
           // Add breaks before "Application in Business"
           .replace(
             /###\s*Application in Business/g,
-            "\n\n### Application in Business"
+            "\n\n### Application in Business",
           )
           // Add breaks before "Considerations"
           .replace(/###\s*Considerations/g, "\n\n### Considerations")
@@ -71,7 +71,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
           // Add breaks before specific keywords
           .replace(
             /([.!?])\s*(Perfectly Inelastic|Inelastic|Unitary|Elastic|Understanding)/g,
-            "$1\n\n$2"
+            "$1\n\n$2",
           )
           // Handle PED formulas
           .replace(/([.!?])\s*\(/g, "$1\n\n(")
@@ -83,7 +83,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
           .trim()
       );
     },
-    []
+    [],
   );
 
   // Markdown components
@@ -156,7 +156,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
           <code
             className={cn(
               "bg-muted text-muted-foreground rounded-md px-1 py-0.5 text-xs font-mono border",
-              className
+              className,
             )}
             {...rest}
           >
@@ -257,12 +257,18 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
         <hr className="my-6 border-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       ),
     }),
-    [onCopy, copied, isWrapped, toggleWrap, resolvedTheme, geistMono]
+    [onCopy, copied, isWrapped, toggleWrap, resolvedTheme, geistMono],
   );
 
   // Remark and rehype plugins
-  const remarkPlugins = useMemo(() => [remarkGfm, remarkBreaks, remarkMath], []);
-  const rehypePlugins = useMemo(() => [rehypeRaw, rehypeSanitize, rehypeKatex], []);
+  const remarkPlugins = useMemo(
+    () => [remarkGfm, remarkBreaks, remarkMath],
+    [],
+  );
+  const rehypePlugins = useMemo(
+    () => [rehypeRaw, rehypeSanitize, rehypeKatex],
+    [],
+  );
 
   return {
     preprocessMarkdown,

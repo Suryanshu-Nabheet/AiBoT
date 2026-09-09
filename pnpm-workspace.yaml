@@ -1,0 +1,5 @@
+# Explicit supply-chain policy for packages whose install scripts are unnecessary
+# for AiBoT. Pinning these decisions makes non-interactive CI installs reliable.
+allowBuilds:
+  core-js: false
+  unrs-resolver: false

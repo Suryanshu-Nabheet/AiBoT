@@ -6,6 +6,7 @@
  */
 
 import { PROVIDER_MODELS } from "@/lib/provider-models";
+import { MODELS } from "@/lib/types";
 
 export type CustomKeys = {
   openai?: string;
@@ -23,13 +24,19 @@ export type ResolvedProviderRoute = {
   model: string;
 };
 
-function findProviderForModel(modelId: string): keyof typeof PROVIDER_MODELS | null {
+export function findProviderForModel(
+  modelId: string,
+): keyof typeof PROVIDER_MODELS | null {
   for (const [providerId, models] of Object.entries(PROVIDER_MODELS)) {
     if (models.some((m) => m.id === modelId)) {
       return providerId as keyof typeof PROVIDER_MODELS;
     }
   }
   return null;
+}
+
+export function isPlatformModel(modelId: string) {
+  return MODELS.some((model) => model.id === modelId);
 }
 
 /**
@@ -39,7 +46,7 @@ function findProviderForModel(modelId: string): keyof typeof PROVIDER_MODELS | n
 export function resolveProviderRoute(
   modelId: string,
   customKeys: CustomKeys | undefined,
-  platform: { openRouterKey?: string; siteUrl: string; siteName: string }
+  platform: { openRouterKey?: string; siteUrl: string; siteName: string },
 ): ResolvedProviderRoute {
   const provider = findProviderForModel(modelId);
   const keys = customKeys || {};
@@ -108,7 +115,9 @@ export function resolveProviderRoute(
 }
 
 /** Convert Anthropic SSE stream into OpenAI-style `data: {choices...}` SSE. */
-export function anthropicToOpenAISSE(anthropicBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+export function anthropicToOpenAISSE(
+  anthropicBody: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = "";
@@ -131,13 +140,18 @@ export function anthropicToOpenAISSE(anthropicBody: ReadableStream<Uint8Array>):
             if (!raw || raw === "[DONE]") continue;
             try {
               const event = JSON.parse(raw);
-              if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
+              if (
+                event.type === "content_block_delta" &&
+                event.delta?.type === "text_delta"
+              ) {
                 const text = event.delta.text || "";
                 if (!text) continue;
                 const openaiChunk = {
                   choices: [{ delta: { content: text } }],
                 };
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`),
+                );
               }
             } catch {
               // ignore partial JSON

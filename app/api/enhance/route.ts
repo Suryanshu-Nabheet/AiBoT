@@ -7,8 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { isLocale, localeReplyDirective } from "@/lib/i18n";
-
-export const runtime = "edge";
+import { protectApiRequest } from "@/lib/server/request-security";
+import { enhanceRequestSchema } from "@/lib/server/request-schemas";
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -56,23 +56,30 @@ Transform user input into professionally structured, highly effective prompts th
 Ensure your output is production-ready and optimized for the highest quality AI generation.`;
 
 export async function POST(req: NextRequest) {
+  const blocked = protectApiRequest(req, {
+    scope: "enhance",
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (blocked) return blocked;
+
   if (!OPENROUTER_KEY) {
     return NextResponse.json(
       { error: "API Key not configured" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   try {
-    const { prompt, locale: rawLocale } = await req.json();
-    const locale = isLocale(rawLocale) ? rawLocale : undefined;
-
-    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
+    const parsed = enhanceRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Prompt is required" },
-        { status: 400 }
+        { error: "Invalid prompt request" },
+        { status: 400 },
       );
     }
+    const { prompt, locale: rawLocale } = parsed.data;
+    const locale = isLocale(rawLocale) ? rawLocale : undefined;
 
     const systemPrompt = locale
       ? `${PROMPT_ENGINEER_SYSTEM}${localeReplyDirective(locale)}`
@@ -97,7 +104,8 @@ export async function POST(req: NextRequest) {
           temperature: 0.7,
           max_tokens: 1500,
         }),
-      }
+        signal: AbortSignal.timeout(90_000),
+      },
     );
 
     if (!response.ok) {
@@ -105,7 +113,7 @@ export async function POST(req: NextRequest) {
       console.error("OpenRouter API Error:", errorText);
       return NextResponse.json(
         { error: "Failed to enhance prompt" },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -115,7 +123,7 @@ export async function POST(req: NextRequest) {
     if (!enhancedPrompt) {
       return NextResponse.json(
         { error: "No enhanced prompt generated" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -124,7 +132,7 @@ export async function POST(req: NextRequest) {
     console.error("Prompt enhancement error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

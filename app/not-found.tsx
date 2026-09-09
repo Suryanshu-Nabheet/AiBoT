@@ -20,7 +20,7 @@ export default function NotFound() {
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[120px] size-[500px]" />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
@@ -30,22 +30,23 @@ export default function NotFound() {
         <h1 className="text-8xl font-black tracking-tighter text-foreground mb-4 md:text-9xl">
           404
         </h1>
-        
+
         <div className="relative flex flex-col gap-2">
           <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
             Lost in the digital void
           </h2>
           <p className="text-muted-foreground font-medium">
-            The page you&apos;re looking for has either drifted away or never existed.
+            The page you&apos;re looking for has either drifted away or never
+            existed.
           </p>
         </div>
 
         {/* Action Buttons - matching agent mode style */}
         <div className="mt-8 flex flex-col gap-3 w-full sm:flex-row sm:justify-center">
-          <Button 
-            asChild 
-            variant="default" 
-            size="lg" 
+          <Button
+            asChild
+            variant="default"
+            size="lg"
             className="h-11 px-8 rounded-xl font-medium shadow-sm transition-all duration-200"
           >
             <Link href="/" className="flex items-center gap-2">
@@ -53,10 +54,10 @@ export default function NotFound() {
               Back Home
             </Link>
           </Button>
-          <Button 
-            asChild 
-            variant="ghost" 
-            size="lg" 
+          <Button
+            asChild
+            variant="ghost"
+            size="lg"
             className="h-11 px-8 rounded-xl bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
           >
             <Link href="/chat" className="flex items-center gap-2">
@@ -68,7 +69,15 @@ export default function NotFound() {
 
         {/* Subtle Footer */}
         <div className="mt-10 text-sm text-muted-foreground/60 font-medium">
-          Found a bug? <a href="https://github.com/Suryanshu-Nabheet/AiBoT/issues" target="_blank" rel="noopener noreferrer" className="text-primary/70 hover:text-primary transition-colors border-b border-primary/20 hover:border-primary">Report an Issue</a>
+          Found a bug?{" "}
+          <a
+            href="https://github.com/Suryanshu-Nabheet/AiBoT/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary/70 hover:text-primary transition-colors border-b border-primary/20 hover:border-primary"
+          >
+            Report an Issue
+          </a>
         </div>
       </motion.div>
     </div>

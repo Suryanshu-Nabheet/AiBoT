@@ -33,7 +33,8 @@ export const MODELS: ModelFull[] = [
     id: "google/gemma-4-31b-it:free",
     name: "Gemma 4 31B",
     isPremium: false,
-    summary: "Google's next-gen open multimodal model with MatFormer architecture",
+    summary:
+      "Google's next-gen open multimodal model with MatFormer architecture",
     logo: "/icons/google.svg",
   },
   {

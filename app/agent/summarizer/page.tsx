@@ -144,12 +144,12 @@ export default function AssignmentSummarizerPage() {
             toast.error(`Could not read ${file.name}`);
             return null;
           }
-        })
+        }),
       );
 
       // Filter out any failed files
       const validFiles = filesData.filter(
-        (f): f is { name: string; content: string } => f !== null
+        (f): f is { name: string; content: string } => f !== null,
       );
 
       if (validFiles.length === 0) {
@@ -183,35 +183,35 @@ export default function AssignmentSummarizerPage() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-background relative overflow-hidden">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
       {/* Background decoration */}
       <div className="absolute top-0 right-0 -z-10 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 left-0 -z-10 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
 
-      <div className="flex-1 overflow-auto p-8 max-w-5xl mx-auto w-full">
-        <div className="mb-10 text-center">
-          <h1 className="text-2xl font-bold tracking-tight mb-3 text-foreground flex items-center justify-center gap-2">
+      <div className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="mb-6 text-center sm:mb-10">
+          <h1 className="mb-2 flex items-center justify-center gap-2 text-xl font-bold tracking-tight text-foreground sm:mb-3 sm:text-2xl">
             <FileText className="size-6 text-blue-600" weight="bold" />
             <span>
               Ai <span className="text-blue-600">Summarizer</span>
             </span>
           </h1>
 
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="mx-auto max-w-2xl text-sm text-muted-foreground sm:text-lg">
             Upload your documents (PDF, DOCX, TXT) and let AiBoT analyze them
             for you. Summarize content, extract key data, or ask specific
             questions.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:gap-6 lg:mb-8 lg:grid-cols-2 lg:gap-8">
           {/* Upload Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col gap-4"
           >
-            <div className="bg-card border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 group cursor-pointer relative overflow-hidden min-h-[300px]">
+            <div className="relative flex min-h-[220px] flex-col items-center justify-center gap-4 overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/25 bg-card p-5 text-center transition-colors hover:border-primary/50 sm:min-h-[300px] sm:p-8">
               <Input
                 type="file"
                 multiple
@@ -276,7 +276,7 @@ export default function AssignmentSummarizerPage() {
             transition={{ delay: 0.1 }}
             className="flex flex-col gap-4"
           >
-            <div className="bg-card border rounded-xl p-6 h-full flex flex-col shadow-sm">
+            <div className="flex h-full min-h-[300px] flex-col rounded-xl border bg-card p-4 shadow-sm sm:p-6">
               <h3 className="font-semibold text-lg mb-4">
                 How can I help you?
               </h3>
@@ -378,7 +378,7 @@ export default function AssignmentSummarizerPage() {
                         await generatePDF(
                           result,
                           "summary.pdf",
-                          "Summary Report"
+                          "Summary Report",
                         );
                         toast.success("PDF downloaded successfully!");
                       } catch (error) {

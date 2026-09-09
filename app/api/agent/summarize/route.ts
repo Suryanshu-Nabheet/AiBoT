@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { MODELS } from "@/lib/types";
+import { protectApiRequest } from "@/lib/server/request-security";
+import { summarizeRequestSchema } from "@/lib/server/request-schemas";
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -51,29 +53,28 @@ OPERATIONAL GOAL:
 Provide the highest resolution insights possible through exhaustive documentation and rigorous synthesis. Assume the user requires a professional research report.`;
 
 export async function POST(req: NextRequest) {
+  const blocked = protectApiRequest(req, {
+    scope: "summarize",
+    limit: 3,
+    windowMs: 60_000,
+  });
+  if (blocked) return blocked;
+
   if (!OPENROUTER_KEY) {
     return NextResponse.json(
       { message: "OpenRouter API Key not found" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   try {
-    const { task, filesData } = await req.json();
-
-    if (!task) {
+    const parsed = summarizeRequestSchema.safeParse(await req.json());
+    if (!parsed.success)
       return NextResponse.json(
-        { message: "Task is required" },
-        { status: 400 }
+        { message: "Invalid summarization request" },
+        { status: 400 },
       );
-    }
-
-    if (!filesData || !Array.isArray(filesData) || filesData.length === 0) {
-      return NextResponse.json(
-        { message: "No file content provided" },
-        { status: 400 }
-      );
-    }
+    const { task, filesData } = parsed.data;
 
     // Construct the user message with file contents
     let filesContentStr = "";
@@ -117,7 +118,8 @@ export async function POST(req: NextRequest) {
                 { role: "user", content: userMessage },
               ],
             }),
-          }
+            signal: AbortSignal.timeout(120_000),
+          },
         );
 
         if (response.ok) {
@@ -131,7 +133,7 @@ export async function POST(req: NextRequest) {
           summary = summary
             .replace(
               /\|\s*([^|\n]+?)\s*\|/g,
-              (_match: string, content: string) => `| ${content.trim()} |`
+              (_match: string, content: string) => `| ${content.trim()} |`,
             )
             .replace(
               /(\|[^\n]+\|)\n(\|[^\n]+\|)/g,
@@ -142,7 +144,7 @@ export async function POST(req: NextRequest) {
                   return `${header}\n${separator}\n${row}`;
                 }
                 return match;
-              }
+              },
             )
             .replace(/^\s*(##|\*\*|\*)\s*$/gm, "")
             .replace(/\n{4,}/g, "\n\n\n")
@@ -154,7 +156,7 @@ export async function POST(req: NextRequest) {
         // If rate limited or error, try next model
         const errorText = await response.text();
         console.log(
-          `Summarizer: Model ${model.id} failed (${response.status}), trying next...`
+          `Summarizer: Model ${model.id} failed (${response.status}), trying next...`,
         );
         lastError = errorText;
       } catch (modelError) {
@@ -171,13 +173,13 @@ export async function POST(req: NextRequest) {
         message:
           "All AI models are currently unavailable. Please try again in a moment.",
       },
-      { status: 503 }
+      { status: 503 },
     );
   } catch (error) {
     console.error("API Error:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

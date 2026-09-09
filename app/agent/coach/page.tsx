@@ -188,12 +188,12 @@ export default function CoachAgentPage() {
   };
 
   return (
-    <div className="relative flex h-full w-full bg-background overflow-hidden flex-col items-center justify-center text-foreground font-sans">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto bg-background text-foreground font-sans">
       {/* Background Accents */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/50 via-background to-background opacity-70 pointer-events-none" />
 
       {/* Top Bar - Minimalist */}
-      <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-50">
+      <div className="relative z-50 flex w-full shrink-0 items-start justify-between p-4 sm:p-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <SpeakerHigh className="size-6 text-blue-600" weight="bold" />
@@ -209,7 +209,7 @@ export default function CoachAgentPage() {
             size="icon"
             className={cn(
               "rounded-full transition-colors",
-              showTranscript ? "bg-blue-100 text-blue-600" : "hover:bg-muted"
+              showTranscript ? "bg-blue-100 text-blue-600" : "hover:bg-muted",
             )}
             onClick={() => setShowTranscript(!showTranscript)}
             title="Toggle Transcript"
@@ -220,8 +220,8 @@ export default function CoachAgentPage() {
       </div>
 
       {/* Center - Visualizer & Controls - Fixed Height Container for Alignment */}
-      <div className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4">
-        <div className="w-full max-w-xl min-h-[320px] flex items-center justify-center">
+      <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-6 sm:py-10">
+        <div className="flex min-h-[260px] w-full max-w-xl items-center justify-center sm:min-h-[320px]">
           {/* Center - Visualizer & Controls */}
           <AnimatePresence mode="wait">
             {isProcessing ? (
@@ -306,7 +306,7 @@ export default function CoachAgentPage() {
                     "flex flex-col gap-1 p-3 rounded-xl text-sm border shadow-sm",
                     msg.role === Role.User
                       ? "bg-blue-50 border-blue-100 ml-8 text-blue-900"
-                      : "bg-white border-slate-100 mr-8 text-slate-900"
+                      : "bg-white border-slate-100 mr-8 text-slate-900",
                   )}
                 >
                   <span className="text-[10px] font-bold opacity-60 uppercase">

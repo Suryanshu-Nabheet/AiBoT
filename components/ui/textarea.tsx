@@ -17,7 +17,7 @@ const Textarea = React.forwardRef<
     <textarea
       className={cn(
         "flex w-full bg-transparent px-3 py-2 text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        className
+        className,
       )}
       ref={ref}
       {...props}

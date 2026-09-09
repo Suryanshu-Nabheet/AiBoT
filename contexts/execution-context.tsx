@@ -20,7 +20,7 @@ interface ExecutionContextType {
 }
 
 const ExecutionContext = createContext<ExecutionContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const ExecutionProvider = ({
@@ -41,7 +41,7 @@ export const useExecutionContext = () => {
   const context = useContext(ExecutionContext);
   if (!context) {
     throw new Error(
-      "useExecutionContext must be used within ExecutionProvider"
+      "useExecutionContext must be used within ExecutionProvider",
     );
   }
   return context;

@@ -81,7 +81,7 @@ const MessageComponent = memo(
     const displayedContent = useSmoothTyping(
       message.content,
       5,
-      message.shouldAnimate
+      message.shouldAnimate,
     );
 
     // Parsing Thinking blocks - Only for Agent responses
@@ -93,13 +93,16 @@ const MessageComponent = memo(
     if (!isUser) {
       const rawContent = displayedContent; // Use displayedContent to maintain typing animation
       const isThinkingMode = message.isThinkingRequested;
-      
-      const transitionRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
+
+      const transitionRegex =
+        /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
       const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
-      const closingThinkingRegex = /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
+      const closingThinkingRegex =
+        /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
       hasClosingThinkingTag = closingThinkingRegex.test(rawContent);
-      
-      const transitionMatch = rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
+
+      const transitionMatch =
+        rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
 
       if (transitionMatch) {
         hasThinkingTag = true;
@@ -109,24 +112,29 @@ const MessageComponent = memo(
         thinkingContent = parts[0]
           .replace(
             /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi,
-            ""
+            "",
           )
           .trim();
         // Extract main response (strip any remaining hallucinated tags)
-        mainResponse = parts.slice(1).join(splitMarker).replace(/<\/?[^>]+(>|$)/g, "").trim();
+        mainResponse = parts
+          .slice(1)
+          .join(splitMarker)
+          .replace(/<\/?[^>]+(>|$)/g, "")
+          .trim();
       } else {
-        const anyOpenTag = /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+        const anyOpenTag =
+          /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
         const openMatch = rawContent.match(anyOpenTag);
-        
+
         if (openMatch) {
           hasThinkingTag = true;
           // If we have an opening tag but no closing tag yet, everything after it is thinking
           thinkingContent = rawContent.split(openMatch[0])[1]?.trim() || "";
           mainResponse = "";
         } else {
-          // NO TAGS FOUND: 
-          // Even if thinking was requested, if the model isn't providing tags, 
-          // don't trap the answer in the reasoning bar. 
+          // NO TAGS FOUND:
+          // Even if thinking was requested, if the model isn't providing tags,
+          // don't trap the answer in the reasoning bar.
           // Treat the entire thing as the main response.
           thinkingContent = "";
           mainResponse = rawContent;
@@ -142,10 +150,10 @@ const MessageComponent = memo(
         /The response must now begin with and end with/gi,
         /IMPORTANT:\s*When you respond[^\n]*/gi,
         /All reasoning MUST be inside <thinking>\.\.\.<\/thinking>\.?/gi,
-        /After <\/thinking>, provide the final answer[^\n]*/gi
+        /After <\/thinking>, provide the final answer[^\n]*/gi,
       ];
-      
-      leakagePatterns.forEach(pattern => {
+
+      leakagePatterns.forEach((pattern) => {
         mainResponse = mainResponse.replace(pattern, "").trim();
         thinkingContent = thinkingContent.replace(pattern, "").trim();
       });
@@ -173,7 +181,7 @@ const MessageComponent = memo(
       <div
         className={cn(
           "flex flex-col w-full px-4 md:px-6 py-2",
-          isUser ? "items-end" : "items-start"
+          isUser ? "items-end" : "items-start",
         )}
       >
         {!isUser && (hasThinkingTag || thinkingContent) && (
@@ -197,7 +205,7 @@ const MessageComponent = memo(
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden px-1"
                 >
-                    <div className="text-sm text-muted-foreground/75 leading-relaxed py-1.5 border-l border-primary/5 pl-4 my-0.5">
+                  <div className="text-sm text-muted-foreground/75 leading-relaxed py-1.5 border-l border-primary/5 pl-4 my-0.5">
                     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words [&_*]:text-muted-foreground/75">
                       <ReactMarkdown
                         remarkPlugins={remarkPlugins}
@@ -213,17 +221,19 @@ const MessageComponent = memo(
             </AnimatePresence>
           </div>
         )}
-        {(!isUser && !!message.isThinkingRequested && hasThinkingTag) ? null : (
+        {!isUser && !!message.isThinkingRequested && hasThinkingTag ? null : (
           <div
             className={cn(
               "text-sm overflow-hidden break-words",
               isUser
                 ? "bg-muted text-foreground border border-border/50 rounded-2xl px-4 py-2.5 md:px-5 md:py-3 shadow-sm max-w-[85%]"
-                : compactAgentContentClass
+                : compactAgentContentClass,
             )}
           >
             {isUser ? (
-              <div className="whitespace-pre-wrap font-medium">{mainResponse}</div>
+              <div className="whitespace-pre-wrap font-medium">
+                {mainResponse}
+              </div>
             ) : (
               <div className="w-full max-w-full">
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
@@ -243,60 +253,77 @@ const MessageComponent = memo(
             )}
           </div>
         )}
-        
+
         {/* Actions - Only show after final response is complete */}
         {!isUser &&
           !message.isThinkingRequested &&
           message.content.trim() &&
           !isGenerating &&
-          !/<thinking>|<thought>|<reasoning>|<\/\|thinking\|>|\[THOUGHT\]/i.test(message.content) && (
-          <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                    onClick={handleCopy}
+          !/<thinking>|<thought>|<reasoning>|<\/\|thinking\|>|\[THOUGHT\]/i.test(
+            message.content,
+          ) && (
+            <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                      onClick={handleCopy}
+                    >
+                      {isCopied ? (
+                        <CheckIcon className="size-4 text-green-500" />
+                      ) : (
+                        <CopyIcon className="size-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="text-[10px] px-2 py-1 font-bold"
                   >
-                    {isCopied ? (
-                      <CheckIcon className="size-4 text-green-500" />
-                    ) : (
-                      <CopyIcon className="size-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Copy message</TooltipContent>
-              </Tooltip>
+                    Copy message
+                  </TooltipContent>
+                </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                    onClick={async () => {
-                      try {
-                        const { generatePDF } = await import("@/lib/pdf-utils");
-                        await generatePDF(message.content, "arena-response.pdf", "Arena Response");
-                        toast.success("PDF downloaded successfully!");
-                      } catch (err) {
-                        toast.error("Failed to generate PDF");
-                      }
-                    }}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+                      onClick={async () => {
+                        try {
+                          const { generatePDF } =
+                            await import("@/lib/pdf-utils");
+                          await generatePDF(
+                            message.content,
+                            "arena-response.pdf",
+                            "Arena Response",
+                          );
+                          toast.success("PDF downloaded successfully!");
+                        } catch (err) {
+                          toast.error("Failed to generate PDF");
+                        }
+                      }}
+                    >
+                      <DownloadIcon className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="text-[10px] px-2 py-1 font-bold"
                   >
-                    <DownloadIcon className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold">Download as PDF</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )}
+                    Download as PDF
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
       </div>
     );
-  }
+  },
 );
 MessageComponent.displayName = "MessageComponent";
 
@@ -334,15 +361,21 @@ export default function ArenaInterface({
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
 
-  const [leftLoadingStatus, setLeftLoadingStatus] = useState("AiBoT is thinking...");
-  const [rightLoadingStatus, setRightLoadingStatus] = useState("AiBoT is thinking...");
+  const [leftLoadingStatus, setLeftLoadingStatus] = useState(
+    "AiBoT is thinking...",
+  );
+  const [rightLoadingStatus, setRightLoadingStatus] = useState(
+    "AiBoT is thinking...",
+  );
 
   useEffect(() => {
     if (!leftChat.isLoading) {
-      setLeftLoadingStatus(isThinking ? "AiBoT is thinking..." : "AiBoT is generating...");
+      setLeftLoadingStatus(
+        isThinking ? "AiBoT is thinking..." : "AiBoT is generating...",
+      );
       return;
     }
-    const statuses = isThinking 
+    const statuses = isThinking
       ? [
           "AiBoT is thinking...",
           "Analyzing logical branches...",
@@ -366,10 +399,12 @@ export default function ArenaInterface({
 
   useEffect(() => {
     if (!rightChat.isLoading) {
-      setRightLoadingStatus(isThinking ? "AiBoT is thinking..." : "AiBoT is generating...");
+      setRightLoadingStatus(
+        isThinking ? "AiBoT is thinking..." : "AiBoT is generating...",
+      );
       return;
     }
-    const statuses = isThinking 
+    const statuses = isThinking
       ? [
           "AiBoT is thinking...",
           "Analyzing logical branches...",
@@ -413,8 +448,18 @@ export default function ArenaInterface({
     setAttachments([]); // Clear immediately
 
     await Promise.all([
-      leftChat.handleSend(currentQuery, currentAttachments, undefined, isThinking),
-      rightChat.handleSend(currentQuery, currentAttachments, undefined, isThinking),
+      leftChat.handleSend(
+        currentQuery,
+        currentAttachments,
+        undefined,
+        isThinking,
+      ),
+      rightChat.handleSend(
+        currentQuery,
+        currentAttachments,
+        undefined,
+        isThinking,
+      ),
     ]);
   };
 
@@ -462,7 +507,7 @@ export default function ArenaInterface({
             } catch (extractError) {
               console.error(`Failed to extract ${file.name}:`, extractError);
               toast.error(
-                `Could not extract text from ${file.name}. Try the Summarizer feature.`
+                `Could not extract text from ${file.name}. Try the Summarizer feature.`,
               );
             }
           } else {
@@ -585,28 +630,34 @@ export default function ArenaInterface({
   return (
     <div className="flex flex-col h-full w-full bg-background relative overflow-hidden">
       {/* Split Area */}
-      <div className="flex-1 overflow-hidden flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-border">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto divide-y divide-border md:flex-row md:overflow-hidden md:divide-x md:divide-y-0">
         {/* LEFT PANEL */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+        <div className="relative flex min-h-[38dvh] min-w-0 flex-1 flex-col md:min-h-0">
           <div className="absolute top-2 left-4 z-10">
             <ModelSelector
               value={leftChat.model}
               onValueChange={leftChat.setModel}
             />
           </div>
-          <div className="flex-1 overflow-y-auto pt-12 pb-32 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto pt-12 pb-5 scrollbar-thin">
             {leftChat.messages.map((m, i) => {
               const isLast = i === leftChat.messages.length - 1;
-              const isAgentGenerating = leftChat.isLoading && isLast && m.role === Role.Agent;
-              
+              const isAgentGenerating =
+                leftChat.isLoading && isLast && m.role === Role.Agent;
+
               // Only show shimmer if generating and (if thinking, show shimmer only until reasoning starts)
-              const showShimmer = isAgentGenerating && (m.isThinkingRequested ? !m.content.trim() : true);
+              const showShimmer =
+                isAgentGenerating &&
+                (m.isThinkingRequested ? !m.content.trim() : true);
 
               return (
                 <React.Fragment key={m.id || i}>
                   {showShimmer && leftLoadingStatus && (
                     <div className="px-6 mb-2">
-                      <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                      <TextShimmer
+                        className="text-sm font-medium opacity-60"
+                        duration={1.2}
+                      >
                         {leftLoadingStatus}
                       </TextShimmer>
                     </div>
@@ -619,17 +670,21 @@ export default function ArenaInterface({
                 </React.Fragment>
               );
             })}
-            
+
             {/* Initial Shimmer for Left Panel */}
             {leftChat.isLoading &&
               leftChat.messages.length > 0 &&
-              leftChat.messages[leftChat.messages.length - 1].role === Role.User &&
+              leftChat.messages[leftChat.messages.length - 1].role ===
+                Role.User &&
               leftLoadingStatus && (
                 <div className="px-6 mb-4">
                   {isThinking ? (
                     <ThinkingBar text="Connecting to reasoning engine..." />
                   ) : (
-                    <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                    <TextShimmer
+                      className="text-sm font-medium opacity-60"
+                      duration={1.2}
+                    >
                       {leftLoadingStatus}
                     </TextShimmer>
                   )}
@@ -644,25 +699,31 @@ export default function ArenaInterface({
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+        <div className="relative flex min-h-[38dvh] min-w-0 flex-1 flex-col md:min-h-0">
           <div className="absolute top-2 left-4 z-10">
             <ModelSelector
               value={rightChat.model}
               onValueChange={rightChat.setModel}
             />
           </div>
-          <div className="flex-1 overflow-y-auto pt-12 pb-32 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto pt-12 pb-5 scrollbar-thin">
             {rightChat.messages.map((m, i) => {
               const isLast = i === rightChat.messages.length - 1;
-              const isAgentGenerating = rightChat.isLoading && isLast && m.role === Role.Agent;
-              
-              const showShimmer = isAgentGenerating && (m.isThinkingRequested ? !m.content.trim() : true);
+              const isAgentGenerating =
+                rightChat.isLoading && isLast && m.role === Role.Agent;
+
+              const showShimmer =
+                isAgentGenerating &&
+                (m.isThinkingRequested ? !m.content.trim() : true);
 
               return (
                 <React.Fragment key={m.id || i}>
                   {showShimmer && rightLoadingStatus && (
                     <div className="px-6 mb-2">
-                      <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                      <TextShimmer
+                        className="text-sm font-medium opacity-60"
+                        duration={1.2}
+                      >
                         {rightLoadingStatus}
                       </TextShimmer>
                     </div>
@@ -679,13 +740,17 @@ export default function ArenaInterface({
             {/* Initial Shimmer for Right Panel */}
             {rightChat.isLoading &&
               rightChat.messages.length > 0 &&
-              rightChat.messages[rightChat.messages.length - 1].role === Role.User &&
+              rightChat.messages[rightChat.messages.length - 1].role ===
+                Role.User &&
               rightLoadingStatus && (
                 <div className="px-6 mb-4">
                   {isThinking ? (
                     <ThinkingBar text="Connecting to reasoning engine..." />
                   ) : (
-                    <TextShimmer className="text-sm font-medium opacity-60" duration={1.2}>
+                    <TextShimmer
+                      className="text-sm font-medium opacity-60"
+                      duration={1.2}
+                    >
                       {rightLoadingStatus}
                     </TextShimmer>
                   )}
@@ -716,8 +781,12 @@ export default function ArenaInterface({
         onThinkingToggle={() => setIsThinking((prev) => !prev)}
         // No Model Selector for Arena
         showModelSelector={false}
-        placeholder={isListening ? t("composer.placeholder.listening") : t("composer.placeholder.arena")}
-        className="absolute bottom-0 left-0" // Ensure positioning is correct
+        placeholder={
+          isListening
+            ? t("composer.placeholder.listening")
+            : t("composer.placeholder.arena")
+        }
+        className="shrink-0"
       />
     </div>
   );

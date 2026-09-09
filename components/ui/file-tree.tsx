@@ -63,7 +63,7 @@ export const FolderItem = ({
       open={isOpen}
       onOpenChange={(open) => {
         context.setOpenItems((prev) =>
-          open ? [...prev, value] : prev.filter((item) => item !== value)
+          open ? [...prev, value] : prev.filter((item) => item !== value),
         );
       }}
       className={cn("w-full", className)}
@@ -95,7 +95,7 @@ export const FolderTrigger = ({
         "flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm font-medium hover:bg-muted/50 transition-colors text-left",
         gitStatus === "modified" && "text-yellow-500",
         gitStatus === "untracked" && "text-green-500",
-        className
+        className,
       )}
       {...props}
     >
@@ -120,7 +120,7 @@ export const FolderPanel = ({
     <CollapsiblePrimitive.Content
       className={cn(
         "overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down pl-4 border-l border-border/40 ml-2 mt-0.5",
-        className
+        className,
       )}
       {...props}
     >
@@ -159,7 +159,7 @@ export const FileItem = ({
         "flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm cursor-pointer hover:bg-muted/50 transition-colors",
         gitStatus === "modified" && "text-yellow-600 dark:text-yellow-400",
         gitStatus === "untracked" && "text-green-600 dark:text-green-400",
-        className
+        className,
       )}
       {...props}
     >

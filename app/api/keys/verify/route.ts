@@ -6,15 +6,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
-export const runtime = "edge";
+import { protectApiRequest } from "@/lib/server/request-security";
+import { keyVerificationSchema } from "@/lib/server/request-schemas";
 
 type Provider = "openai" | "anthropic" | "google" | "deepseek" | "openrouter";
 
 async function verifyOpenAICompatible(
   baseUrl: string,
   key: string,
-  extraHeaders?: Record<string, string>
+  extraHeaders?: Record<string, string>,
 ): Promise<{ ok: boolean; detail?: string }> {
   const res = await fetch(`${baseUrl.replace(/\/$/, "")}/models`, {
     method: "GET",
@@ -28,7 +28,9 @@ async function verifyOpenAICompatible(
   return { ok: false, detail: text.slice(0, 200) || `HTTP ${res.status}` };
 }
 
-async function verifyAnthropic(key: string): Promise<{ ok: boolean; detail?: string }> {
+async function verifyAnthropic(
+  key: string,
+): Promise<{ ok: boolean; detail?: string }> {
   // Lightweight authenticated probe — empty messages returns 400 with valid key, 401 with bad key.
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -54,10 +56,12 @@ async function verifyAnthropic(key: string): Promise<{ ok: boolean; detail?: str
   return { ok: false, detail: text.slice(0, 200) || `HTTP ${res.status}` };
 }
 
-async function verifyGoogle(key: string): Promise<{ ok: boolean; detail?: string }> {
+async function verifyGoogle(
+  key: string,
+): Promise<{ ok: boolean; detail?: string }> {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
-    { method: "GET" }
+    { method: "GET" },
   );
   if (res.ok) return { ok: true };
   const text = await res.text().catch(() => "");
@@ -65,23 +69,30 @@ async function verifyGoogle(key: string): Promise<{ ok: boolean; detail?: string
 }
 
 export async function POST(req: NextRequest) {
-  let body: { provider?: Provider; key?: string };
+  const blocked = protectApiRequest(req, {
+    scope: "key-verification",
+    limit: 5,
+    windowMs: 60_000,
+  });
+  if (blocked) return blocked;
+
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
-    return NextResponse.json({ ok: false, message: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, message: "Invalid JSON" },
+      { status: 400 },
+    );
   }
 
-  const provider = body.provider;
-  const key = (body.key || "").trim();
-
-  if (!provider || !key) {
-    return NextResponse.json({ ok: false, message: "provider and key are required" }, { status: 400 });
-  }
-
-  if (key.length < 8) {
-    return NextResponse.json({ ok: false, message: "Key looks too short" }, { status: 400 });
-  }
+  const parsed = keyVerificationSchema.safeParse(rawBody);
+  if (!parsed.success)
+    return NextResponse.json(
+      { ok: false, message: "Invalid provider or key" },
+      { status: 400 },
+    );
+  const { provider, key } = parsed.data;
 
   try {
     let result: { ok: boolean; detail?: string };
@@ -94,10 +105,15 @@ export async function POST(req: NextRequest) {
         result = await verifyOpenAICompatible("https://api.deepseek.com", key);
         break;
       case "openrouter":
-        result = await verifyOpenAICompatible("https://openrouter.ai/api/v1", key, {
-          "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-          "X-Title": "AiBoT",
-        });
+        result = await verifyOpenAICompatible(
+          "https://openrouter.ai/api/v1",
+          key,
+          {
+            "HTTP-Referer":
+              process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+            "X-Title": "AiBoT",
+          },
+        );
         break;
       case "anthropic":
         result = await verifyAnthropic(key);
@@ -106,17 +122,22 @@ export async function POST(req: NextRequest) {
         result = await verifyGoogle(key);
         break;
       default:
-        return NextResponse.json({ ok: false, message: "Unknown provider" }, { status: 400 });
+        return NextResponse.json(
+          { ok: false, message: "Unknown provider" },
+          { status: 400 },
+        );
     }
 
     return NextResponse.json({
       ok: result.ok,
-      message: result.ok ? "Key verified" : result.detail || "Verification failed",
+      message: result.ok
+        ? "Key verified"
+        : result.detail || "Verification failed",
     });
   } catch (error) {
     return NextResponse.json(
       { ok: false, message: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -16,7 +16,10 @@ import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
-import { getThinkingModeUserSuffix, type ThinkingStage } from "@/lib/chat/thinking-mode";
+import {
+  getThinkingModeUserSuffix,
+  type ThinkingStage,
+} from "@/lib/chat/thinking-mode";
 import {
   LONG_TASK_MS,
   playCompletionChime,
@@ -24,7 +27,11 @@ import {
 } from "@/lib/desktop-notifications";
 import { translate, localeReplyDirective } from "@/lib/i18n";
 
-function httpErrorMessage(locale: Parameters<typeof translate>[0], status: number, detail: string) {
+function httpErrorMessage(
+  locale: Parameters<typeof translate>[0],
+  status: number,
+  detail: string,
+) {
   return translate(locale, "errors.http", {
     status,
     detail: detail.substring(0, 200),
@@ -60,13 +67,8 @@ export function useChatSession({
   const [attachments, setAttachments] = useState<
     { name: string; content: string; type: string }[]
   >([]);
-  const {
-    apiKeys,
-    ollamaUrl,
-    desktopNotifications,
-    completionSound,
-    locale,
-  } = useSettings();
+  const { apiKeys, ollamaUrl, desktopNotifications, completionSound, locale } =
+    useSettings();
   const [executionCreated, setExecutionCreated] = useState(false);
 
   // Initialize conversationId with session persistence logic
@@ -128,7 +130,7 @@ export function useChatSession({
       setModel(newModel);
       setModelId(newModel);
     },
-    [setModelId]
+    [setModelId],
   );
 
   const processStream = async (
@@ -139,7 +141,7 @@ export function useChatSession({
       finalize?: boolean;
       tempId?: string;
       contentPrefix?: string;
-    }
+    },
   ) => {
     const finalize = options?.finalize ?? true;
     if (!response.ok || !response.body) {
@@ -174,7 +176,7 @@ export function useChatSession({
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        
+
         const lines = buffer.split("\n");
         // Keep the last partial line in the buffer
         buffer = lines.pop() || "";
@@ -215,8 +217,8 @@ export function useChatSession({
                     content: prefix + accumulated,
                     isThinkingRequested,
                   }
-                : m
-            )
+                : m,
+            ),
           );
         }
       }
@@ -226,7 +228,7 @@ export function useChatSession({
         const updatedMessages = prev.map((m) =>
           m.id === tempId
             ? { ...m, content: prefix + accumulated, isThinkingRequested }
-            : m
+            : m,
         );
 
         if (finalize && conversationId) {
@@ -235,7 +237,8 @@ export function useChatSession({
             title:
               updatedMessages
                 .find((m) => m.role === Role.User)
-                ?.content.substring(0, 50) || translate(locale, "chat.defaultTitle"),
+                ?.content.substring(0, 50) ||
+              translate(locale, "chat.defaultTitle"),
             createdAt: new Date().toISOString(),
             messages: updatedMessages,
             updatedAt: new Date().toISOString(),
@@ -250,8 +253,10 @@ export function useChatSession({
       if (options?.tempId) {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === tempId ? { ...m, content: errorContent, isThinkingRequested } : m
-          )
+            m.id === tempId
+              ? { ...m, content: errorContent, isThinkingRequested }
+              : m,
+          ),
         );
       } else {
         setMessages((prev) => [
@@ -272,8 +277,7 @@ export function useChatSession({
         const wasAborted = abortControllerRef.current?.signal.aborted;
         const startedAt = requestStartedAtRef.current;
         const elapsed = startedAt ? Date.now() - startedAt : 0;
-        const wasLong =
-          thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
+        const wasLong = thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
 
         if (!wasAborted && wasLong) {
           if (desktopNotifications) {
@@ -282,13 +286,13 @@ export function useChatSession({
                 locale,
                 thinkingRequestedRef.current
                   ? "notify.thinking.title"
-                  : "notify.complete.title"
+                  : "notify.complete.title",
               ),
               body: translate(
                 locale,
                 thinkingRequestedRef.current
                   ? "notify.thinking.body"
-                  : "notify.complete.body"
+                  : "notify.complete.body",
               ),
               tag: `aibot-${conversationId || "chat"}`,
             });
@@ -308,7 +312,7 @@ export function useChatSession({
     manualQuery?: string,
     manualAttachments?: { name: string; content: string; type: string }[],
     systemInstruction?: string,
-    isThinking?: boolean
+    isThinking?: boolean,
   ) => {
     const inputQuery = manualQuery || query;
     if (!inputQuery.trim() || isLoading) return;
@@ -327,7 +331,7 @@ export function useChatSession({
         .map((a) =>
           a.type.startsWith("image/")
             ? `![${a.name}](${a.content})`
-            : `\n\nFile: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``
+            : `\n\nFile: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``,
         )
         .join("\n");
       apiContent = `${aiContext}\n\n${currentQuery}`;
@@ -371,7 +375,6 @@ export function useChatSession({
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
-
     try {
       const isOllama = model.startsWith("ollama/");
       const stage1Content = `${apiContent}${getThinkingModeUserSuffix("thinking")}`;
@@ -389,16 +392,15 @@ export function useChatSession({
           targetUrl = `http://${targetUrl}`;
         }
 
-        const baseSystemPrompt =
-          `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}${localeReplyDirective(locale)}`;
+        const baseSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}${localeReplyDirective(locale)}`;
 
         const stage1SystemPrompt = `${baseSystemPrompt}\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n- Stage 1: thinking-only.\n- Your response MUST start with <thinking> with no characters before it.\n- Put all reasoning inside <thinking>...</thinking>.\n- You MUST NOT output any final answer content outside of </thinking> for this stage.\n- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
 
-        const stage2SystemPrompt =
-          `${baseSystemPrompt}\n\nIMPORTANT: Stage 2: final-only.\n- Do not include any <thinking>...</thinking> or related tags.\n- Output ONLY the final answer.`;
+        const stage2SystemPrompt = `${baseSystemPrompt}\n\nIMPORTANT: Stage 2: final-only.\n- Do not include any <thinking>...</thinking> or related tags.\n- Output ONLY the final answer.`;
 
         const buildOllamaPayload = (stage: ThinkingStage, content: string) => {
-          const systemPrompt = stage === "thinking" ? stage1SystemPrompt : stage2SystemPrompt;
+          const systemPrompt =
+            stage === "thinking" ? stage1SystemPrompt : stage2SystemPrompt;
           return {
             model: ollamaModelName,
             messages: [
@@ -417,7 +419,12 @@ export function useChatSession({
           // Create the placeholder once so UI renders as a single message bubble.
           setMessages((prev) => [
             ...prev,
-            { id: tempId, role: Role.Agent, content: "", isThinkingRequested: true },
+            {
+              id: tempId,
+              role: Role.Agent,
+              content: "",
+              isThinkingRequested: true,
+            },
           ]);
 
           // Stage 1: thinking-only
@@ -433,7 +440,7 @@ export function useChatSession({
           } catch (err) {
             console.warn(
               "Primary Ollama chat connection failed (stage 1), trying loopback fallback...",
-              err
+              err,
             );
             if (targetUrl.includes("localhost")) {
               const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
@@ -482,7 +489,7 @@ export function useChatSession({
           } catch (err) {
             console.warn(
               "Primary Ollama chat connection failed (stage 2), trying loopback fallback...",
-              err
+              err,
             );
             if (targetUrl.includes("localhost")) {
               const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
@@ -541,7 +548,10 @@ export function useChatSession({
             signal: abortControllerRef.current.signal,
           });
         } catch (err) {
-          console.warn("Primary Ollama chat connection failed, trying loopback fallback...", err);
+          console.warn(
+            "Primary Ollama chat connection failed, trying loopback fallback...",
+            err,
+          );
           if (targetUrl.includes("localhost")) {
             const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
             res = await fetch(`${fallbackUrl}/api/chat`, {
@@ -581,7 +591,12 @@ export function useChatSession({
         // Create placeholder once so Stage 1 + Stage 2 render as one bubble.
         setMessages((prev) => [
           ...prev,
-          { id: tempId, role: Role.Agent, content: "", isThinkingRequested: true },
+          {
+            id: tempId,
+            role: Role.Agent,
+            content: "",
+            isThinkingRequested: true,
+          },
         ]);
 
         // Stage 1: thinking-only
@@ -589,9 +604,10 @@ export function useChatSession({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [...messages, { ...userMessage, content: stage1Content }].map(
-              (m) => ({ role: m.role, content: m.content })
-            ),
+            messages: [
+              ...messages,
+              { ...userMessage, content: stage1Content },
+            ].map((m) => ({ role: m.role, content: m.content })),
             model,
             conversationId,
             isThinking: true,
@@ -628,9 +644,10 @@ export function useChatSession({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [...messages, { ...userMessage, content: stage2Content }].map(
-              (m) => ({ role: m.role, content: m.content })
-            ),
+            messages: [
+              ...messages,
+              { ...userMessage, content: stage2Content },
+            ].map((m) => ({ role: m.role, content: m.content })),
             model,
             conversationId,
             isThinking: false,
@@ -670,7 +687,7 @@ export function useChatSession({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...messages, { ...userMessage, content: apiContent }].map(
-            (m) => ({ role: m.role, content: m.content })
+            (m) => ({ role: m.role, content: m.content }),
           ),
           model,
           conversationId,
@@ -704,7 +721,9 @@ export function useChatSession({
           {
             id: `error-fetch-${Date.now()}`,
             role: Role.Agent,
-            content: translate(locale, "errors.network", { message: error.message }),
+            content: translate(locale, "errors.network", {
+              message: error.message,
+            }),
           },
         ]);
       }

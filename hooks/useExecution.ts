@@ -72,13 +72,13 @@ export const useExecution = () => {
     (id: string, updates: Partial<Execution>) => {
       setExecutions((prev) => {
         const newExecutions = prev.map((e) =>
-          e.id === id ? { ...e, ...updates } : e
+          e.id === id ? { ...e, ...updates } : e,
         );
         saveToStorage(newExecutions);
         return newExecutions;
       });
     },
-    []
+    [],
   );
 
   const refreshExecutions = useCallback(() => {

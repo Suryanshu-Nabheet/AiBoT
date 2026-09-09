@@ -149,7 +149,7 @@ export const UIStructure = () => {
                         className={cn(
                           "w-full justify-between h-11 px-3 bg-background hover:bg-sidebar-accent border border-sidebar-border shadow-sm transition-all text-foreground rounded-xl",
                           isAgentModeOpen &&
-                            "bg-sidebar-accent font-bold text-primary border-sidebar-border"
+                            "bg-sidebar-accent font-bold text-primary border-sidebar-border",
                         )}
                         variant="ghost"
                       >
@@ -157,16 +157,22 @@ export const UIStructure = () => {
                           <Code
                             className={cn(
                               "size-5 transition-colors",
-                              isAgentModeOpen ? "text-primary" : "text-muted-foreground"
+                              isAgentModeOpen
+                                ? "text-primary"
+                                : "text-muted-foreground",
                             )}
                             weight="bold"
                           />
-                          <span className="font-bold tracking-tight">{t("nav.agentMode")}</span>
+                          <span className="font-bold tracking-tight">
+                            {t("nav.agentMode")}
+                          </span>
                         </div>
                         <CaretDown
                           className={cn(
                             "size-3.5 transition-transform duration-300",
-                            isAgentModeOpen ? "rotate-180 text-primary" : "text-muted-foreground"
+                            isAgentModeOpen
+                              ? "rotate-180 text-primary"
+                              : "text-muted-foreground",
                           )}
                           weight="bold"
                         />
@@ -179,7 +185,10 @@ export const UIStructure = () => {
                           className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
                           onClick={() => router.push("/agent/summarizer")}
                         >
-                          <FileText className="size-4.5 text-primary" weight="bold" />
+                          <FileText
+                            className="size-4.5 text-primary"
+                            weight="bold"
+                          />
                           {t("nav.agent.summarizer")}
                         </Button>
                         <Button
@@ -187,7 +196,10 @@ export const UIStructure = () => {
                           className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
                           onClick={() => router.push("/agent/coder")}
                         >
-                          <TerminalWindow className="size-4.5 text-primary" weight="bold" />
+                          <TerminalWindow
+                            className="size-4.5 text-primary"
+                            weight="bold"
+                          />
                           {t("nav.agent.coder")}
                         </Button>
                         <Button
@@ -195,7 +207,10 @@ export const UIStructure = () => {
                           className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
                           onClick={() => router.push("/agent/coach")}
                         >
-                          <SpeakerHigh className="size-4.5 text-primary" weight="bold" />
+                          <SpeakerHigh
+                            className="size-4.5 text-primary"
+                            weight="bold"
+                          />
                           {t("nav.agent.coach")}
                         </Button>
                       </div>
@@ -218,7 +233,7 @@ export const UIStructure = () => {
                     .filter((execution) =>
                       execution.title
                         .toLowerCase()
-                        .includes(searchQuery.toLowerCase())
+                        .includes(searchQuery.toLowerCase()),
                     )
                     .map((execution: Execution) => (
                       <SidebarMenuItem key={execution.id}>
@@ -227,7 +242,7 @@ export const UIStructure = () => {
                             "group relative w-full text-left transition-all duration-200 rounded-lg px-3 py-2 h-auto text-sm",
                             execution.id === currentConversationId
                               ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
-                              : "hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                              : "hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
                           )}
                           onMouseEnter={() => setHoverChatId(execution.id)}
                           onMouseLeave={() => setHoverChatId("")}

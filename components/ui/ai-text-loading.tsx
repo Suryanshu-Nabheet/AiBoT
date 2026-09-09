@@ -77,7 +77,7 @@ export default function AITextLoading({
             }}
             className={cn(
               "flex justify-center text-3xl font-bold bg-gradient-to-r from-blue-600 via-blue-400 to-blue-600 dark:from-blue-500 dark:via-blue-300 dark:to-blue-500 bg-[length:200%_100%] bg-clip-text text-transparent whitespace-nowrap min-w-max",
-              className
+              className,
             )}
           >
             {texts[currentTextIndex]}

@@ -11,7 +11,7 @@ import { SettingsPanel } from "@/components/settings/settings-panel";
 
 export default function SettingsPage() {
   return (
-    <div className="h-screen w-screen overflow-hidden">
+    <div className="h-full min-h-0 w-full overflow-hidden">
       <SettingsPanel />
     </div>
   );

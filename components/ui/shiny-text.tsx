@@ -22,15 +22,21 @@ const ShinyText: React.FC<ShinyTextProps> = ({
   className,
 }) => {
   return (
-    <div className={cn("flex items-center mt-1.5 mb-0.5 pl-0.5 min-h-[20px]", className)}>
+    <div
+      className={cn(
+        "flex items-center mt-1.5 mb-0.5 pl-0.5 min-h-[20px]",
+        className,
+      )}
+    >
       <span
         className={cn(
           "font-medium text-[13px] inline-block tracking-[0.1px] font-inherit opacity-80",
-          !disabled && "animate-shiny-text"
+          !disabled && "animate-shiny-text",
         )}
         style={{
           color: "#2563eb",
-          background: "linear-gradient(90deg, #2563eb 0%, #2563eb 40%, #93c5fd 50%, #2563eb 60%, #2563eb 100%)",
+          background:
+            "linear-gradient(90deg, #2563eb 0%, #2563eb 40%, #93c5fd 50%, #2563eb 60%, #2563eb 100%)",
           backgroundSize: "200% 100%",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",

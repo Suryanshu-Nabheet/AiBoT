@@ -19,8 +19,8 @@ export default function HomePage() {
   const { viewMode } = useViewMode();
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden relative">
-      <div className="flex-1 w-full relative min-h-0">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
+      <div className="relative min-h-0 w-full flex-1">
         <AnimatePresence mode="popLayout">
           {viewMode === "direct" && (
             <motion.div

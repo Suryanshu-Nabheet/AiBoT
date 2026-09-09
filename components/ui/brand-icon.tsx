@@ -18,7 +18,13 @@ type BrandIconProps = React.ImgHTMLAttributes<HTMLImageElement> & {
  * Provider/model logo. Monochrome SVGs invert in dark mode so they stay visible
  * on black backgrounds; colorful logos are left unchanged.
  */
-export function BrandIcon({ src, className, alt = "", onError, ...props }: BrandIconProps) {
+export function BrandIcon({
+  src,
+  className,
+  alt = "",
+  onError,
+  ...props
+}: BrandIconProps) {
   const mono = isMonochromeBrandIcon(src);
 
   return (
@@ -28,7 +34,7 @@ export function BrandIcon({ src, className, alt = "", onError, ...props }: Brand
       className={cn(
         "object-contain",
         mono && "dark:invert dark:brightness-110",
-        className
+        className,
       )}
       onError={(e) => {
         if (onError) {

@@ -32,7 +32,7 @@ export default function AIVoiceOutput({
         <button
           className={cn(
             "group w-24 h-24 rounded-2xl flex items-center justify-center transition-all z-50 shadow-sm",
-            "bg-transparent cursor-default shadow-none"
+            "bg-transparent cursor-default shadow-none",
           )}
           type="button"
           onClick={onStop}
@@ -44,7 +44,7 @@ export default function AIVoiceOutput({
                 "w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-500 cursor-pointer",
                 isSpeaking
                   ? "animate-spin bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 ring-4 ring-blue-50"
-                  : "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                  : "text-blue-600 bg-blue-50 hover:bg-blue-100",
               )}
               style={isSpeaking ? { animationDuration: "3s" } : undefined}
             >
@@ -67,7 +67,7 @@ export default function AIVoiceOutput({
                 "w-0.5 rounded-full transition-all duration-300",
                 isSpeaking
                   ? "bg-blue-600 animate-pulse shadow-[0_0_8px_rgba(37,99,235,0.4)]" // Glow effect on bars
-                  : "bg-slate-200 h-1"
+                  : "bg-slate-200 h-1",
               )}
               style={
                 isSpeaking && isClient

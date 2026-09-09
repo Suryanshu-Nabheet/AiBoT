@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { MODELS } from "@/lib/types";
+import { protectApiRequest } from "@/lib/server/request-security";
+import { coachRequestSchema } from "@/lib/server/request-schemas";
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -38,22 +40,28 @@ CONTEXT:
 Adapt immediately to user intent. Maintain a seamless conversational flow without meta-commentary on the selected mode.`;
 
 export async function POST(req: NextRequest) {
+  const blocked = protectApiRequest(req, {
+    scope: "coach",
+    limit: 15,
+    windowMs: 60_000,
+  });
+  if (blocked) return blocked;
+
   if (!OPENROUTER_KEY) {
     return NextResponse.json(
       { message: "OpenRouter API Key not configured" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   try {
-    const { messages } = await req.json();
-
-    if (!messages || !Array.isArray(messages)) {
+    const parsed = coachRequestSchema.safeParse(await req.json());
+    if (!parsed.success)
       return NextResponse.json(
-        { message: "Messages array is required" },
-        { status: 400 }
+        { message: "Invalid coach request" },
+        { status: 400 },
       );
-    }
+    const { messages } = parsed.data;
 
     // Universal prompt - no more modes
     const systemPrompt = UNIVERSAL_SYSTEM_PROMPT;
@@ -82,11 +90,15 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({
               model: model.id,
-              messages: [{ role: "system", content: identityPrompt }, ...messages],
+              messages: [
+                { role: "system", content: identityPrompt },
+                ...messages,
+              ],
               temperature: 0.7,
               max_tokens: 1000,
             }),
-          }
+            signal: AbortSignal.timeout(90_000),
+          },
         );
 
         if (response.ok) {
@@ -100,9 +112,11 @@ export async function POST(req: NextRequest) {
         }
 
         // If rate limited or error, try next model
-        const errorText = await response.text();
+        const errorText = response.bodyUsed
+          ? "Empty completion"
+          : await response.text();
         console.log(
-          `Coach: Model ${model.id} failed (${response.status}), trying next...`
+          `Coach: Model ${model.id} failed (${response.status}), trying next...`,
         );
         lastError = errorText;
       } catch (modelError) {
@@ -119,13 +133,13 @@ export async function POST(req: NextRequest) {
         message:
           "All AI models are currently unavailable. Please try again in a moment.",
       },
-      { status: 503 }
+      { status: 503 },
     );
   } catch (error) {
     console.error("API Error:", error);
     return NextResponse.json(
       { message: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

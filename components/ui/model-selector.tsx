@@ -45,16 +45,18 @@ export function ModelSelector({
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
   const { availableModels, enabledModels } = useSettings();
-  
+
   const filteredModels = useMemo(() => {
-    return availableModels.filter(m => enabledModels.includes(m.id));
+    return availableModels.filter((m) => enabledModels.includes(m.id));
   }, [availableModels, enabledModels]);
-  
-  const platformModels = filteredModels.filter(m => m.provider === "platform");
-  const customModels = filteredModels.filter(m => m.provider !== "platform");
+
+  const platformModels = filteredModels.filter(
+    (m) => m.provider === "platform",
+  );
+  const customModels = filteredModels.filter((m) => m.provider !== "platform");
 
   const { modelId: persistedModelId, setModelId } = useModel({
-    initialModel: value ?? (filteredModels[0]?.id),
+    initialModel: value ?? filteredModels[0]?.id,
     storageKey: "preferredModel",
     persistToLocalStorage: true,
   });
@@ -105,12 +107,20 @@ export function ModelSelector({
           <ChevronsUpDown className="ml-1 size-3 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[calc(100vw-1rem)] max-w-[280px] p-0 shadow-2xl border-border/50" align="start">
+      <DropdownMenuContent
+        className="w-[calc(100vw-1rem)] max-w-[280px] p-0 shadow-2xl border-border/50"
+        align="start"
+      >
         <Command className="rounded-xl overflow-hidden">
-          <CommandInput placeholder={t("model.search")} className="h-9 text-xs" />
+          <CommandInput
+            placeholder={t("model.search")}
+            className="h-9 text-xs"
+          />
           <CommandList className="max-h-[60vh] scrollbar-thin">
-            <CommandEmpty className="text-xs py-4">{t("model.empty")}</CommandEmpty>
-            
+            <CommandEmpty className="text-xs py-4">
+              {t("model.empty")}
+            </CommandEmpty>
+
             {platformModels.length > 0 && (
               <CommandGroup heading={t("model.platform")} className="px-2">
                 {platformModels.map((model) => (
@@ -159,13 +169,17 @@ export function ModelSelector({
                       className="cursor-pointer py-2.5 px-2 text-xs flex justify-between items-center rounded-lg my-0.5 hover:bg-emerald-500/[0.03]"
                     >
                       <div className="flex items-center gap-3 w-full">
-                         <div className="size-8 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/20 flex items-center justify-center p-1.5 shrink-0 text-emerald-500 overflow-hidden">
-                           {model.logo ? (
-                             <BrandIcon src={model.logo} alt="" className="w-full h-full" />
-                           ) : (
-                             <Cpu className="size-5" />
-                           )}
-                         </div>
+                        <div className="size-8 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/20 flex items-center justify-center p-1.5 shrink-0 text-emerald-500 overflow-hidden">
+                          {model.logo ? (
+                            <BrandIcon
+                              src={model.logo}
+                              alt=""
+                              className="w-full h-full"
+                            />
+                          ) : (
+                            <Cpu className="size-5" />
+                          )}
+                        </div>
                         <div className="flex flex-col min-w-0">
                           <span className="font-bold text-[13px] text-foreground truncate">
                             {model.name}

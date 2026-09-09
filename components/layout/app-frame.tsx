@@ -20,15 +20,15 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === "/" || pathname?.startsWith("/chat/");
 
   return (
-    <div className="flex h-screen w-full max-w-full overflow-hidden">
+    <div className="flex h-[100dvh] w-full max-w-full overflow-hidden">
       <SidebarProvider>
         <UIStructure />
         <CommandPalette />
-        <SidebarInset className="bg-sidebar p-0 md:p-2 relative flex-col">
-          <div className="flex h-full flex-col w-full max-w-full relative overflow-hidden bg-background md:rounded-2xl border border-sidebar-border/50 shadow-sm">
-            <header className="flex h-11 w-full items-center gap-0 shrink-0 z-10 overflow-hidden select-none">
+        <SidebarInset className="relative min-h-0 bg-sidebar p-0 md:p-2">
+          <div className="relative flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden border border-sidebar-border/50 bg-background shadow-sm md:rounded-2xl">
+            <header className="flex h-12 w-full shrink-0 items-center gap-0 overflow-hidden select-none z-10">
               {/* Left and Center of Header - White Background */}
-              <div className="flex-1 flex items-center gap-4 px-4 h-full bg-background border-b border-sidebar-border/30">
+              <div className="flex h-full min-w-0 flex-1 items-center gap-3 border-b border-sidebar-border/30 bg-background px-3 sm:px-4">
                 <SidebarToggle />
                 <div className="flex-1" />
               </div>
@@ -63,7 +63,7 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
                   </div>
 
                   {/* Mobile Header Elements - Kept inside white background */}
-                  <div className="md:hidden flex items-center px-4 h-full bg-background border-b border-sidebar-border/30">
+                  <div className="flex h-full shrink-0 items-center border-b border-sidebar-border/30 bg-background px-2 sm:px-4 md:hidden">
                     <HeaderModeToggle />
                   </div>
                 </>
@@ -72,7 +72,7 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
               )}
             </header>
 
-            <main className="flex-1 w-full max-w-full relative overflow-hidden">
+            <main className="relative flex min-h-0 w-full max-w-full flex-1 overflow-hidden">
               {children}
             </main>
           </div>

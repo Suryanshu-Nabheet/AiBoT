@@ -16,7 +16,7 @@ import { jsPDF } from "jspdf";
 export async function generatePDF(
   content: string,
   filename: string = "document.pdf",
-  title: string = "Document"
+  title: string = "Document",
 ) {
   try {
     // Import ReactMarkdown dynamically

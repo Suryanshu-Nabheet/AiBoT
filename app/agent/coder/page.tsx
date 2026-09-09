@@ -273,9 +273,9 @@ Then provide the COMPLETE HTML code.`;
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full max-w-full bg-background overflow-hidden">
+    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-y-auto bg-background xl:flex-row xl:overflow-hidden">
       {/* Left: Chat Interface - 50% on desktop */}
-      <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r bg-background flex flex-col min-h-[40vh] lg:min-h-0 max-w-full">
+      <div className="flex min-h-0 w-full flex-col border-b bg-background xl:min-h-0 xl:w-1/2 xl:border-b-0 xl:border-r">
         {/* Header */}
         <div className="p-3 sm:p-4 border-b flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -292,13 +292,18 @@ Then provide the COMPLETE HTML code.`;
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+        <div
+          className={cn(
+            "overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 xl:flex-1",
+            messages.length > 0 && "min-h-[8rem] flex-1",
+          )}
+        >
           {messages.map((msg) => (
             <div
               key={msg.id}
               className={cn(
                 "flex w-full animate-in fade-in slide-in-from-bottom-2 duration-300",
-                msg.role === Role.User ? "justify-end" : "justify-start"
+                msg.role === Role.User ? "justify-end" : "justify-start",
               )}
             >
               <div
@@ -306,7 +311,7 @@ Then provide the COMPLETE HTML code.`;
                   "relative max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm",
                   msg.role === Role.User
                     ? "bg-blue-600 text-white rounded-br-sm"
-                    : "bg-muted border text-foreground rounded-bl-sm"
+                    : "bg-muted border text-foreground rounded-bl-sm",
                 )}
               >
                 {msg.content}
@@ -336,7 +341,7 @@ Then provide the COMPLETE HTML code.`;
                 "absolute bottom-2 sm:bottom-3 right-2 sm:right-3 h-8 w-8 transition-all",
                 prompt
                   ? "bg-blue-600 hover:bg-blue-700"
-                  : "bg-muted text-muted-foreground hover:bg-muted"
+                  : "bg-muted text-muted-foreground hover:bg-muted",
               )}
               disabled={!prompt || isGenerating}
               onClick={handleGenerate}
@@ -355,16 +360,16 @@ Then provide the COMPLETE HTML code.`;
       </div>
 
       {/* Right: Code/Preview Area */}
-      <div className="flex-1 flex flex-col h-full max-w-full overflow-hidden bg-background">
+      <div className="flex min-h-[58dvh] w-full flex-1 flex-col overflow-hidden bg-background xl:min-h-0 xl:w-1/2">
         {/* Tabs */}
-        <div className="h-[45px] flex items-center gap-1 px-2 sm:px-3 border-b bg-background/50 backdrop-blur-sm shrink-0">
+        <div className="flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b bg-background/50 px-2 backdrop-blur-sm sm:px-3">
           <button
             onClick={() => setActiveTab("code")}
             className={cn(
               "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
               activeTab === "code"
                 ? "bg-blue-100 text-blue-700"
-                : "hover:bg-muted text-muted-foreground"
+                : "hover:bg-muted text-muted-foreground",
             )}
           >
             <Code className="size-4" />
@@ -376,7 +381,7 @@ Then provide the COMPLETE HTML code.`;
               "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
               activeTab === "preview"
                 ? "bg-blue-100 text-blue-700"
-                : "hover:bg-muted text-muted-foreground"
+                : "hover:bg-muted text-muted-foreground",
             )}
           >
             <Desktop className="size-4" />
@@ -388,7 +393,7 @@ Then provide the COMPLETE HTML code.`;
               size="sm"
               className={cn(
                 "h-7 text-xs gap-1.5",
-                isEditing && "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                isEditing && "bg-blue-100 text-blue-700 hover:bg-blue-200",
               )}
               onClick={() => {
                 if (isEditing) {
@@ -475,7 +480,7 @@ Then provide the COMPLETE HTML code.`;
               <iframe
                 srcDoc={code}
                 className="w-full h-full border-none"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
+                sandbox="allow-scripts allow-forms allow-modals"
                 title="Website Preview"
               />
             </div>

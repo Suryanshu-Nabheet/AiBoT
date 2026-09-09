@@ -116,9 +116,7 @@ export function ChatInput({
               toast.success(t("toast.file.extracted", { name: file.name }));
             } catch (extractError) {
               console.error(`Failed to extract ${file.name}:`, extractError);
-              toast.error(
-                t("toast.file.extractFail", { name: file.name })
-              );
+              toast.error(t("toast.file.extractFail", { name: file.name }));
             }
           } else {
             const text = await file.text();
@@ -146,8 +144,8 @@ export function ChatInput({
   return (
     <div
       className={cn(
-        "w-full bg-gradient-to-t from-background via-background to-transparent pt-10 pb-6 px-4 z-10",
-        className
+        "z-10 w-full bg-gradient-to-t from-background via-background to-transparent px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-4 sm:pt-6",
+        className,
       )}
     >
       <div className="max-w-4xl mx-auto">
@@ -156,7 +154,7 @@ export function ChatInput({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
           onSubmit={onSubmit}
-          className="relative flex flex-col gap-2 bg-muted/40 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10 dark:ring-white/5"
+          className="relative flex max-w-full flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-muted/40 shadow-xl ring-1 ring-white/10 backdrop-blur-xl sm:rounded-3xl dark:ring-white/5"
         >
           {/* Attachments Preview */}
           {attachments.length > 0 && (
@@ -199,7 +197,7 @@ export function ChatInput({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={resolvedPlaceholder}
-            className="min-h-[60px] max-h-[200px] w-full bg-transparent border-0 focus-visible:ring-0 resize-none py-4 px-4 md:px-5 text-base md:text-[15px] placeholder:text-muted-foreground/60 leading-relaxed scrollbar-thin scrollbar-thumb-muted-foreground/20"
+            className="min-h-[56px] max-h-[35dvh] w-full resize-none border-0 bg-transparent px-3 py-3 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 sm:px-4 sm:py-4 md:px-5 md:text-[15px] scrollbar-thin scrollbar-thumb-muted-foreground/20"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -209,7 +207,7 @@ export function ChatInput({
           />
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-3 pb-3 pt-0">
+          <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-0 sm:px-3 sm:pb-3">
             {/* Left Tools: Input & AI */}
             <div className="flex items-center gap-1.5">
               {/* Model Selector - First */}
@@ -250,7 +248,7 @@ export function ChatInput({
                   "size-8 rounded-full transition-all duration-300",
                   isListening
                     ? "text-red-500 bg-red-500/10 animate-pulse"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 onClick={onSpeechToggle}
                 title={t("composer.voice")}
@@ -271,7 +269,7 @@ export function ChatInput({
                   "size-8 rounded-full transition-all duration-300",
                   isThinking
                     ? "text-amber-400 bg-amber-400/10"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 onClick={onThinkingToggle}
                 title={t("composer.thinking")}
@@ -280,9 +278,16 @@ export function ChatInput({
                   weight={isThinking ? "fill" : "regular"}
                   className={cn(
                     "size-[18px]",
-                    isThinking && "animate-pulse brightness-125"
+                    isThinking && "animate-pulse brightness-125",
                   )}
-                  style={isThinking ? { filter: "drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))" } : {}}
+                  style={
+                    isThinking
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))",
+                        }
+                      : {}
+                  }
                 />
               </Button>
 
@@ -295,7 +300,7 @@ export function ChatInput({
                   "size-8 rounded-full transition-all duration-300",
                   isEnhancing
                     ? "text-purple-400 bg-purple-400/10"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 onClick={onEnhance}
                 disabled={isEnhancing || !query.trim()}

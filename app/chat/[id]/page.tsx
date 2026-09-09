@@ -26,7 +26,7 @@ const ChatPage = ({ params }: { params: any }) => {
   // or the initial load. Removing aggressive auto-correction to prevent "double-click" bugs.
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden relative">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
       <AnimatePresence mode="popLayout" initial={false}>
         {viewMode === "direct" && (
           <motion.div
@@ -40,7 +40,7 @@ const ChatPage = ({ params }: { params: any }) => {
             <ChatInterface conversationId={id} />
           </motion.div>
         )}
-        
+
         {viewMode === "side-by-side" && (
           <motion.div
             key="arena"
