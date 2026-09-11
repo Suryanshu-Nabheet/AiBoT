@@ -16,7 +16,7 @@ import React, {
   ReactNode,
 } from "react";
 import { MODELS, ModelFull } from "@/lib/types";
-import { PROVIDER_MODELS } from "@/lib/provider-models";
+import { getModelsForProvider } from "@/lib/provider-models";
 import {
   applyDocumentLocale,
   DEFAULT_LOCALE,
@@ -95,7 +95,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const providerModels = Object.entries(apiKeys).flatMap(
       ([providerId, key]) => {
         if (!key) return [];
-        const models = PROVIDER_MODELS[providerId] || [];
+        const models = getModelsForProvider(providerId);
         return models.map((m) => ({
           id: m.id,
           name: m.name,

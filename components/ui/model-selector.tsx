@@ -11,9 +11,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Cpu } from "lucide-react";
+import { Check, ChevronDown, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   Command,
   CommandEmpty,
@@ -30,6 +29,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
 import { BrandIcon } from "@/components/ui/brand-icon";
+import {
+  ThinkingModeSwitch,
+  thinkingAccentTextClass,
+} from "@/components/ui/thinking-mode-switch";
 
 interface ModelSelectorProps {
   value?: string;
@@ -69,26 +72,60 @@ function ModelListItem({
     <CommandItem
       value={`${label} ${model.id}`}
       onSelect={onSelect}
-      className="cursor-pointer flex items-center justify-between gap-2 rounded-md px-2 py-2 text-xs aria-selected:bg-muted/70"
+      className="cursor-pointer flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-blue-500/10 dark:aria-selected:bg-blue-400/15"
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <div
-          className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/40 bg-background p-1"
-        >
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border/40 bg-background p-0.5">
           {model.logo ? (
             <BrandIcon src={model.logo} alt="" className="size-full" />
           ) : (
-            <Cpu className="size-4 text-muted-foreground" />
+            <Cpu className="size-3.5 text-muted-foreground" />
           )}
         </div>
-        <span className="min-w-0 truncate font-medium text-[13px] text-foreground">
+        <span
+          className={cn(
+            "min-w-0 truncate font-medium",
+            selected ? "text-foreground" : "text-foreground/90",
+          )}
+        >
           {label}
         </span>
       </div>
       {selected && (
-        <Check className="size-3.5 shrink-0 text-foreground/70" strokeWidth={2.5} />
+        <Check className="size-4 shrink-0 text-foreground/75" strokeWidth={2} />
       )}
     </CommandItem>
+  );
+}
+
+function ThinkingMenuRow({
+  label,
+  checked,
+  onCheckedChange,
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <div
+      className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <span
+        className={cn(
+          "text-sm font-medium",
+          checked ? thinkingAccentTextClass : "text-muted-foreground",
+        )}
+      >
+        {label}
+      </span>
+      <ThinkingModeSwitch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        aria-label={label}
+      />
+    </div>
   );
 }
 
@@ -158,68 +195,68 @@ export function ModelSelector({
           title={showModelList ? fullModelLabel : undefined}
           disabled={disabled}
           className={cn(
-            "h-9 shrink-0 rounded-full border border-border/50 bg-muted/30 px-3 font-medium text-muted-foreground text-xs hover:bg-muted/60 hover:text-foreground focus:ring-0 sm:h-8",
+            "h-9 shrink-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 sm:h-8",
             triggerVariant === "compact"
-              ? "min-w-[9.25rem] max-w-[min(58vw,13.5rem)] justify-between gap-2 sm:min-w-[10rem] sm:max-w-[11.5rem] md:max-w-[13rem]"
-              : "w-fit max-w-none justify-between gap-2",
+              ? "min-w-0 max-w-[min(62vw,14rem)] justify-start sm:max-w-[12rem]"
+              : "w-fit max-w-none justify-start",
             triggerClassName,
           )}
         >
-          <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
             {showModelList && selectedModelObj && (
               <BrandIcon
                 src={selectedModelObj.logo || "/icons/ai.svg"}
                 alt=""
-                className="size-3.5 shrink-0 sm:size-4"
+                className="size-4 shrink-0 opacity-90"
               />
             )}
             {showModelList ? (
-              <span className="min-w-0 truncate text-left text-[11px] font-medium text-foreground sm:text-xs">
+              <span
+                className={cn(
+                  "min-w-0 truncate text-left text-sm font-medium",
+                  thinkingEnabled
+                    ? thinkingAccentTextClass
+                    : "text-foreground",
+                )}
+              >
                 {fullModelLabel}
               </span>
             ) : (
-              <span className="truncate text-left text-[11px] font-medium text-foreground sm:text-xs">
+              <span className="truncate text-left text-sm font-medium text-foreground">
                 {t("model.thinkingMenu")}
               </span>
             )}
           </span>
-          <ChevronsUpDown className="size-3 shrink-0 opacity-40" />
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-[min(calc(100vw-1.5rem),280px)] border border-border/80 p-0 shadow-md"
+        className="w-[min(calc(100vw-1.5rem),300px)] overflow-hidden rounded-xl border border-border/80 p-0 shadow-lg"
         align="start"
-        sideOffset={6}
+        sideOffset={8}
       >
-        {showThinking && (
-          <div className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5">
-            <span className="text-sm font-medium text-foreground">
-              {t("model.thinkingPower")}
-            </span>
-            <Switch
-              checked={thinkingEnabled}
-              onCheckedChange={onThinkingChange}
-              aria-label={t("model.thinkingPower")}
-              className="shrink-0 data-[state=checked]:bg-foreground"
-            />
-          </div>
-        )}
-
-        {showModelList && (
-          <Command className="overflow-hidden rounded-none rounded-b-md">
+        {showModelList ? (
+          <Command className="rounded-none bg-popover">
             <CommandInput
               placeholder={t("model.search")}
-              className="h-9 border-0 text-xs"
+              className="h-10 border-0 border-b border-border/50 text-sm"
             />
-            <CommandList className="max-h-[min(50vh,280px)] scrollbar-thin">
-              <CommandEmpty className="py-4 text-xs text-muted-foreground">
+            {showThinking && onThinkingChange && (
+              <ThinkingMenuRow
+                label={t("model.thinkingPower")}
+                checked={thinkingEnabled}
+                onCheckedChange={onThinkingChange}
+              />
+            )}
+            <CommandList className="max-h-[min(50vh,300px)] scrollbar-thin p-1">
+              <CommandEmpty className="py-6 text-sm text-muted-foreground">
                 {t("model.empty")}
               </CommandEmpty>
 
               {platformModels.length > 0 && (
                 <CommandGroup
                   heading={t("model.platform")}
-                  className="px-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/80"
+                  className="px-0.5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground/70"
                 >
                   {platformModels.map((model) => (
                     <ModelListItem
@@ -236,11 +273,11 @@ export function ModelSelector({
               {externalModels.length > 0 && (
                 <>
                   {platformModels.length > 0 && (
-                    <CommandSeparator className="my-1 opacity-40" />
+                    <CommandSeparator className="my-1 opacity-50" />
                   )}
                   <CommandGroup
                     heading={t("model.external")}
-                    className="px-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/80"
+                    className="px-0.5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground/70"
                   >
                     {externalModels.map((model) => (
                       <ModelListItem
@@ -256,6 +293,17 @@ export function ModelSelector({
               )}
             </CommandList>
           </Command>
+        ) : (
+          showThinking &&
+          onThinkingChange && (
+            <div className="p-1">
+              <ThinkingMenuRow
+                label={t("model.thinkingPower")}
+                checked={thinkingEnabled}
+                onCheckedChange={onThinkingChange}
+              />
+            </div>
+          )
         )}
       </DropdownMenuContent>
     </DropdownMenu>

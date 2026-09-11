@@ -48,6 +48,8 @@ interface ChatInputProps {
   thinkingMenuOnly?: boolean;
   placeholder?: string;
   className?: string;
+  /** Centered on empty home vs docked to bottom during a thread */
+  dock?: "bottom" | "center";
 }
 
 export function ChatInput({
@@ -71,6 +73,7 @@ export function ChatInput({
   thinkingMenuOnly = false,
   placeholder,
   className,
+  dock = "bottom",
 }: ChatInputProps) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t("composer.placeholder");
@@ -151,7 +154,10 @@ export function ChatInput({
   return (
     <div
       className={cn(
-        "z-10 w-full max-w-full shrink-0 bg-gradient-to-t from-background via-background to-transparent px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4 md:pt-6",
+        "z-10 w-full max-w-full shrink-0",
+        dock === "bottom"
+          ? "bg-gradient-to-t from-background via-background to-transparent px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4 md:pt-6"
+          : "px-0 pb-0 pt-0",
         className,
       )}
     >

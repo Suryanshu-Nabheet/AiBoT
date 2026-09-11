@@ -28,9 +28,10 @@ import { Button } from "@/components/ui/button";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { cn } from "@/lib/utils";
 import { ThinkingBar } from "@/components/core/thinking-bar";
+import { ThinkingPanel } from "@/components/chat/thinking-panel";
+import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { TextShimmer } from "@/components/core/text-shimmer";
 import { useChatSession } from "@/hooks/use-chat-session";
-import ReactMarkdown from "react-markdown";
 import { ChatInput } from "./chat-input";
 import { Geist_Mono } from "next/font/google";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
@@ -39,6 +40,7 @@ import { useMarkdown } from "@/hooks/useMarkdown";
 import { useTranslation } from "@/hooks/use-translation";
 import { PageShell } from "@/components/layout/page-shell";
 import { parseAssistantThinkingContent } from "@/lib/chat/thinking-mode";
+import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
 
 const geistMono = Geist_Mono({
@@ -70,8 +72,13 @@ const MessageComponent = memo(
     onCopy: (content: string) => void;
     isGenerating?: boolean;
   }) => {
-    // Simplified Markdown setup
-    const { markdownComponents, remarkPlugins, rehypePlugins } = useMarkdown({
+    const { t } = useTranslation();
+    const {
+      markdownComponents,
+      remarkPlugins,
+      rehypePlugins,
+      preprocessMarkdown,
+    } = useMarkdown({
       onCopy,
       copied: false,
       isWrapped: false,
@@ -91,7 +98,6 @@ const MessageComponent = memo(
       thinkingContent,
       mainResponse,
       hasThinkingTag,
-      hasClosingThinkingTag,
       hideAnswerPanel,
     } = parseAssistantThinkingContent(
       isUser ? message.content : displayedContent,
@@ -99,9 +105,10 @@ const MessageComponent = memo(
     );
 
     const hasThinkingPanel = !isUser && (hasThinkingTag || thinkingContent);
-    const compactAgentContentClass = hasThinkingPanel
-      ? "bg-transparent text-foreground px-0 pt-0 pb-2 shadow-none border-none w-full max-w-full"
-      : "bg-transparent text-foreground px-0 py-2 shadow-none border-none w-full max-w-full";
+    const showAnswer =
+      !isUser && !hideAnswerPanel && Boolean(mainResponse?.trim());
+    const compactAgentContentClass =
+      "bg-transparent text-foreground px-0 shadow-none border-none w-full max-w-full";
 
     const [isCopied, setIsCopied] = useState(false);
     const handleCopy = useCallback(async () => {
@@ -117,84 +124,56 @@ const MessageComponent = memo(
           isUser ? "items-end" : "items-start",
         )}
       >
-        {!isUser && (hasThinkingTag || thinkingContent) && (
-          <div className="w-full mb-1">
-            <ThinkingBar
-              text={
-                isThinkingExpanded
-                  ? "Reasoning Details"
-                  : hasClosingThinkingTag
-                    ? "Deep reasoning complete"
-                    : "Deep reasoning in progress"
-              }
-              isExpanded={isThinkingExpanded}
-              onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
-            />
-            <AnimatePresence>
-              {isThinkingExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden px-1"
-                >
-                  <div className="text-sm text-muted-foreground/75 leading-relaxed py-1.5 border-l border-primary/5 pl-4 my-0.5">
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words [&_*]:text-muted-foreground/75">
-                      <ReactMarkdown
-                        remarkPlugins={remarkPlugins}
-                        rehypePlugins={rehypePlugins}
-                        components={markdownComponents}
-                      >
-                        {thinkingContent}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        {hasThinkingPanel && (
+          <ThinkingPanel
+            thinkingContent={thinkingContent}
+            isExpanded={isThinkingExpanded}
+            onToggle={() => setIsThinkingExpanded(!isThinkingExpanded)}
+            label={t("chat.thinking.label")}
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
+            markdownComponents={markdownComponents}
+            preprocessMarkdown={preprocessMarkdown}
+            className={showAnswer ? "pb-0" : "pb-1"}
+          />
         )}
-        {!isUser && hideAnswerPanel ? null : (
+        {(isUser || showAnswer) && (
           <div
             className={cn(
-              "text-sm overflow-hidden break-words",
+              "text-sm overflow-hidden break-words w-full",
               isUser
                 ? "bg-muted text-foreground border border-border/50 rounded-2xl px-4 py-2.5 md:px-5 md:py-3 shadow-sm max-w-[85%]"
-                : compactAgentContentClass,
+                : cn(
+                    compactAgentContentClass,
+                    chatMessageBodyClass,
+                    hasThinkingPanel && showAnswer
+                      ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
+                      : "py-1.5",
+                  ),
             )}
           >
             {isUser ? (
-              <div className="whitespace-pre-wrap font-medium">
+              <div className="whitespace-pre-wrap text-sm font-medium leading-relaxed">
                 {mainResponse}
               </div>
             ) : (
-              <div className="w-full max-w-full">
-                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words">
-                  <div className="w-full max-w-full overflow-hidden">
-                    <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_p]:break-words [&_li]:break-words [&_h1]:break-words [&_h2]:break-words">
-                      <ReactMarkdown
-                        remarkPlugins={remarkPlugins}
-                        rehypePlugins={rehypePlugins}
-                        components={markdownComponents}
-                      >
-                        {mainResponse}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <AssistantMarkdown
+                content={mainResponse}
+                variant="answer"
+                remarkPlugins={remarkPlugins}
+                rehypePlugins={rehypePlugins}
+                components={markdownComponents}
+                preprocess={preprocessMarkdown}
+              />
             )}
           </div>
         )}
 
         {/* Actions - Only show after final response is complete */}
         {!isUser &&
-          !message.isThinkingRequested &&
-          message.content.trim() &&
+          mainResponse.trim() &&
           !isGenerating &&
-          !/<thinking>|<thought>|<reasoning>|<\/\|thinking\|>|\[THOUGHT\]/i.test(
-            message.content,
-          ) && (
+          !hideAnswerPanel && (
             <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
               <TooltipProvider delayDuration={0}>
                 <Tooltip>
@@ -614,7 +593,7 @@ export default function ArenaInterface({
               leftLoadingStatus && (
                 <div className="px-6 mb-4">
                   {isThinking ? (
-                    <ThinkingBar text="Connecting to reasoning engine..." />
+                    <ThinkingBar text={t("chat.status.connecting")} />
                   ) : (
                     <TextShimmer
                       className="text-sm font-medium opacity-60"
@@ -681,7 +660,7 @@ export default function ArenaInterface({
               rightLoadingStatus && (
                 <div className="px-6 mb-4">
                   {isThinking ? (
-                    <ThinkingBar text="Connecting to reasoning engine..." />
+                    <ThinkingBar text={t("chat.status.connecting")} />
                   ) : (
                     <TextShimmer
                       className="text-sm font-medium opacity-60"

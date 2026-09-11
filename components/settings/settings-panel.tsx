@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { useSettings, ApiKeys } from "@/contexts/settings-context";
 import { MODELS } from "@/lib/types";
-import { PROVIDER_MODELS } from "@/lib/provider-models";
+import { getModelsForProvider } from "@/lib/provider-models";
 import { toast } from "sonner";
 import { useTranslation } from "@/hooks/use-translation";
 import { LOCALES, type Locale } from "@/lib/i18n";
@@ -461,7 +461,7 @@ export function SettingsPanel() {
                       const provider = PROVIDERS.find(
                         (p) => p.id === providerId,
                       );
-                      const models = PROVIDER_MODELS[providerId] || [];
+                      const models = getModelsForProvider(providerId);
 
                       if (models.length === 0) return null;
 

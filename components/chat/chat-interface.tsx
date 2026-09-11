@@ -24,7 +24,6 @@ import {
   X as XIcon,
   DownloadSimple as DownloadIcon,
 } from "@phosphor-icons/react";
-import ReactMarkdown from "react-markdown";
 import Image from "next/image";
 import { Geist_Mono } from "next/font/google";
 import { toast } from "sonner";
@@ -47,10 +46,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThinkingBar } from "@/components/core/thinking-bar";
+import { ThinkingPanel } from "@/components/chat/thinking-panel";
+import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { useTranslation } from "@/hooks/use-translation";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
 import { PageShell } from "@/components/layout/page-shell";
 import { parseAssistantThinkingContent } from "@/lib/chat/thinking-mode";
+import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -120,14 +122,14 @@ const MessageComponent = memo(
       thinkingContent,
       mainResponse,
       hasThinkingTag,
-      hasClosingThinkingTag,
       hideAnswerPanel,
     } = parsedThinking;
 
     const hasThinkingPanel = !isUser && (hasThinkingTag || thinkingContent);
-    const compactAgentContentClass = hasThinkingPanel
-      ? "bg-transparent text-foreground px-0 pt-0 pb-2 shadow-none border-none"
-      : "bg-transparent text-foreground px-0 py-2 shadow-none border-none";
+    const showAnswer =
+      !isUser && !hideAnswerPanel && Boolean(mainResponse?.trim());
+    const compactAgentContentClass =
+      "bg-transparent text-foreground px-0 shadow-none border-none";
 
     return (
       <div className="w-full">
@@ -175,86 +177,54 @@ const MessageComponent = memo(
                   </div>
                 )}
 
-                {/* Thinking Bar */}
-                {!isUser && (hasThinkingTag || thinkingContent) && (
-                  <div className="w-full">
-                    <ThinkingBar
-                      text={
-                        isThinkingExpanded
-                          ? t("chat.thinking.details")
-                          : hasClosingThinkingTag
-                            ? t("chat.thinking.complete")
-                            : t("chat.thinking.inProgress")
-                      }
-                      isExpanded={isThinkingExpanded}
-                      onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
-                    />
-                    <AnimatePresence>
-                      {isThinkingExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden px-1"
-                        >
-                          <div className="text-sm text-muted-foreground/75 leading-relaxed py-1.5 border-l border-primary/5 pl-4 my-0.5">
-                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:first:mt-0 prose-headings:mb-3 prose-headings:text-muted-foreground/80 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words prose-img:rounded-lg prose-img:max-w-full [&_*]:text-muted-foreground/75">
-                              <ReactMarkdown
-                                remarkPlugins={remarkPlugins}
-                                rehypePlugins={rehypePlugins}
-                                components={markdownComponents}
-                              >
-                                {thinkingContent}
-                              </ReactMarkdown>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                {hasThinkingPanel && (
+                  <ThinkingPanel
+                    thinkingContent={thinkingContent}
+                    isExpanded={isThinkingExpanded}
+                    onToggle={() => setIsThinkingExpanded(!isThinkingExpanded)}
+                    label={t("chat.thinking.label")}
+                    remarkPlugins={remarkPlugins}
+                    rehypePlugins={rehypePlugins}
+                    markdownComponents={markdownComponents}
+                    preprocessMarkdown={preprocessMarkdown}
+                    className={showAnswer ? "pb-0" : "pb-1"}
+                  />
                 )}
 
-                {/* Message Content */}
-                {!isUser && hideAnswerPanel ? null : (
+                {(isUser || showAnswer) && (
                   <div
                     className={cn(
-                      "text-sm w-full max-w-full overflow-hidden break-words",
+                      "w-full max-w-full overflow-hidden break-words",
                       isUser
-                        ? "bg-muted text-foreground border border-border/50 rounded-2xl px-3.5 py-2.5 md:px-5 md:py-3.5 shadow-sm"
-                        : compactAgentContentClass,
+                        ? "text-sm bg-muted text-foreground border border-border/50 rounded-2xl px-3.5 py-2.5 md:px-5 md:py-3.5 shadow-sm"
+                        : cn(
+                            compactAgentContentClass,
+                            chatMessageBodyClass,
+                            hasThinkingPanel && showAnswer
+                              ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
+                              : "py-1.5",
+                          ),
                     )}
                   >
                     {isUser ? (
-                      <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere font-medium">
+                      <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere font-medium leading-relaxed">
                         {mainResponse}
                       </div>
                     ) : (
-                      <div className="w-full max-w-full">
-                        {mainResponse && (
-                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:first:mt-0 prose-headings:mb-3 prose-li:my-1.5 prose-pre:my-4 prose-pre:max-w-full prose-code:break-words prose-img:rounded-lg prose-img:max-w-full">
-                            <div className="w-full max-w-full overflow-x-auto scrollbar-thin">
-                              <div className="w-full max-w-full [&_*]:max-w-full [&_table]:w-full [&_table]:table-auto [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:bg-muted/50 [&_th]:break-words [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:break-words [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:text-xs [&_code]:break-words [&_code]:overflow-wrap-anywhere [&_p]:break-words [&_p]:overflow-wrap-anywhere [&_li]:break-words [&_h1]:break-words [&_h2]:break-words [&_h3]:break-words [&_h4]:break-words [&_span]:break-words [&_div]:break-words">
-                                <ReactMarkdown
-                                  remarkPlugins={remarkPlugins}
-                                  rehypePlugins={rehypePlugins}
-                                  components={markdownComponents}
-                                >
-                                  {mainResponse}
-                                </ReactMarkdown>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <AssistantMarkdown
+                        content={mainResponse}
+                        variant="answer"
+                        remarkPlugins={remarkPlugins}
+                        rehypePlugins={rehypePlugins}
+                        components={markdownComponents}
+                        preprocess={preprocessMarkdown}
+                      />
                     )}
                   </div>
                 )}
 
                 {/* Copy and Download buttons - Only show after final response is complete */}
-                {!isUser &&
-                  !message.isThinkingRequested &&
-                  mainResponse.trim() &&
-                  !isGenerating && (
+                {!isUser && mainResponse.trim() && !isGenerating && (
                     <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
@@ -369,7 +339,7 @@ const MessagesList = memo(
   }) => {
     const { t } = useTranslation();
     return (
-      <div className="flex flex-col gap-2 pb-4">
+      <div className="flex flex-col gap-3 pb-4 sm:gap-4">
         {messages.map((message, i) => {
           const isLast = i === messages.length - 1;
           const isAgentGenerating =
@@ -390,7 +360,7 @@ const MessagesList = memo(
                 <div className="px-2 sm:px-4 md:px-6 lg:px-8 mb-2">
                   <div className="max-w-4xl mx-auto">
                     {msgIsThinking ? (
-                      <ThinkingBar text="Initializing deep reasoning engine..." />
+                      <ThinkingBar text={t("chat.thinking.inProgress")} />
                     ) : (
                       <TextShimmer
                         className="text-sm font-medium opacity-60"
@@ -452,7 +422,6 @@ export default function ChatInterface({
     query,
     setQuery,
     messages,
-    showWelcome,
     isLoading,
     attachments,
     setAttachments,
@@ -575,10 +544,13 @@ export default function ChatInterface({
     }
   }, [handleScroll]);
 
-  // Auto-scroll on new messages
+  const isEmptyChat = messages.length === 0;
+
+  // Auto-scroll on new messages (thread mode only)
   useEffect(() => {
+    if (isEmptyChat) return;
     scrollToBottom("auto");
-  }, [messages.length, scrollToBottom]);
+  }, [messages.length, isEmptyChat, scrollToBottom]);
 
   useGlobalKeyPress({
     inputRef: textareaRef,
@@ -778,83 +750,91 @@ export default function ChatInterface({
     await navigator.clipboard.writeText(content);
   }, []);
 
+  const chatInputProps = {
+    query,
+    setQuery,
+    onSubmit: handleCreateChat,
+    isLoading,
+    onStop: stopHelpers.stop,
+    attachments,
+    setAttachments,
+    isListening,
+    onSpeechToggle: handleSpeech,
+    isEnhancing,
+    onEnhance: handleEnhance,
+    isThinking,
+    onThinkingChange: setIsThinking,
+    model,
+    onModelChange: setModel,
+    modelStorageKey: storageKey,
+    showModelSelector: true as const,
+    placeholder: isListening
+      ? t("composer.placeholder.listening")
+      : t("composer.placeholder"),
+  };
+
   return (
     <PageShell className={cn("relative bg-background", className)}>
-      {/* Scrollable Message Area - independent scroll */}
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden scroll-smooth overscroll-contain"
-      >
-        <div className="mx-auto w-full max-w-4xl px-2 pb-6 pt-4 sm:px-4 sm:pt-6 md:pt-8">
-          {showWelcome && messages.length === 0 ? (
-            <div className="flex min-h-[min(60dvh,100%)] flex-col items-center justify-center space-y-6 text-center px-4 py-8 sm:space-y-8">
-              <div className="space-y-4">
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground">
-                  Ai<span className="text-primary">BoT</span>
-                </h1>
-                <p className="text-muted-foreground text-base md:text-lg max-w-lg mx-auto leading-relaxed">
-                  {t("chat.welcome.tagline")}
-                </p>
+      {isEmptyChat ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="relative w-full max-w-3xl"
+          >
+            <p
+              className="pointer-events-none absolute bottom-full left-0 right-0 mb-5 max-w-md mx-auto text-balance px-2 text-center text-xl font-normal tracking-tight text-foreground sm:mb-6 sm:text-2xl"
+            >
+              {t("chat.welcome.greeting")}
+            </p>
+
+            <ChatInput
+              {...chatInputProps}
+              dock="center"
+              className="w-full shrink-0"
+            />
+          </motion.div>
+        </div>
+      ) : (
+        <>
+          <div
+            ref={scrollContainerRef}
+            className="min-h-0 flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden scroll-smooth overscroll-contain"
+          >
+            <div className="mx-auto w-full max-w-4xl px-2 pb-6 pt-4 sm:px-4 sm:pt-6 md:pt-8">
+              <div className="flex flex-col gap-1">
+                <MessagesList
+                  messages={messages}
+                  onCopy={handleCopy}
+                  onModelSelect={setModel}
+                  isLoading={isLoading}
+                  loadingStatus={loadingStatus}
+                  isThinking={isThinking}
+                />
+                <div ref={messagesEndRef} className="h-4" />
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <MessagesList
-                messages={messages}
-                onCopy={handleCopy}
-                onModelSelect={setModel}
-                isLoading={isLoading}
-                loadingStatus={loadingStatus}
-                isThinking={isThinking}
-              />
-              {/* Invisible element to scroll to */}
-              <div ref={messagesEndRef} className="h-4" />
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Floating Scroll Down Button */}
-      <AnimatePresence>
-        {showScrollButton && (
-          <motion.button
-            type="button"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-[calc(7.5rem+env(safe-area-inset-bottom,0px))] right-3 z-20 rounded-full bg-primary p-2 text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 sm:bottom-28 sm:right-6"
-            onClick={() => scrollToBottom()}
-          >
-            <ArrowDownIcon className="size-5" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+          <AnimatePresence>
+            {showScrollButton && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-[calc(7.5rem+env(safe-area-inset-bottom,0px))] right-3 z-20 rounded-full bg-primary p-2 text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 sm:bottom-28 sm:right-6"
+                onClick={() => scrollToBottom()}
+              >
+                <ArrowDownIcon className="size-5" />
+              </motion.button>
+            )}
+          </AnimatePresence>
 
-      <ChatInput
-        query={query}
-        setQuery={setQuery}
-        onSubmit={handleCreateChat}
-        isLoading={isLoading}
-        onStop={stopHelpers.stop}
-        attachments={attachments}
-        setAttachments={setAttachments}
-        isListening={isListening}
-        onSpeechToggle={handleSpeech}
-        isEnhancing={isEnhancing}
-        onEnhance={handleEnhance}
-        isThinking={isThinking}
-        onThinkingChange={setIsThinking}
-        model={model}
-        onModelChange={setModel}
-        modelStorageKey={storageKey}
-        showModelSelector={true}
-        placeholder={
-          isListening
-            ? t("composer.placeholder.listening")
-            : t("composer.placeholder")
-        }
-        className="shrink-0"
-      />
+          <ChatInput {...chatInputProps} dock="bottom" className="shrink-0" />
+        </>
+      )}
     </PageShell>
   );
 }

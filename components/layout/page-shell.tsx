@@ -1,4 +1,11 @@
 /**
+ * AiBoT - AI-Powered Platform
+ * Copyright (c) 2026 Suryanshu Nabheet
+ * Licensed under MIT with Additional Commercial Terms
+ * See LICENSE file for details
+ */
+
+/**
  * Shared full-height page layout for App Router views inside AppFrame.
  * Keeps flex + overflow behavior consistent across chat, agents, and settings.
  */

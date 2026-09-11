@@ -91,47 +91,51 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
     () => ({
       // Headers
       h1: ({ children }: any) => (
-        <h1 className="text-2xl font-bold mt-6 mb-3 text-foreground border-b border-border pb-2">
+        <h1 className="text-lg font-bold mt-4 mb-2 text-inherit border-b border-border pb-1.5 first:mt-0">
           {children}
         </h1>
       ),
       h2: ({ children }: any) => (
-        <h2 className="text-xl font-semibold mt-5 mb-2 text-foreground">
+        <h2 className="text-base font-semibold mt-4 mb-2 text-inherit first:mt-0">
           {children}
         </h2>
       ),
       h3: ({ children }: any) => (
-        <h3 className="text-lg font-medium mt-4 mb-2 text-foreground">
+        <h3 className="text-sm font-semibold mt-3 mb-1.5 text-inherit first:mt-0">
           {children}
         </h3>
       ),
       h4: ({ children }: any) => (
-        <h4 className="font-medium mt-3 mb-1 text-foreground">{children}</h4>
+        <h4 className="text-sm font-medium mt-2 mb-1 text-inherit">{children}</h4>
       ),
 
       // Paragraphs
       p: ({ children }: any) => (
-        <p className="text-foreground mb-3 last:mb-0">{children}</p>
+        <p className="mb-2 text-sm last:mb-0 leading-[1.65] text-inherit">
+          {children}
+        </p>
       ),
 
       // Lists
       ul: ({ children }: any) => (
-        <ul className="list-disc list-inside space-y-1 mb-3 ml-3 text-foreground">
+        <ul className="mb-2.5 ml-0 list-disc space-y-1.5 pl-5 text-inherit marker:text-muted-foreground">
           {children}
         </ul>
       ),
       ol: ({ children }: any) => (
-        <ol className="list-decimal list-inside space-y-1 mb-3 ml-3 text-foreground">
+        <ol className="mb-2.5 ml-0 list-decimal space-y-2 pl-5 text-inherit marker:font-medium marker:text-muted-foreground">
           {children}
         </ol>
       ),
       li: ({ children }: any) => (
-        <li className="text-foreground">{children}</li>
+        <li className="pl-0.5 text-sm leading-[1.65] text-inherit [&>p]:mb-1 [&>p]:last:mb-0 [&>p]:text-sm">
+          {children}
+        </li>
       ),
 
       // Blockquotes
       blockquote: ({ children }: any) => (
-        <blockquote className="border-l-3 border-primary/20 pl-3 py-1 my-3 bg-muted/30 rounded-r-lg italic text-muted-foreground">
+        <blockquote className="border-l-2 border-border pl-3 py-1 my-3 bg-muted/30 rounded-r-lg italic text-muted-foreground">
           {children}
         </blockquote>
       ),

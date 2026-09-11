@@ -5,7 +5,7 @@
  * See LICENSE file for details
  */
 
-import { PROVIDER_MODELS } from "@/lib/provider-models";
+import { BYOK_PROVIDER_IDS, PROVIDER_MODELS } from "@/lib/provider-models";
 import { MODELS } from "@/lib/types";
 
 export type CustomKeys = {
@@ -26,10 +26,11 @@ export type ResolvedProviderRoute = {
 
 export function findProviderForModel(
   modelId: string,
-): keyof typeof PROVIDER_MODELS | null {
-  for (const [providerId, models] of Object.entries(PROVIDER_MODELS)) {
+): (typeof BYOK_PROVIDER_IDS)[number] | null {
+  for (const providerId of BYOK_PROVIDER_IDS) {
+    const models = PROVIDER_MODELS[providerId] ?? [];
     if (models.some((m) => m.id === modelId)) {
-      return providerId as keyof typeof PROVIDER_MODELS;
+      return providerId;
     }
   }
   return null;

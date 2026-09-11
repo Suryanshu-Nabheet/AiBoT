@@ -165,17 +165,15 @@ export const en = {
   "command.footer.hint": "↑↓ navigate · ↵ select · esc close",
 
   // Chat
-  "chat.welcome.tagline":
-    "The world's fastest, smartest, and most premium AI chatbot. Start a conversation below.",
+  "chat.welcome.greeting": "What can I help you with today?",
   "chat.defaultTitle": "New Chat",
   "chat.message.copy": "Copy message",
   "chat.message.downloadPdf": "Download as PDF",
-  "chat.thinking.details": "Reasoning Details",
-  "chat.thinking.complete": "Deep reasoning complete",
-  "chat.thinking.inProgress": "Deep reasoning in progress",
+  "chat.thinking.label": "Thinking",
+  "chat.thinking.inProgress": "Thinking…",
   "chat.status.thinking": "AiBoT is thinking...",
   "chat.status.generating": "AiBoT is generating...",
-  "chat.status.connecting": "Connecting to reasoning engine...",
+  "chat.status.connecting": "Thinking…",
   "chat.status.reasoningQuery": "Reasoning about the query...",
   "chat.status.analyzing": "Analyzing context...",
   "chat.status.synthesizing": "Synthesizing insights...",

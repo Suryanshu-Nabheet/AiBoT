@@ -1,4 +1,11 @@
 /**
+ * AiBoT - AI-Powered Platform
+ * Copyright (c) 2026 Suryanshu Nabheet
+ * Licensed under MIT with Additional Commercial Terms
+ * See LICENSE file for details
+ */
+
+/**
  * Production two-stage "deep thinking" orchestration.
  *
  * Stage 1 (thinking): model emits reasoning inside <thinking>...</thinking> only.
