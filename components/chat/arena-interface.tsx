@@ -313,8 +313,10 @@ export default function ArenaInterface({
     toast.success("Copied to clipboard");
   };
 
-  const arenaModelTriggerClass =
-    "h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]";
+  const arenaEmptyModelTriggerClass =
+    "h-9 w-full min-w-0 max-w-none shrink justify-start";
+  const arenaPanelModelTriggerClass =
+    "h-8 w-full min-w-0 max-w-full shrink justify-start";
 
   const sharedChatInput = (
     <ChatInput
@@ -359,22 +361,26 @@ export default function ArenaInterface({
               className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2"
               data-testid="arena-empty-models"
             >
-              <ModelSelector
-                value={leftChat.model}
-                onValueChange={leftChat.setModel}
-                modelStorageKey="arena-a"
-                thinkingEnabled={leftThinking.thinkingEnabled}
-                onThinkingChange={leftThinking.setThinkingEnabled}
-                triggerClassName={arenaModelTriggerClass}
-              />
-              <ModelSelector
-                value={rightChat.model}
-                onValueChange={rightChat.setModel}
-                modelStorageKey="arena-b"
-                thinkingEnabled={rightThinking.thinkingEnabled}
-                onThinkingChange={rightThinking.setThinkingEnabled}
-                triggerClassName={arenaModelTriggerClass}
-              />
+              <div className="min-w-0">
+                <ModelSelector
+                  value={leftChat.model}
+                  onValueChange={leftChat.setModel}
+                  modelStorageKey="arena-a"
+                  thinkingEnabled={leftThinking.thinkingEnabled}
+                  onThinkingChange={leftThinking.setThinkingEnabled}
+                  triggerClassName={arenaEmptyModelTriggerClass}
+                />
+              </div>
+              <div className="min-w-0">
+                <ModelSelector
+                  value={rightChat.model}
+                  onValueChange={rightChat.setModel}
+                  modelStorageKey="arena-b"
+                  thinkingEnabled={rightThinking.thinkingEnabled}
+                  onThinkingChange={rightThinking.setThinkingEnabled}
+                  triggerClassName={arenaEmptyModelTriggerClass}
+                />
+              </div>
             </div>
 
             {sharedChatInput}
@@ -393,7 +399,7 @@ export default function ArenaInterface({
           modelStorageKey="arena-a"
           thinkingEnabled={leftThinking.thinkingEnabled}
           onThinkingChange={leftThinking.setThinkingEnabled}
-          triggerClassName={arenaModelTriggerClass}
+          triggerClassName={arenaPanelModelTriggerClass}
           messages={leftChat.messages}
           isLoading={leftChat.isLoading}
           loadingStatus={leftLoadingStatus}
@@ -405,7 +411,7 @@ export default function ArenaInterface({
           modelStorageKey="arena-b"
           thinkingEnabled={rightThinking.thinkingEnabled}
           onThinkingChange={rightThinking.setThinkingEnabled}
-          triggerClassName={arenaModelTriggerClass}
+          triggerClassName={arenaPanelModelTriggerClass}
           messages={rightChat.messages}
           isLoading={rightChat.isLoading}
           loadingStatus={rightLoadingStatus}

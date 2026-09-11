@@ -54,7 +54,12 @@ type SelectorModel = {
 };
 
 function displayModelName(name: string) {
-  return name.replace(" (Free)", "");
+  let label = name.replace(" (Free)", "");
+  // Logo already indicates OpenRouter; keep the trigger label short and readable.
+  if (label.startsWith("OpenRouter ")) {
+    label = label.slice("OpenRouter ".length);
+  }
+  return label;
 }
 
 function ModelListItem({
@@ -192,13 +197,17 @@ export function ModelSelector({
           role="combobox"
           aria-expanded={open}
           aria-label={triggerLabel}
-          title={showModelList ? fullModelLabel : undefined}
+          title={
+            showModelList && selectedModelObj
+              ? selectedModelObj.name.replace(" (Free)", "")
+              : undefined
+          }
           disabled={disabled}
           className={cn(
-            "h-9 shrink-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 sm:h-8",
+            "h-9 min-w-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 sm:h-8",
             triggerVariant === "compact"
-              ? "min-w-0 max-w-[min(62vw,14rem)] justify-start sm:max-w-[12rem]"
-              : "w-fit max-w-none justify-start",
+              ? "max-w-[min(62vw,14rem)] shrink-0 justify-start sm:max-w-[12rem]"
+              : "w-fit max-w-none shrink-0 justify-start",
             triggerClassName,
           )}
         >
