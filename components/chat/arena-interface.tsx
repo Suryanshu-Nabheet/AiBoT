@@ -9,10 +9,10 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { v4 } from "uuid";
-import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useChatSession } from "@/hooks/use-chat-session";
+import { ExecutionType } from "@/hooks/useExecution";
 import { ChatInput } from "./chat-input";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
@@ -20,6 +20,13 @@ import { Message } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { PageShell } from "@/components/layout/page-shell";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
+import { useRotatingChatStatus } from "@/hooks/use-rotating-chat-status";
+import {
+  useChatComposerClipboard,
+  useChatComposerEnhance,
+  useChatComposerSpeech,
+} from "@/hooks/use-chat-composer";
+import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 
 function ArenaPanel({
   model,
@@ -86,7 +93,7 @@ export default function ArenaInterface({
 }: {
   conversationId?: string;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   // Shared conversation ID for both panels to keep history unified
   const [arenaConversationId] = useState(() => initialConversationId || v4());
 
@@ -95,14 +102,14 @@ export default function ArenaInterface({
     storageKey: "arena-a",
     sessionId: "arena-a",
     conversationId: arenaConversationId,
-    executionType: "ARENA",
+    executionType: ExecutionType.ARENA,
     viewMode: "side-by-side",
   });
   const rightChat = useChatSession({
     storageKey: "arena-b",
     sessionId: "arena-b",
     conversationId: arenaConversationId,
-    executionType: "ARENA",
+    executionType: ExecutionType.ARENA,
     viewMode: "side-by-side",
   });
 
@@ -111,83 +118,39 @@ export default function ArenaInterface({
   const [attachments, setAttachments] = useState<
     { name: string; content: string; type: string }[]
   >([]);
-  const [isListening, setIsListening] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const leftThinking = useThinkingMode("aibot_arena_a_thinking_enabled");
   const rightThinking = useThinkingMode("aibot_arena_b_thinking_enabled");
   const isEmptyArena =
     leftChat.messages.length === 0 && rightChat.messages.length === 0;
 
-  const [leftLoadingStatus, setLeftLoadingStatus] = useState(
-    "AiBoT is thinking...",
+  const leftLoadingStatus = useRotatingChatStatus(
+    leftChat.isLoading,
+    leftThinking.thinkingEnabled,
+    t,
   );
-  const [rightLoadingStatus, setRightLoadingStatus] = useState(
-    "AiBoT is thinking...",
+  const rightLoadingStatus = useRotatingChatStatus(
+    rightChat.isLoading,
+    rightThinking.thinkingEnabled,
+    t,
   );
 
-  useEffect(() => {
-    if (!leftChat.isLoading) {
-      setLeftLoadingStatus(
-        leftThinking.thinkingEnabled
-          ? "AiBoT is thinking..."
-          : "AiBoT is generating...",
-      );
-      return;
-    }
-    const statuses = leftThinking.thinkingEnabled
-      ? [
-          "AiBoT is thinking...",
-          "Analyzing logical branches...",
-          "Validating reasoning paths...",
-          "Exploring deeper context...",
-          "Synthesizing final thought...",
-        ]
-      : [
-          "AiBoT is generating...",
-          "Drafting response...",
-          "Finalizing details...",
-          "Polishing output...",
-        ];
-    let i = 0;
-    const interval = setInterval(() => {
-      i = (i + 1) % statuses.length;
-      setLeftLoadingStatus(statuses[i]);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [leftChat.isLoading, leftThinking.thinkingEnabled]);
+  const { isListening, onSpeechToggle } = useChatComposerSpeech(
+    setQuery,
+    t,
+    locale,
+  );
+  const { isEnhancing, onEnhance } = useChatComposerEnhance(query, setQuery, t);
+  const handleCopy = useChatComposerClipboard();
 
-  useEffect(() => {
-    if (!rightChat.isLoading) {
-      setRightLoadingStatus(
-        rightThinking.thinkingEnabled
-          ? "AiBoT is thinking..."
-          : "AiBoT is generating...",
-      );
-      return;
-    }
-    const statuses = rightThinking.thinkingEnabled
-      ? [
-          "AiBoT is thinking...",
-          "Analyzing logical branches...",
-          "Validating reasoning paths...",
-          "Exploring deeper context...",
-          "Synthesizing final thought...",
-        ]
-      : [
-          "AiBoT is generating...",
-          "Drafting response...",
-          "Finalizing details...",
-          "Polishing output...",
-        ];
-    let i = 0;
-    const interval = setInterval(() => {
-      i = (i + 1) % statuses.length;
-      setRightLoadingStatus(statuses[i]);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [rightChat.isLoading, rightThinking.thinkingEnabled]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isLoadingEither = leftChat.isLoading || rightChat.isLoading;
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  useGlobalKeyPress({
+    inputRef: textareaRef,
+    onKeyPress: (key: string) => setQuery((prev) => prev + key),
+    disabled: isLoadingEither,
+    loading: isLoadingEither,
+  });
 
   // --- Handlers ---
   const handleSharedSubmit = async (e: React.FormEvent) => {
@@ -231,100 +194,6 @@ export default function ArenaInterface({
     rightChat.stopHelpers,
   ]);
 
-  const handleSpeech = useCallback(() => {
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-      return;
-    }
-
-    if (!("webkitSpeechRecognition" in window)) {
-      toast.error("Speech recognition is not supported in this browser.");
-      return;
-    }
-
-    const recognition = new (window as any).webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    recognitionRef.current = recognition;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      toast.info("Listening...");
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech error", event.error);
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setQuery((prev) => (prev ? prev + " " + transcript : transcript));
-    };
-
-    recognition.start();
-  }, [isListening]);
-
-  const handleEnhance = async () => {
-    if (!query.trim()) {
-      toast.warning("Please type something to enhance first.");
-      return;
-    }
-
-    const originalQuery = query;
-    setIsEnhancing(true);
-
-    try {
-      const res = await fetch("/api/enhance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: query }),
-      });
-
-      if (!res.ok) {
-        toast.error("Failed to enhance prompt. Please try again.");
-        return;
-      }
-
-      const data = await res.json();
-
-      if (data.enhanced) {
-        const enhanced = data.enhanced.trim();
-        const isErrorMessage =
-          enhanced.toLowerCase().includes("please provide") ||
-          enhanced.length < originalQuery.length;
-
-        if (isErrorMessage) {
-          toast.info(enhanced, { duration: 4000 });
-        } else {
-          setQuery(enhanced);
-          toast.success("Prompt enhanced!");
-        }
-      } else {
-        toast.error("No enhancement received.");
-      }
-    } catch (error) {
-      console.error("Enhancement error:", error);
-      toast.error("Failed to enhance.");
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
-  const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content);
-    toast.success("Copied to clipboard");
-  };
-
   const arenaModelTriggerClass =
     "h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]";
 
@@ -338,9 +207,10 @@ export default function ArenaInterface({
       attachments={attachments}
       setAttachments={setAttachments}
       isListening={isListening}
-      onSpeechToggle={handleSpeech}
+      onSpeechToggle={onSpeechToggle}
       isEnhancing={isEnhancing}
-      onEnhance={handleEnhance}
+      onEnhance={onEnhance}
+      textareaRef={textareaRef}
       showModelSelector={false}
       placeholder={
         isListening

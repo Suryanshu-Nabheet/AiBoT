@@ -15,6 +15,7 @@ import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
 import { useExecutionContext } from "@/contexts/execution-context";
+import { ExecutionType } from "@/hooks/useExecution";
 import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import {
@@ -48,7 +49,7 @@ export interface UseChatSessionOptions {
   conversationId?: string;
   storageKey?: string;
   sessionId?: string; // Persistence key for conversationId
-  executionType?: any; // e.g. ExecutionType.ARENA
+  executionType?: ExecutionType;
   viewMode?: "direct" | "side-by-side";
 }
 
@@ -370,7 +371,7 @@ export function useChatSession({
         title,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        type: executionType || ("CONVERSATION" as any),
+        type: executionType ?? ExecutionType.CONVERSATION,
         mode: viewMode || "direct",
       });
       setExecutionCreated(true);
@@ -633,16 +634,16 @@ export function useChatSession({
       }
 
       await processStream(res, false, false);
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
+    } catch (error: unknown) {
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      if (!isAbort) {
+        const message = error instanceof Error ? error.message : String(error);
         setMessages((prev) => [
           ...prev,
           {
             id: `error-fetch-${Date.now()}`,
             role: Role.Agent,
-            content: translate(locale, "errors.network", {
-              message: error.message,
-            }),
+            content: translate(locale, "errors.network", { message }),
           },
         ]);
       }

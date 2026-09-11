@@ -10,7 +10,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownIcon } from "@phosphor-icons/react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
@@ -20,6 +19,12 @@ import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 import { useTranslation } from "@/hooks/use-translation";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
 import { PageShell } from "@/components/layout/page-shell";
+import { useRotatingChatStatus } from "@/hooks/use-rotating-chat-status";
+import {
+  useChatComposerClipboard,
+  useChatComposerEnhance,
+  useChatComposerSpeech,
+} from "@/hooks/use-chat-composer";
 
 interface ChatInterfaceProps {
   conversationId?: string;
@@ -50,52 +55,19 @@ export default function ChatInterface({
     viewMode: "direct",
   });
 
-  const [isListening, setIsListening] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
     useThinkingMode("aibot_thinking_enabled");
-  const [loadingStatus, setLoadingStatus] = useState(() =>
-    t("chat.status.thinking"),
+  const loadingStatus = useRotatingChatStatus(isLoading, isThinking, t);
+  const { isListening, onSpeechToggle } = useChatComposerSpeech(
+    setQuery,
+    t,
+    locale,
   );
-
-  useEffect(() => {
-    if (!isLoading) {
-      setLoadingStatus(
-        isThinking ? t("chat.status.thinking") : t("chat.status.generating"),
-      );
-      return;
-    }
-
-    const thinkingStatuses = [
-      t("chat.status.thinking"),
-      t("chat.status.reasoningQuery"),
-      t("chat.status.analyzing"),
-      t("chat.status.crafting"),
-      t("chat.status.polishing"),
-    ];
-
-    const normalStatuses = [
-      t("chat.status.generating"),
-      t("chat.status.writing"),
-      t("chat.status.analyzing"),
-      t("chat.status.crafting"),
-      t("chat.status.polishing"),
-    ];
-
-    const statuses = isThinking ? thinkingStatuses : normalStatuses;
-
-    let i = 0;
-    const interval = setInterval(() => {
-      i = (i + 1) % statuses.length;
-      setLoadingStatus(statuses[i]);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isLoading, isThinking, t]);
+  const { isEnhancing, onEnhance } = useChatComposerEnhance(query, setQuery, t);
+  const handleCopy = useChatComposerClipboard();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -169,102 +141,10 @@ export default function ChatInterface({
     loading: isLoading,
   });
 
-  const handleSpeech = useCallback(() => {
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-      return;
-    }
-
-    if (!("webkitSpeechRecognition" in window)) {
-      toast.error(t("toast.speech.unsupported"));
-      return;
-    }
-
-    const recognition = new window.webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = locale === "hi" ? "hi-IN" : "en-US";
-
-    recognitionRef.current = recognition;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      toast.info(t("toast.speech.listening"));
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      setQuery((prev) => (prev ? prev + " " + transcript : transcript));
-    };
-
-    recognition.start();
-  }, [isListening, t, locale, setQuery]);
-
-  const handleEnhance = async () => {
-    if (!query.trim()) {
-      toast.warning(t("toast.enhance.empty"));
-      return;
-    }
-
-    const originalQuery = query;
-    setIsEnhancing(true);
-
-    try {
-      const res = await fetch("/api/enhance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: query }),
-      });
-
-      if (!res.ok) {
-        toast.error(t("toast.enhance.fail"));
-        return;
-      }
-
-      const data = await res.json();
-
-      if (data.enhanced) {
-        const enhanced = data.enhanced.trim();
-        const isErrorMessage =
-          enhanced.toLowerCase().includes("please provide") ||
-          enhanced.length < originalQuery.length;
-
-        if (isErrorMessage) {
-          toast.info(enhanced, { duration: 4000 });
-        } else {
-          setQuery(enhanced);
-          toast.success(t("toast.enhance.success"));
-        }
-      } else {
-        toast.error(t("toast.enhance.none"));
-      }
-    } catch (error) {
-      console.error("Enhancement error:", error);
-      toast.error(t("toast.enhance.fail"));
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
   const handleCreateChat = (e: React.FormEvent) => {
     e.preventDefault();
     handleSend(undefined, undefined, undefined, isThinking);
   };
-
-  const handleCopy = useCallback(async (content: string) => {
-    await navigator.clipboard.writeText(content);
-  }, []);
 
   const chatInputProps = {
     query,
@@ -275,9 +155,9 @@ export default function ChatInterface({
     attachments,
     setAttachments,
     isListening,
-    onSpeechToggle: handleSpeech,
+    onSpeechToggle,
     isEnhancing,
-    onEnhance: handleEnhance,
+    onEnhance,
     isThinking,
     onThinkingChange: setIsThinking,
     model,

@@ -34,6 +34,12 @@ export interface ApiKeys {
 
 export type OllamaConnectionStatus = "unknown" | "connected" | "disconnected";
 
+export type OllamaDiscoveredModel = {
+  name: string;
+  size?: number;
+  details?: { parameter_size?: string };
+};
+
 export interface GeneralPreferences {
   locale: Locale;
   desktopNotifications: boolean;
@@ -58,8 +64,8 @@ interface SettingsContextType {
   verifyKey: (provider: keyof ApiKeys, key: string) => Promise<boolean>;
   ollamaUrl: string;
   setOllamaUrl: (url: string) => void;
-  ollamaModels: any[];
-  setOllamaModels: (models: any[]) => void;
+  ollamaModels: OllamaDiscoveredModel[];
+  setOllamaModels: (models: OllamaDiscoveredModel[]) => void;
   ollamaStatus: OllamaConnectionStatus;
   setOllamaStatus: (status: OllamaConnectionStatus) => void;
   locale: Locale;
@@ -81,7 +87,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [ollamaUrl, setOllamaUrlState] = useState<string>(
     "http://localhost:11434",
   );
-  const [ollamaModels, setOllamaModelsState] = useState<any[]>([]);
+  const [ollamaModels, setOllamaModelsState] = useState<
+    OllamaDiscoveredModel[]
+  >([]);
   const [ollamaStatus, setOllamaStatus] =
     useState<OllamaConnectionStatus>("unknown");
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
@@ -208,7 +216,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setOllamaUrlState(url);
   };
 
-  const setOllamaModels = (models: any[]) => {
+  const setOllamaModels = (models: OllamaDiscoveredModel[]) => {
     setOllamaModelsState(models);
     setEnabledModels((prev) => {
       const newIds = models.map((m) => `ollama/${m.name}`);

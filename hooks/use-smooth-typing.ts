@@ -17,7 +17,6 @@ export function useSmoothTyping(
   );
   const indexRef = useRef(0);
   const rafRef = useRef<number | undefined>(undefined);
-  const prevShouldAnimate = useRef(shouldAnimate);
 
   useEffect(() => {
     // Immediate update if animation disabled

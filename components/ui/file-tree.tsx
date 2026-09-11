@@ -13,7 +13,6 @@ import {
   ChevronRight,
   File as FileIcon,
   Folder as FolderIcon,
-  FolderOpen,
 } from "lucide-react";
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
 
@@ -84,7 +83,6 @@ export const FolderTrigger = ({
   gitStatus,
   ...props
 }: FolderTriggerProps) => {
-  const context = React.useContext(FilesContext);
   // We can't easily know "isOpen" here without context or prop, but standard use assumes direct child of FolderItem
   // For simplicity, we'll just render. Ideally, FolderItem passes state down or we use context better.
   // Visuals:

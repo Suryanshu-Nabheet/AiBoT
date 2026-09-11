@@ -10,12 +10,7 @@
 "use client";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  ClipboardTextIcon,
-  ArrowsLeftRightIcon,
-  CheckIcon,
-} from "@phosphor-icons/react";
-import { WrapText } from "lucide-react";
+import { ClipboardTextIcon, CheckIcon } from "@phosphor-icons/react";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { cn } from "@/lib/utils";

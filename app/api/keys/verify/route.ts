@@ -9,8 +9,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { keyVerificationSchema } from "@/lib/server/request-schemas";
 
-type Provider = "openai" | "anthropic" | "google" | "deepseek" | "openrouter";
-
 async function verifyOpenAICompatible(
   baseUrl: string,
   key: string,

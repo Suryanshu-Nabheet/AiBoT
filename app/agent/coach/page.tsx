@@ -75,6 +75,7 @@ export default function CoachAgentPage() {
       // Only process if we stopped listening and have text
       processUserMessage(transcript);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once when mic stops
   }, [listening]);
 
   // Handle Speech Input Start

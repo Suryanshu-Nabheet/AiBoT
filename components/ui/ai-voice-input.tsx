@@ -55,7 +55,6 @@ export function AIVoiceInput({
   // Always Blue
   const pulseColor = "bg-blue-600";
   const darkPulseColor = "dark:bg-blue-400";
-  const textColor = "text-blue-700";
 
   return (
     <div className="flex w-full max-w-full flex-col items-center justify-center px-2 py-2 sm:py-4">

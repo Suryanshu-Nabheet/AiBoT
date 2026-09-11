@@ -63,9 +63,6 @@ export async function POST(req: NextRequest) {
       );
     const { messages } = parsed.data;
 
-    // Universal prompt - no more modes
-    const systemPrompt = UNIVERSAL_SYSTEM_PROMPT;
-
     // Try each model in fallback chain
     let lastError = null;
 

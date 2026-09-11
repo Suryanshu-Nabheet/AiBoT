@@ -67,12 +67,7 @@ export default function AssignmentSummarizerPage() {
     }
   }, [result]);
 
-  const {
-    preprocessMarkdown,
-    markdownComponents,
-    remarkPlugins,
-    rehypePlugins,
-  } = useMarkdown({
+  const { markdownComponents, remarkPlugins, rehypePlugins } = useMarkdown({
     onCopy: async (content: string) => {
       await navigator.clipboard.writeText(content);
       setCopied(true);
