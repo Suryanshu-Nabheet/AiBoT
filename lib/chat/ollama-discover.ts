@@ -17,6 +17,35 @@ export type OllamaDiscoverResult =
   | { ok: true; models: OllamaDiscoveredModel[]; resolvedUrl: string }
   | { ok: false; error: "network" | "empty" | "invalid" };
 
+export const OLLAMA_LAST_GOOD_URL_KEY = "aibot_ollama_last_good_url";
+
+export function readLastGoodOllamaUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = localStorage.getItem(OLLAMA_LAST_GOOD_URL_KEY);
+    return v ? normalizeOllamaUrl(v) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeLastGoodOllamaUrl(url: string) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(OLLAMA_LAST_GOOD_URL_KEY, normalizeOllamaUrl(url));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Prefer loopback on HTTPS — browsers treat it more reliably than localhost. */
+export function defaultOllamaEndpointForContext(): string {
+  if (typeof window !== "undefined" && window.isSecureContext) {
+    return "http://127.0.0.1:11434";
+  }
+  return "http://localhost:11434";
+}
+
 function parseHostPort(baseUrl: string): { host: string; port: string } {
   try {
     const u = new URL(baseUrl);
@@ -36,6 +65,9 @@ export function buildOllamaScanCandidates(preferredRaw: string): string[] {
   const withPort = (h: string) => `http://${h}:${port}`;
 
   const ordered: string[] = [];
+
+  const lastGood = readLastGoodOllamaUrl();
+  if (lastGood) ordered.push(lastGood);
 
   if (typeof window !== "undefined" && window.isSecureContext) {
     ordered.push(withPort("127.0.0.1"), withPort("localhost"));
@@ -102,11 +134,9 @@ export async function discoverOllamaModels(
     const data = await proxyRes.json().catch(() => null);
     const models = normalizeModels(data);
     if (models.length > 0) {
-      return {
-        ok: true,
-        models,
-        resolvedUrl: normalizeOllamaUrl(preferredUrl),
-      };
+      const resolved = normalizeOllamaUrl(preferredUrl);
+      writeLastGoodOllamaUrl(resolved);
+      return { ok: true, models, resolvedUrl: resolved };
     }
   }
 
@@ -123,6 +153,7 @@ export async function discoverOllamaModels(
       if (models.length === 0) {
         return { ok: false, error: "empty" };
       }
+      writeLastGoodOllamaUrl(base);
       return { ok: true, models, resolvedUrl: base };
     } catch (err) {
       lastError = err;

@@ -77,6 +77,7 @@ export const hi = {
   "localLlm.privacy.desc":
     "लोकल निष्पादन सीधे डिवाइस पर होता है। आपके प्रॉम्प्ट और कोड सत्र मशीन नहीं छोड़ते, और कोई API शुल्क नहीं लगता।",
   "localLlm.status.connected": "कनेक्टेड",
+  "localLlm.status.cached": "कैश — लाइव स्कैन बाकी",
   "localLlm.status.disconnected": "कनेक्ट नहीं",
   "localLlm.status.unknown": "अभी स्कैन नहीं हुआ",
   "localLlm.scan.success":
@@ -86,7 +87,11 @@ export const hi = {
   "localLlm.scan.loopback": "सफल! 127.0.0.1 लूपबैक से लोकल Ollama कनेक्ट हुआ।",
   "localLlm.scan.fail":
     "Ollama से कनेक्ट नहीं हो सका। प्रोडक्शन HTTPS के लिए CORS सेटअप आवश्यक है। नीचे समस्या निवारण पढ़ें।",
+  "localLlm.scan.failCached":
+    "लाइव स्कैन विफल, लेकिन पिछले पाए मॉडल अभी भी सूची में हैं। नीचे CORS पूरा करें, फिर स्कैन दोबारा करें।",
   "localLlm.diagnostics.title": "लोकल कनेक्शन डायग्नोस्टिक्स",
+  "localLlm.diagnostics.siteOriginHint":
+    "अपनी AiBoT साइट URL शामिल करें ताकि यह टैब Ollama को कॉल कर सके (फिर Ollama पूरी तरह बंद करके दोबारा चालू करें):",
   "localLlm.diagnostics.desc":
     "सुरक्षित वेबसाइटें (HTTPS) लोकल API (http://localhost:11434) तक तब तक नहीं पहुँच सकतीं जब तक मशीन पर CORS सक्षम न हो।",
   "localLlm.diagnostics.os": "ऑपरेटिंग सिस्टम चुनें",
