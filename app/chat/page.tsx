@@ -10,12 +10,10 @@ import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
 
 const ChatPage = () => {
   return (
-    <PageShell>
-      <div className="relative min-h-0 flex-1">
-        <PageViewSlot>
-          <ChatInterface />
-        </PageViewSlot>
-      </div>
+    <PageShell className="h-full min-h-0">
+      <PageViewSlot>
+        <ChatInterface className="h-full" />
+      </PageViewSlot>
     </PageShell>
   );
 };

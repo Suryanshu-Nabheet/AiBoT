@@ -26,6 +26,7 @@ import rehypeSanitize from "rehype-sanitize";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+import { preprocessAssistantMarkdown } from "@/lib/chat/markdown-preprocess";
 
 interface UseMarkdownOptions {
   onCopy?: (content: string) => void;
@@ -48,41 +49,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
 
   // Preprocessing function
   const preprocessMarkdown = useMemo(
-    () => (text: string) => {
-      return (
-        text
-          // Handle ### markers embedded in text
-          .replace(/###\s*(\d+)\.\s*/g, "\n\n### $1. ")
-          // Handle ### at the end of sentences
-          .replace(/([.!?])\s*###\s*/g, "$1\n\n### ")
-          // Add breaks before "Application in Business"
-          .replace(
-            /###\s*Application in Business/g,
-            "\n\n### Application in Business",
-          )
-          // Add breaks before "Considerations"
-          .replace(/###\s*Considerations/g, "\n\n### Considerations")
-          // Convert - Definition: to proper formatting
-          .replace(/\s*-\s*Definition:/g, "\n\n**Definition:**")
-          // Convert - Example: to proper formatting
-          .replace(/\s*-\s*Example:/g, "\n\n**Example:**")
-          // Add line breaks before numbered items
-          .replace(/([.!?])\s*(\d+\.\s*[A-Z])/g, "$1\n\n$2")
-          // Add breaks before specific keywords
-          .replace(
-            /([.!?])\s*(Perfectly Inelastic|Inelastic|Unitary|Elastic|Understanding)/g,
-            "$1\n\n$2",
-          )
-          // Handle PED formulas
-          .replace(/([.!?])\s*\(/g, "$1\n\n(")
-          .replace(/\)\s*-\s*/g, ")\n\n- ")
-          // Clean up multiple line breaks
-          .replace(/\n{3,}/g, "\n\n")
-          // Add breaks after sentences
-          .replace(/([.!?])\s+([A-Z][a-z])/g, "$1\n\n$2")
-          .trim()
-      );
-    },
+    () => (text: string) => preprocessAssistantMarkdown(text),
     [],
   );
 

@@ -161,11 +161,11 @@ export function ChatInput({
         className,
       )}
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="mx-auto w-full max-w-4xl">
         <motion.form
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          initial={dock === "center" ? { opacity: 0 } : { y: 20, opacity: 0 }}
+          animate={dock === "center" ? { opacity: 1 } : { y: 0, opacity: 1 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
           onSubmit={onSubmit}
           className="relative flex w-full max-w-full min-w-0 flex-col gap-0 overflow-hidden rounded-2xl border border-border/50 bg-muted/40 shadow-xl ring-1 ring-white/10 backdrop-blur-xl sm:rounded-3xl dark:ring-white/5"
         >
@@ -209,7 +209,7 @@ export function ChatInput({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={resolvedPlaceholder}
-            className="min-h-[48px] max-h-[min(35dvh,240px)] w-full min-w-0 resize-none border-0 bg-transparent px-3 py-2.5 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 sm:min-h-[56px] sm:px-4 sm:py-3 md:px-5 md:py-4 md:text-[15px] scrollbar-thin scrollbar-thumb-muted-foreground/20"
+            className="min-h-[48px] max-h-[min(35dvh,240px)] w-full min-w-0 resize-none border-0 bg-transparent px-3 py-2.5 font-sans text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0 sm:min-h-[56px] sm:px-4 sm:py-3 sm:text-base md:px-5 md:py-4 scrollbar-thin scrollbar-thumb-muted-foreground/20"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

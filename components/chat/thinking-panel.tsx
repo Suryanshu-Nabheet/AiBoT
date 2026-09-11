@@ -13,6 +13,7 @@ import { ThinkingBar } from "@/components/core/thinking-bar";
 import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { cn } from "@/lib/utils";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
+import { isSubstantiveThinkingContent } from "@/lib/chat/thinking-mode";
 
 type ThinkingPanelProps = {
   thinkingContent: string;
@@ -37,7 +38,7 @@ export function ThinkingPanel({
   preprocessMarkdown,
   className,
 }: ThinkingPanelProps) {
-  const hasBody = Boolean(thinkingContent?.trim());
+  const hasBody = isSubstantiveThinkingContent(thinkingContent);
 
   return (
     <div className={cn("w-full max-w-full", className)}>

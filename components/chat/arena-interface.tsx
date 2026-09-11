@@ -7,7 +7,13 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, memo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  memo,
+} from "react";
 import { v4 } from "uuid";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,7 +45,10 @@ import { Message, Role } from "@/lib/types";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useTranslation } from "@/hooks/use-translation";
 import { PageShell } from "@/components/layout/page-shell";
-import { parseAssistantThinkingContent } from "@/lib/chat/thinking-mode";
+import {
+  isSubstantiveThinkingContent,
+  parseAssistantThinkingContent,
+} from "@/lib/chat/thinking-mode";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
 
@@ -98,13 +107,24 @@ const MessageComponent = memo(
       thinkingContent,
       mainResponse,
       hasThinkingTag,
+      hasClosingThinkingTag,
       hideAnswerPanel,
     } = parseAssistantThinkingContent(
       isUser ? message.content : displayedContent,
       { isUser, isThinkingRequested: message.isThinkingRequested },
     );
 
-    const hasThinkingPanel = !isUser && (hasThinkingTag || thinkingContent);
+    useEffect(() => {
+      if (hasClosingThinkingTag && mainResponse?.trim()) {
+        setIsThinkingExpanded(false);
+      }
+    }, [hasClosingThinkingTag, mainResponse]);
+
+    const hasThinkingPanel =
+      !isUser &&
+      (hasThinkingTag ||
+        isSubstantiveThinkingContent(thinkingContent) ||
+        (message.isThinkingRequested && !hasClosingThinkingTag));
     const showAnswer =
       !isUser && !hideAnswerPanel && Boolean(mainResponse?.trim());
     const compactAgentContentClass =
@@ -112,10 +132,10 @@ const MessageComponent = memo(
 
     const [isCopied, setIsCopied] = useState(false);
     const handleCopy = useCallback(async () => {
-      await onCopy(message.content);
+      await onCopy(mainResponse);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
-    }, [onCopy, message.content]);
+    }, [onCopy, mainResponse]);
 
     return (
       <div
@@ -171,9 +191,10 @@ const MessageComponent = memo(
 
         {/* Actions - Only show after final response is complete */}
         {!isUser &&
+          showAnswer &&
           mainResponse.trim() &&
           !isGenerating &&
-          !hideAnswerPanel && (
+          (!message.isThinkingRequested || hasClosingThinkingTag) && (
             <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
               <TooltipProvider delayDuration={0}>
                 <Tooltip>

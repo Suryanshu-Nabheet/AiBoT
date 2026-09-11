@@ -114,6 +114,7 @@ html {
 }
 
 @theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -191,7 +192,11 @@ html {
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     max-width: 100vw;
     overflow-x: hidden;
     overflow-y: hidden;
@@ -227,6 +232,38 @@ html {
 
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .font-locale {
+    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :lang(hi),
+  :lang(hi) .font-locale {
+    font-family: var(--font-devanagari), var(--font-jakarta), ui-sans-serif,
+      system-ui, sans-serif;
+  }
+
+  .chat-welcome-line {
+    font-family: inherit;
+    font-size: 1.375rem;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
+
+  @media (min-width: 640px) {
+    .chat-welcome-line {
+      font-size: 1.5rem;
+      line-height: 1.3;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .chat-welcome-line {
+      font-size: 1.625rem;
+    }
   }
 
   .text-responsive-xs {

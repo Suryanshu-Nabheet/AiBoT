@@ -51,7 +51,10 @@ import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { useTranslation } from "@/hooks/use-translation";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
 import { PageShell } from "@/components/layout/page-shell";
-import { parseAssistantThinkingContent } from "@/lib/chat/thinking-mode";
+import {
+  isSubstantiveThinkingContent,
+  parseAssistantThinkingContent,
+} from "@/lib/chat/thinking-mode";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 
 const geistMono = Geist_Mono({
@@ -122,10 +125,21 @@ const MessageComponent = memo(
       thinkingContent,
       mainResponse,
       hasThinkingTag,
+      hasClosingThinkingTag,
       hideAnswerPanel,
     } = parsedThinking;
 
-    const hasThinkingPanel = !isUser && (hasThinkingTag || thinkingContent);
+    useEffect(() => {
+      if (hasClosingThinkingTag && mainResponse?.trim()) {
+        setIsThinkingExpanded(false);
+      }
+    }, [hasClosingThinkingTag, mainResponse]);
+
+    const hasThinkingPanel =
+      !isUser &&
+      (hasThinkingTag ||
+        isSubstantiveThinkingContent(thinkingContent) ||
+        (message.isThinkingRequested && !hasClosingThinkingTag));
     const showAnswer =
       !isUser && !hideAnswerPanel && Boolean(mainResponse?.trim());
     const compactAgentContentClass =
@@ -224,8 +238,12 @@ const MessageComponent = memo(
                 )}
 
                 {/* Copy and Download buttons - Only show after final response is complete */}
-                {!isUser && mainResponse.trim() && !isGenerating && (
-                    <div className="mt-2 flex items-center gap-1.5 self-start transition-opacity duration-200 animate-in fade-in slide-in-from-bottom-1">
+                {!isUser &&
+                  showAnswer &&
+                  mainResponse.trim() &&
+                  !isGenerating &&
+                  (!message.isThinkingRequested || hasClosingThinkingTag) && (
+                    <div className="mt-3 flex items-center gap-1.5 self-start transition-opacity duration-200">
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -233,7 +251,7 @@ const MessageComponent = memo(
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                              onClick={() => handleMessageCopy()}
+                              onClick={() => handleMessageCopy(mainResponse)}
                             >
                               {isCopied ? (
                                 <CheckIcon className="size-4 text-green-500" />
@@ -261,7 +279,7 @@ const MessageComponent = memo(
                                   const { generatePDF } =
                                     await import("@/lib/pdf-utils");
                                   await generatePDF(
-                                    message.content,
+                                    mainResponse,
                                     "ai-response.pdf",
                                     "AI Response",
                                   );
@@ -774,26 +792,29 @@ export default function ChatInterface({
   };
 
   return (
-    <PageShell className={cn("relative bg-background", className)}>
+    <PageShell
+      className={cn(
+        "relative h-full min-h-0 w-full flex-col bg-background",
+        className,
+      )}
+    >
       {isEmptyChat ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain px-4 sm:px-6">
+        <div
+          className="grid min-h-0 w-full flex-1 place-items-center overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4"
+        >
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="relative w-full max-w-3xl"
+            className="relative w-full max-w-4xl"
           >
             <p
-              className="pointer-events-none absolute bottom-full left-0 right-0 mb-5 max-w-md mx-auto text-balance px-2 text-center text-xl font-normal tracking-tight text-foreground sm:mb-6 sm:text-2xl"
+              className="chat-welcome-line pointer-events-none absolute bottom-full left-0 right-0 mb-4 max-w-xl mx-auto text-balance px-2 text-center sm:mb-5 md:mb-6"
             >
               {t("chat.welcome.greeting")}
             </p>
 
-            <ChatInput
-              {...chatInputProps}
-              dock="center"
-              className="w-full shrink-0"
-            />
+            <ChatInput {...chatInputProps} dock="center" className="w-full" />
           </motion.div>
         </div>
       ) : (

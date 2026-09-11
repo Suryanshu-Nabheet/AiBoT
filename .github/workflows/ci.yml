@@ -37,8 +37,19 @@ jobs:
       - name: Lint and type-check
         run: pnpm check
 
+      - name: Unit and integration tests
+        run: pnpm test
+
       - name: Build production bundle
         run: pnpm build
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: End-to-end tests
+        run: pnpm test:e2e
+        env:
+          CI: true
 
       - name: Block critical dependency vulnerabilities
         run: pnpm audit:critical

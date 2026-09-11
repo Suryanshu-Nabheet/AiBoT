@@ -32,8 +32,8 @@ export default function HomePage() {
   const { viewMode } = useViewMode();
 
   return (
-    <PageShell>
-      <div className="relative min-h-0 flex-1">
+    <PageShell className="h-full min-h-0">
+      <div className="relative h-full min-h-0 flex-1">
         <AnimatePresence mode="wait" initial={false}>
           {viewMode === "direct" && (
             <motion.div
@@ -42,7 +42,7 @@ export default function HomePage() {
               className="absolute inset-0"
             >
               <PageViewSlot>
-                <ChatInterface storageKey="directModel" />
+                <ChatInterface storageKey="directModel" className="h-full" />
               </PageViewSlot>
             </motion.div>
           )}

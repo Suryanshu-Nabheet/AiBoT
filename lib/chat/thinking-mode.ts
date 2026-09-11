@@ -187,8 +187,10 @@ export function parseAssistantThinkingContent(
   let hasThinkingTag = false;
   const hasClosingThinkingTag = CLOSING_THINKING_REGEX.test(rawContent);
 
+  const hasOpenThinking = OPEN_THINKING_REGEX.test(rawContent);
   const transitionMatch =
-    rawContent.match(TRANSITION_REGEX) || rawContent.match(GENERIC_CLOSE_REGEX);
+    rawContent.match(TRANSITION_REGEX) ||
+    (hasOpenThinking ? rawContent.match(GENERIC_CLOSE_REGEX) : null);
 
   if (transitionMatch) {
     hasThinkingTag = true;
@@ -222,6 +224,18 @@ export function parseAssistantThinkingContent(
     hasClosingThinkingTag,
     hideAnswerPanel,
   };
+}
+
+/** Skip rendering placeholder / empty reasoning traces in the UI. */
+export function isSubstantiveThinkingContent(text: string): boolean {
+  const cleaned = text
+    .replace(OPEN_THINKING_REGEX, "")
+    .replace(/<\/?[^>]+(>|$)/g, "")
+    .trim();
+  if (!cleaned) return false;
+  if (/^\.{1,8}$/.test(cleaned)) return false;
+  if (cleaned === "…" || cleaned === "...") return false;
+  return cleaned.length >= 8;
 }
 
 export function buildChatMessagesForThinkingStage(params: {

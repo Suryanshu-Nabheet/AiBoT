@@ -35,8 +35,8 @@ const ChatPage = ({ params }: { params: any }) => {
   const { viewMode } = useViewMode();
 
   return (
-    <PageShell>
-      <div className="relative min-h-0 flex-1">
+    <PageShell className="h-full min-h-0">
+      <div className="relative h-full min-h-0 flex-1">
         <AnimatePresence mode="wait" initial={false}>
           {viewMode === "direct" && (
             <motion.div
@@ -45,7 +45,7 @@ const ChatPage = ({ params }: { params: any }) => {
               className="absolute inset-0"
             >
               <PageViewSlot>
-                <ChatInterface conversationId={id} />
+                <ChatInterface conversationId={id} className="h-full" />
               </PageViewSlot>
             </motion.div>
           )}
