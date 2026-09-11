@@ -15,7 +15,9 @@ test.describe("Chat layout after first message", () => {
     await composer.fill("ping");
     await page.getByRole("button", { name: /send message/i }).click();
 
-    await expect(page.getByText("ping", { exact: true })).toBeVisible({
+    await expect(
+      page.locator("main").getByText("ping", { exact: true }),
+    ).toBeVisible({
       timeout: 15_000,
     });
 
