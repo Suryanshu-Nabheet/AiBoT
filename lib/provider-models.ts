@@ -43,7 +43,8 @@ export const PROVIDER_MODELS: Record<string, ProviderModel[]> = {
       name: "GPT-4.1",
       provider: "openai",
       category: "flagship",
-      summary: "Latest general-purpose flagship; strong coding and instruction following",
+      summary:
+        "Latest general-purpose flagship; strong coding and instruction following",
     },
     {
       id: "gpt-4.1-mini",
@@ -99,7 +100,8 @@ export const PROVIDER_MODELS: Record<string, ProviderModel[]> = {
       name: "o1",
       provider: "openai",
       category: "reasoning",
-      summary: "Prior-generation reasoning model; still strong on hard problems",
+      summary:
+        "Prior-generation reasoning model; still strong on hard problems",
     },
     {
       id: "o1-mini",
@@ -123,14 +125,16 @@ export const PROVIDER_MODELS: Record<string, ProviderModel[]> = {
       name: "Claude Sonnet 4",
       provider: "anthropic",
       category: "flagship",
-      summary: "Best balance of intelligence, speed, and cost for production workloads",
+      summary:
+        "Best balance of intelligence, speed, and cost for production workloads",
     },
     {
       id: "claude-opus-4-20250514",
       name: "Claude Opus 4",
       provider: "anthropic",
       category: "flagship",
-      summary: "Highest capability tier for research, agents, and complex reasoning",
+      summary:
+        "Highest capability tier for research, agents, and complex reasoning",
     },
     {
       id: "claude-3-7-sonnet-20250219",
@@ -151,7 +155,8 @@ export const PROVIDER_MODELS: Record<string, ProviderModel[]> = {
       name: "Claude 3.5 Haiku",
       provider: "anthropic",
       category: "fast",
-      summary: "Near-instant responses for chat, classification, and extraction",
+      summary:
+        "Near-instant responses for chat, classification, and extraction",
     },
     {
       id: "claude-3-opus-20240229",
@@ -175,7 +180,8 @@ export const PROVIDER_MODELS: Record<string, ProviderModel[]> = {
       name: "Gemini 2.5 Pro",
       provider: "google",
       category: "flagship",
-      summary: "Top Gemini tier for reasoning, long documents, and multimodal input",
+      summary:
+        "Top Gemini tier for reasoning, long documents, and multimodal input",
     },
     {
       id: "gemini-2.5-flash",
@@ -210,7 +216,8 @@ export const PROVIDER_MODELS: Record<string, ProviderModel[]> = {
       name: "Gemini 1.5 Pro",
       provider: "google",
       category: "balanced",
-      summary: "Long-context Pro model (up to 1M tokens on supported endpoints)",
+      summary:
+        "Long-context Pro model (up to 1M tokens on supported endpoints)",
     },
     {
       id: "gemini-1.5-flash",
@@ -468,9 +475,7 @@ export function getAllByokModels(): ProviderModel[] {
   return BYOK_PROVIDER_IDS.flatMap((id) => PROVIDER_MODELS[id]);
 }
 
-export function getModelsForProvider(
-  providerId: string,
-): ProviderModel[] {
+export function getModelsForProvider(providerId: string): ProviderModel[] {
   if (!(providerId in PROVIDER_MODELS)) return [];
   return PROVIDER_MODELS[providerId as ByokProviderId];
 }

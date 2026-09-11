@@ -32,9 +32,7 @@ export function createAssistantMessage(
   };
 }
 
-export function createChatRequestBody(
-  overrides: Record<string, unknown> = {},
-) {
+export function createChatRequestBody(overrides: Record<string, unknown> = {}) {
   return {
     messages: [{ role: "user", content: "Hello" }],
     model: "openrouter/free",

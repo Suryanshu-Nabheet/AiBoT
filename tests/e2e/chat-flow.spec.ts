@@ -20,8 +20,8 @@ test.describe("Chat layout after first message", () => {
     });
 
     await expect(composer).toBeVisible();
-    await expect(
-      page.getByText(/what can i help you with today/i),
-    ).toHaveCount(0);
+    await expect(page.getByText(/what can i help you with today/i)).toHaveCount(
+      0,
+    );
   });
 });

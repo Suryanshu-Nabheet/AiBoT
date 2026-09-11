@@ -42,11 +42,7 @@ export function ThinkingPanel({
 
   return (
     <div className={cn("w-full max-w-full", className)}>
-      <ThinkingBar
-        text={label}
-        isExpanded={isExpanded}
-        onClick={onToggle}
-      />
+      <ThinkingBar text={label} isExpanded={isExpanded} onClick={onToggle} />
       <AnimatePresence initial={false}>
         {isExpanded && hasBody && (
           <motion.div

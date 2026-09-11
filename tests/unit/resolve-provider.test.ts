@@ -39,7 +39,11 @@ describe("resolveProviderRoute", () => {
   const platform = { siteUrl: "https://aibot.test", siteName: "AiBoT" };
 
   it("routes OpenAI key to OpenAI API", () => {
-    const route = resolveProviderRoute("gpt-4o", { openai: "sk-test" }, platform);
+    const route = resolveProviderRoute(
+      "gpt-4o",
+      { openai: "sk-test" },
+      platform,
+    );
     expect(route.kind).toBe("openai-compatible");
     expect(route.url).toContain("api.openai.com");
     expect(route.model).toBe("gpt-4o");
@@ -56,10 +60,14 @@ describe("resolveProviderRoute", () => {
   });
 
   it("falls back to OpenRouter when no BYOK match", () => {
-    const route = resolveProviderRoute("openrouter/free", {}, {
-      ...platform,
-      openRouterKey: "sk-or-test",
-    });
+    const route = resolveProviderRoute(
+      "openrouter/free",
+      {},
+      {
+        ...platform,
+        openRouterKey: "sk-or-test",
+      },
+    );
     expect(route.url).toContain("openrouter.ai");
   });
 });

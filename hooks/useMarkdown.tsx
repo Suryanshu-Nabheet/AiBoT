@@ -73,7 +73,9 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
         </h3>
       ),
       h4: ({ children }: any) => (
-        <h4 className="text-sm font-medium mt-2 mb-1 text-inherit">{children}</h4>
+        <h4 className="text-sm font-medium mt-2 mb-1 text-inherit">
+          {children}
+        </h4>
       ),
 
       // Paragraphs

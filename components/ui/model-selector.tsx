@@ -214,9 +214,7 @@ export function ModelSelector({
               <span
                 className={cn(
                   "min-w-0 truncate text-left text-sm font-medium",
-                  thinkingEnabled
-                    ? thinkingAccentTextClass
-                    : "text-foreground",
+                  thinkingEnabled ? thinkingAccentTextClass : "text-foreground",
                 )}
               >
                 {fullModelLabel}

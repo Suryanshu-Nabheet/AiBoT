@@ -47,7 +47,8 @@ describe("chatRequestSchema", () => {
 describe("enhanceRequestSchema", () => {
   it("requires non-empty prompt", () => {
     expect(enhanceRequestSchema.safeParse({ prompt: "" }).success).toBe(false);
-    expect(enhanceRequestSchema.safeParse({ prompt: "improve this" }).success)
-      .toBe(true);
+    expect(
+      enhanceRequestSchema.safeParse({ prompt: "improve this" }).success,
+    ).toBe(true);
   });
 });
