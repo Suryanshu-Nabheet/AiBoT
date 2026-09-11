@@ -52,6 +52,9 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
       "- For non-trivial tasks, compare approaches briefly, then commit to one.",
       "- For math/code, sanity-check before closing the thinking block.",
       "- You MUST finish the thinking block before writing any part of the final answer.",
+      "- FORBIDDEN inside thinking: greetings, the full reply, or marketing copy about AiBoT.",
+      "- FORBIDDEN after thinking: describing what AiBoT is unless the user asked about the platform.",
+      '- Example — user says "hi": <thinking>Simple greeting; answer in one short line.</thinking>Hello! How can I help you today?',
       "",
       "Accuracy (mandatory):",
       "- Do not invent facts, statistics, quotes, URLs, paper titles, or product names.",
@@ -76,6 +79,7 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
       "- Note unknowns and state explicit assumptions.",
       "- For non-trivial tasks, compare approaches briefly, then commit to one.",
       "- For math/code, sanity-check before closing the thinking block.",
+      "- Do not greet the user or write the final answer here—only private reasoning.",
       "",
       "Accuracy (mandatory):",
       "- Do not invent facts, statistics, quotes, URLs, paper titles, or product names.",
@@ -200,6 +204,42 @@ const CLOSING_THINKING_REGEX =
 const OPEN_THINKING_REGEX =
   /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
 
+const PLATFORM_ANSWER_BOILERPLATE =
+  /\bthe aibot platform is\b|\baibot platform is a\b|\bleverage(s)? advanced ai\b/i;
+const CONVERSATIONAL_ANSWER =
+  /\b(how can i help|what would you like|hello!|hi there|hey there)\b/i;
+
+/** Small models sometimes put the reply inside thinking and platform filler outside. */
+export function repairSwappedThinkingAnswer(parts: {
+  thinkingContent: string;
+  mainResponse: string;
+  hasClosingThinkingTag: boolean;
+}): { thinkingContent: string; mainResponse: string } {
+  const { thinkingContent, mainResponse, hasClosingThinkingTag } = parts;
+  if (!hasClosingThinkingTag) {
+    return { thinkingContent, mainResponse };
+  }
+  const think = thinkingContent.trim();
+  const main = mainResponse.trim();
+  if (!think || !main) return { thinkingContent, mainResponse };
+
+  const mainLooksLikeBoilerplate =
+    PLATFORM_ANSWER_BOILERPLATE.test(main) ||
+    (main.length > 60 && /\baibot\b/i.test(main) && !/\baibot\b/i.test(think));
+  const thinkLooksLikeReply =
+    CONVERSATIONAL_ANSWER.test(think) ||
+    (/^(hello|hi|hey)\b/i.test(think) && think.length < 280);
+
+  if (mainLooksLikeBoilerplate && thinkLooksLikeReply) {
+    return {
+      thinkingContent:
+        "User message was simple; model misplaced the reply into reasoning.",
+      mainResponse: think,
+    };
+  }
+  return { thinkingContent, mainResponse };
+}
+
 /** Shared parser for chat UI (streaming-safe). */
 export function parseAssistantThinkingContent(
   rawContent: string,
@@ -247,6 +287,14 @@ export function parseAssistantThinkingContent(
 
   thinkingContent = stripPromptLeakage(thinkingContent);
   mainResponse = stripPromptLeakage(mainResponse);
+
+  const repaired = repairSwappedThinkingAnswer({
+    thinkingContent,
+    mainResponse,
+    hasClosingThinkingTag,
+  });
+  thinkingContent = repaired.thinkingContent;
+  mainResponse = repaired.mainResponse;
 
   const hideAnswerPanel =
     !!options?.isThinkingRequested &&

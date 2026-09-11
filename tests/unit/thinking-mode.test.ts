@@ -17,6 +17,7 @@ import {
   isSubstantiveThinkingContent,
   normalizeThinkingStage1Output,
   parseAssistantThinkingContent,
+  repairSwappedThinkingAnswer,
   stripPromptLeakage,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
@@ -51,6 +52,27 @@ describe("parseAssistantThinkingContent", () => {
     });
     expect(parsed.hideAnswerPanel).toBe(false);
     expect(parsed.mainResponse.length).toBeGreaterThan(20);
+  });
+
+  it("repairs misplaced greeting in thinking block", () => {
+    const raw = `${THINKING_OPEN_TAG}Hello! How can I help you today?${THINKING_CLOSE_TAG}The AiBoT platform is a powerful tool that harnesses advanced AI technology.`;
+    const parsed = parseAssistantThinkingContent(raw, {
+      isThinkingRequested: true,
+    });
+    expect(parsed.mainResponse).toContain("Hello!");
+    expect(parsed.mainResponse).not.toContain("powerful tool");
+  });
+});
+
+describe("repairSwappedThinkingAnswer", () => {
+  it("swaps boilerplate main with conversational thinking", () => {
+    const out = repairSwappedThinkingAnswer({
+      thinkingContent: "Hi there! What would you like to know?",
+      mainResponse:
+        "The AiBoT platform is a versatile tool designed to leverage advanced AI.",
+      hasClosingThinkingTag: true,
+    });
+    expect(out.mainResponse).toContain("Hi there");
   });
 });
 

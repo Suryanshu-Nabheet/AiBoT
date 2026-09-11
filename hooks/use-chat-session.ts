@@ -417,7 +417,7 @@ export function useChatSession({
           };
         };
 
-        // Single stream: brief <thinking> block, then answer (same path as direct /api chat)
+        // Local models handle two-stage (reasoning → answer) more reliably than combined.
         if (thinkingRequested) {
           const tempId = newAgentMessageId();
 
@@ -431,21 +431,21 @@ export function useChatSession({
             },
           ]);
 
-          const chatPayload = buildOllamaPayload("combined");
-          const res = await postOllamaChat(
+          const chatPayload1 = buildOllamaPayload("thinking");
+          const res1 = await postOllamaChat(
             ollamaUrl,
-            chatPayload,
+            chatPayload1,
             abortControllerRef.current.signal,
           );
 
-          if (!res.ok) {
-            const errorText = await res.text();
+          if (!res1.ok) {
+            const errorText = await res1.text();
             setMessages((prev) => [
               ...prev,
               {
                 id: `error-${Date.now()}`,
                 role: Role.Agent,
-                content: httpErrorMessage(locale, res.status, errorText),
+                content: httpErrorMessage(locale, res1.status, errorText),
                 isError: true,
               },
             ]);
@@ -453,9 +453,38 @@ export function useChatSession({
             return;
           }
 
-          await processStream(res, true, true, {
+          const stage1Final = await processStream(res1, true, true, {
+            finalize: false,
+            tempId,
+            contentPrefix: "",
+          });
+
+          const chatPayload2 = buildOllamaPayload("final", stage1Final);
+          const res2 = await postOllamaChat(
+            ollamaUrl,
+            chatPayload2,
+            abortControllerRef.current.signal,
+          );
+
+          if (!res2.ok) {
+            const errorText = await res2.text();
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `error-${Date.now()}`,
+                role: Role.Agent,
+                content: httpErrorMessage(locale, res2.status, errorText),
+                isError: true,
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          await processStream(res2, false, true, {
             finalize: true,
             tempId,
+            contentPrefix: stage1Final,
           });
 
           return;
