@@ -7,13 +7,7 @@
 
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -130,7 +124,6 @@ export function SettingsPanel() {
     setDesktopNotifications,
     completionSound,
     setCompletionSound,
-    hasLoaded,
   } = useSettings();
 
   const [activeSection, setActiveSection] =
@@ -164,79 +157,68 @@ export function SettingsPanel() {
     }
   }, []);
 
-  const siteOrigin =
-    typeof window !== "undefined" ? window.location.origin : "";
+  const handleAutoDetect = async () => {
+    setIsScanning(true);
+    setShowTroubleshooter(false);
 
-  const macOllamaOriginsCommand = useMemo(() => {
-    const origins = siteOrigin ? `${siteOrigin},*` : "*";
-    return `launchctl setenv OLLAMA_ORIGINS "${origins}"`;
-  }, [siteOrigin]);
-
-  const runOllamaScan = useCallback(
-    async (options?: { silent?: boolean }) => {
-      const silent = options?.silent ?? false;
-      setIsScanning(true);
-      if (!silent) setShowTroubleshooter(false);
-
-      try {
-        const { discoverOllamaModels } =
-          await import("@/lib/chat/ollama-discover");
-        const result = await discoverOllamaModels(ollamaUrl);
-
-        if (result.ok) {
-          setOllamaModels(result.models);
-          setOllamaUrl(result.resolvedUrl);
-          setOllamaStatus("connected");
-          if (!silent) {
-            toast.success(
-              t("localLlm.scan.success", { count: result.models.length }),
-            );
-          }
-          return;
-        }
-
-        if (ollamaModels.length > 0) {
-          setOllamaStatus("cached");
-        } else {
-          setOllamaStatus("disconnected");
-        }
-        if (!silent || ollamaModels.length === 0) {
-          setShowTroubleshooter(true);
-        }
-        if (silent) return;
-
-        if (result.error === "empty") {
-          toast.warning(t("localLlm.scan.empty"));
-        } else if (ollamaModels.length > 0) {
-          toast.message(t("localLlm.scan.failCached"));
-        } else {
-          toast.error(t("localLlm.scan.fail"));
-        }
-      } finally {
-        setIsScanning(false);
-      }
-    },
-    [
-      ollamaUrl,
-      ollamaModels.length,
-      setOllamaModels,
-      setOllamaStatus,
-      setOllamaUrl,
-      t,
-    ],
-  );
-
-  const handleAutoDetect = () => runOllamaScan();
-
-  const didAutoScanRef = useRef(false);
-  useEffect(() => {
-    if (!hasLoaded || activeSection !== "local-llm" || didAutoScanRef.current) {
-      return;
+    let targetUrl = ollamaUrl.trim();
+    if (!targetUrl) {
+      targetUrl = "http://localhost:11434";
     }
-    didAutoScanRef.current = true;
-    if (ollamaStatus === "connected") return;
-    void runOllamaScan({ silent: true });
-  }, [activeSection, hasLoaded, ollamaStatus, runOllamaScan]);
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      targetUrl = `http://${targetUrl}`;
+    }
+
+    try {
+      const res = await fetch(`${targetUrl}/api/tags`, {
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Status " + res.status);
+      const data = await res.json();
+      const models = data.models || [];
+      setOllamaModels(models);
+      setOllamaStatus("connected");
+      if (models.length > 0) {
+        toast.success(t("localLlm.scan.success", { count: models.length }));
+      } else {
+        toast.warning(t("localLlm.scan.empty"));
+      }
+    } catch (primaryErr) {
+      console.warn("Primary connection to Ollama failed:", primaryErr);
+
+      if (targetUrl.includes("localhost")) {
+        const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
+        try {
+          const res = await fetch(`${fallbackUrl}/api/tags`, {
+            mode: "cors",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const models = data.models || [];
+            setOllamaModels(models);
+            setOllamaUrl(fallbackUrl);
+            setOllamaStatus("connected");
+            if (models.length > 0) {
+              toast.success(t("localLlm.scan.loopback"));
+            } else {
+              toast.warning(t("localLlm.scan.empty"));
+            }
+            return;
+          }
+        } catch (fallbackErr) {
+          console.warn("Fallback loopback fetch failed:", fallbackErr);
+        }
+      }
+
+      setOllamaStatus("disconnected");
+      setShowTroubleshooter(true);
+      toast.error(t("localLlm.scan.fail"));
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const handleVerifyKey = async (provider: keyof ApiKeys, key: string) => {
     if (!key) return;
@@ -684,7 +666,6 @@ export function SettingsPanel() {
                     className={cn(
                       "inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
                       ollamaStatus === "connected" && "text-emerald-500",
-                      ollamaStatus === "cached" && "text-amber-500",
                       ollamaStatus === "disconnected" && "text-red-400",
                       ollamaStatus === "unknown" && "text-muted-foreground",
                     )}
@@ -694,25 +675,22 @@ export function SettingsPanel() {
                         "size-1.5 rounded-full",
                         ollamaStatus === "connected" &&
                           "bg-emerald-500 animate-pulse",
-                        ollamaStatus === "cached" && "bg-amber-500",
                         ollamaStatus === "disconnected" && "bg-red-400",
                         ollamaStatus === "unknown" && "bg-muted-foreground/50",
                       )}
                     />
                     {ollamaStatus === "connected"
                       ? t("localLlm.status.connected")
-                      : ollamaStatus === "cached"
-                        ? t("localLlm.status.cached")
-                        : ollamaStatus === "disconnected"
-                          ? t("localLlm.status.disconnected")
-                          : t("localLlm.status.unknown")}
+                      : ollamaStatus === "disconnected"
+                        ? t("localLlm.status.disconnected")
+                        : t("localLlm.status.unknown")}
                   </span>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <div className="relative flex-1 group">
                     <Input
                       type="text"
-                      placeholder="http://127.0.0.1:11434"
+                      placeholder="http://localhost:11434"
                       value={ollamaUrl}
                       onChange={(e) => {
                         setOllamaUrl(e.target.value);
@@ -802,18 +780,13 @@ export function SettingsPanel() {
                           this command to allow your browser to communicate with
                           the local server:
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {t("localLlm.diagnostics.siteOriginHint")}
-                        </p>
-                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between gap-2">
-                          <span className="break-all">
-                            {macOllamaOriginsCommand}
-                          </span>
+                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
+                          <span>{'launchctl setenv OLLAMA_ORIGINS "*"'}</span>
                           <button
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(
-                                macOllamaOriginsCommand,
+                                'launchctl setenv OLLAMA_ORIGINS "*"',
                               );
                               toast.success(t("localLlm.copied"));
                             }}
@@ -823,10 +796,8 @@ export function SettingsPanel() {
                           </button>
                         </div>
                         <p>
-                          3. Fully quit Ollama (menu bar → Quit), then in
-                          Terminal run{" "}
-                          <code className="text-foreground">pkill ollama</code>{" "}
-                          if needed, and restart:
+                          3. Restart the Ollama app by opening it from your
+                          Applications folder or running:
                         </p>
                         <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
                           <span>open -a Ollama</span>

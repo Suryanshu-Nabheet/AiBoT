@@ -86,7 +86,6 @@ export const en = {
   "localLlm.privacy.desc":
     "Local execution is handled direct-to-device. Your prompts and code sessions never leave your local machine, and you enjoy zero API usage fees or latency thresholds.",
   "localLlm.status.connected": "Connected",
-  "localLlm.status.cached": "Cached — live scan pending",
   "localLlm.status.disconnected": "Not connected",
   "localLlm.status.unknown": "Not scanned yet",
   "localLlm.scan.success":
@@ -97,11 +96,7 @@ export const en = {
     "Success! Connected to local Ollama via 127.0.0.1 loopback.",
   "localLlm.scan.fail":
     "Could not connect to Ollama. Production secure connections require CORS setup. Read troubleshooting steps below.",
-  "localLlm.scan.failCached":
-    "Live scan failed, but your last discovered models are still listed. Complete CORS setup below, then retry the scan.",
   "localLlm.diagnostics.title": "Local Connection Diagnostics",
-  "localLlm.diagnostics.siteOriginHint":
-    "Include your AiBoT site URL so the browser can call Ollama from this tab (then fully quit and restart Ollama):",
   "localLlm.diagnostics.desc":
     "Deployed secure websites (HTTPS) are blocked from accessing local API endpoints (http://localhost:11434) unless Cross-Origin Resource Sharing (CORS) is explicitly enabled on your machine.",
   "localLlm.diagnostics.os": "Select Operating System",

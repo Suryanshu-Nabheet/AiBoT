@@ -32,18 +32,13 @@ export interface ApiKeys {
   openrouter?: string;
 }
 
-export type OllamaConnectionStatus =
-  | "unknown"
-  | "connected"
-  | "disconnected"
-  | "cached";
+export type OllamaConnectionStatus = "unknown" | "connected" | "disconnected";
 
-import {
-  defaultOllamaEndpointForContext,
-  type OllamaDiscoveredModel,
-} from "@/lib/chat/ollama-discover";
-
-export type { OllamaDiscoveredModel };
+export type OllamaDiscoveredModel = {
+  name: string;
+  size?: number;
+  details?: { parameter_size?: string };
+};
 
 export interface GeneralPreferences {
   locale: Locale;
@@ -89,8 +84,8 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [enabledModels, setEnabledModels] = useState<string[]>([]);
-  const [ollamaUrl, setOllamaUrlState] = useState<string>(() =>
-    defaultOllamaEndpointForContext(),
+  const [ollamaUrl, setOllamaUrlState] = useState<string>(
+    "http://localhost:11434",
   );
   const [ollamaModels, setOllamaModelsState] = useState<
     OllamaDiscoveredModel[]
@@ -140,39 +135,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (storedKeys) setApiKeys(JSON.parse(storedKeys));
 
       const storedUrl = localStorage.getItem("aibot_ollama_url");
-      if (storedUrl) {
-        let url = storedUrl;
-        if (
-          window.isSecureContext &&
-          /localhost/i.test(url) &&
-          !url.includes("127.0.0.1")
-        ) {
-          url = url.replace(/localhost/i, "127.0.0.1");
-          localStorage.setItem("aibot_ollama_url", url);
-        }
-        setOllamaUrlState(url);
-      } else if (window.isSecureContext) {
-        setOllamaUrlState(defaultOllamaEndpointForContext());
-      }
+      if (storedUrl) setOllamaUrlState(storedUrl);
 
       const storedOllamaModels = localStorage.getItem("aibot_ollama_models");
-      let parsedOllamaModels: OllamaDiscoveredModel[] = [];
-      if (storedOllamaModels) {
-        parsedOllamaModels = JSON.parse(storedOllamaModels);
-        setOllamaModelsState(parsedOllamaModels);
-      }
+      if (storedOllamaModels)
+        setOllamaModelsState(JSON.parse(storedOllamaModels));
 
       const storedStatus = localStorage.getItem("aibot_ollama_status");
       if (
         storedStatus === "connected" ||
         storedStatus === "disconnected" ||
-        storedStatus === "unknown" ||
-        storedStatus === "cached"
+        storedStatus === "unknown"
       ) {
         setOllamaStatus(storedStatus);
-      }
-      if (storedStatus === "disconnected" && parsedOllamaModels.length > 0) {
-        setOllamaStatus("cached");
       }
 
       const storedModels = localStorage.getItem("aibot_enabled_models");
