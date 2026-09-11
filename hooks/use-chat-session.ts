@@ -13,6 +13,7 @@ import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
+import { postOllamaChat } from "@/lib/chat/ollama-url";
 import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { ExecutionType } from "@/hooks/useExecution";
@@ -393,15 +394,6 @@ export function useChatSession({
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
 
-        // Normalize URL
-        let targetUrl = ollamaUrl.trim();
-        if (!targetUrl) {
-          targetUrl = "http://localhost:11434";
-        }
-        if (!/^https?:\/\//i.test(targetUrl)) {
-          targetUrl = `http://${targetUrl}`;
-        }
-
         const baseSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}${localeReplyDirective(locale)}`;
 
         const buildOllamaPayload = (
@@ -440,31 +432,11 @@ export function useChatSession({
           ]);
 
           const chatPayload = buildOllamaPayload("combined");
-          let res: Response;
-          try {
-            res = await fetch(`${targetUrl}/api/chat`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(chatPayload),
-              signal: abortControllerRef.current.signal,
-            });
-          } catch (err) {
-            console.warn(
-              "Primary Ollama chat connection failed, trying loopback fallback...",
-              err,
-            );
-            if (targetUrl.includes("localhost")) {
-              const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-              res = await fetch(`${fallbackUrl}/api/chat`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(chatPayload),
-                signal: abortControllerRef.current.signal,
-              });
-            } else {
-              throw err;
-            }
-          }
+          const res = await postOllamaChat(
+            ollamaUrl,
+            chatPayload,
+            abortControllerRef.current.signal,
+          );
 
           if (!res.ok) {
             const errorText = await res.text();
@@ -500,31 +472,11 @@ export function useChatSession({
           stream: true,
         };
 
-        let res: Response;
-        try {
-          res = await fetch(`${targetUrl}/api/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(chatPayload),
-            signal: abortControllerRef.current.signal,
-          });
-        } catch (err) {
-          console.warn(
-            "Primary Ollama chat connection failed, trying loopback fallback...",
-            err,
-          );
-          if (targetUrl.includes("localhost")) {
-            const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-            res = await fetch(`${fallbackUrl}/api/chat`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(chatPayload),
-              signal: abortControllerRef.current.signal,
-            });
-          } else {
-            throw err;
-          }
-        }
+        const res = await postOllamaChat(
+          ollamaUrl,
+          chatPayload,
+          abortControllerRef.current.signal,
+        );
 
         if (!res.ok) {
           const errorText = await res.text();

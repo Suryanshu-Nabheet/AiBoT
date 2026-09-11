@@ -40,6 +40,7 @@ import { LOCALES, type Locale } from "@/lib/i18n";
 import { getNotificationPermission } from "@/lib/desktop-notifications";
 import packageJson from "@/package.json";
 import { BrandIcon } from "@/components/ui/brand-icon";
+import { fetchOllamaTags, normalizeOllamaUrl } from "@/lib/chat/ollama-url";
 
 type SettingsSection =
   | "general"
@@ -157,67 +158,36 @@ export function SettingsPanel() {
     }
   }, []);
 
+  const macOllamaOriginsCommand =
+    typeof window !== "undefined" && window.isSecureContext
+      ? `launchctl setenv OLLAMA_ORIGINS "${window.location.origin},*"`
+      : 'launchctl setenv OLLAMA_ORIGINS "*"';
+
   const handleAutoDetect = async () => {
     setIsScanning(true);
     setShowTroubleshooter(false);
 
-    let targetUrl = ollamaUrl.trim();
-    if (!targetUrl) {
-      targetUrl = "http://localhost:11434";
-    }
-    if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = `http://${targetUrl}`;
-    }
-
-    try {
-      const res = await fetch(`${targetUrl}/api/tags`, {
-        mode: "cors",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) throw new Error("Status " + res.status);
-      const data = await res.json();
-      const models = data.models || [];
-      setOllamaModels(models);
-      setOllamaStatus("connected");
-      if (models.length > 0) {
-        toast.success(t("localLlm.scan.success", { count: models.length }));
+    const result = await fetchOllamaTags(ollamaUrl);
+    if (result) {
+      setOllamaModels(result.models as typeof ollamaModels);
+      if (result.resolvedBase !== normalizeOllamaUrl(ollamaUrl)) {
+        setOllamaUrl(result.resolvedBase);
+        toast.success(t("localLlm.scan.loopback"));
+      } else if (result.models.length > 0) {
+        toast.success(
+          t("localLlm.scan.success", { count: result.models.length }),
+        );
       } else {
         toast.warning(t("localLlm.scan.empty"));
       }
-    } catch (primaryErr) {
-      console.warn("Primary connection to Ollama failed:", primaryErr);
-
-      if (targetUrl.includes("localhost")) {
-        const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-        try {
-          const res = await fetch(`${fallbackUrl}/api/tags`, {
-            mode: "cors",
-            headers: { "Content-Type": "application/json" },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const models = data.models || [];
-            setOllamaModels(models);
-            setOllamaUrl(fallbackUrl);
-            setOllamaStatus("connected");
-            if (models.length > 0) {
-              toast.success(t("localLlm.scan.loopback"));
-            } else {
-              toast.warning(t("localLlm.scan.empty"));
-            }
-            return;
-          }
-        } catch (fallbackErr) {
-          console.warn("Fallback loopback fetch failed:", fallbackErr);
-        }
-      }
-
+      setOllamaStatus("connected");
+    } else {
+      console.warn("Ollama scan failed for all loopback candidates");
       setOllamaStatus("disconnected");
       setShowTroubleshooter(true);
       toast.error(t("localLlm.scan.fail"));
-    } finally {
-      setIsScanning(false);
     }
+    setIsScanning(false);
   };
 
   const handleVerifyKey = async (provider: keyof ApiKeys, key: string) => {
@@ -781,12 +751,14 @@ export function SettingsPanel() {
                           the local server:
                         </p>
                         <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
-                          <span>{'launchctl setenv OLLAMA_ORIGINS "*"'}</span>
+                          <span className="break-all">
+                            {macOllamaOriginsCommand}
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(
-                                'launchctl setenv OLLAMA_ORIGINS "*"',
+                                macOllamaOriginsCommand,
                               );
                               toast.success(t("localLlm.copied"));
                             }}
