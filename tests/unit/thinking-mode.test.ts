@@ -34,7 +34,7 @@ describe("parseAssistantThinkingContent", () => {
     const parsed = parseAssistantThinkingContent(STAGE1_AND_ANSWER);
     expect(parsed.hasThinkingTag).toBe(true);
     expect(parsed.hasClosingThinkingTag).toBe(true);
-    expect(parsed.thinkingContent).toContain("Plan:");
+    expect(parsed.thinkingContent).toContain("define AI");
     expect(parsed.mainResponse).toContain("What Is Artificial Intelligence?");
   });
 
@@ -122,7 +122,7 @@ describe("buildChatMessagesForThinkingStage", () => {
     expect(msgs).toHaveLength(1);
     expect(msgs[0].content).toContain("Compare A and B");
     expect(msgs[0].content).toContain("Reasoning mode");
-    expect(msgs[0].content).toContain("thinking bullets");
+    expect(msgs[0].content).toContain(THINKING_OPEN_TAG);
   });
 });
 

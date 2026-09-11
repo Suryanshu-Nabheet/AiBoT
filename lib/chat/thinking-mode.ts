@@ -7,7 +7,7 @@
 
 /**
  * Thinking orchestration:
- * - Stage 1 (thinking): private bullets only — task, unknowns, self-checks, plan.
+ * - Stage 1 (thinking): brief private reasoning in plain language (not the user reply).
  * - Stage 2 (final): user-facing answer (Ollama + optional API two-stage).
  * - Combined: one stream for cloud/arena (thinking tags + answer).
  */
@@ -34,13 +34,6 @@ const PROMPT_LEAKAGE_PATTERNS: RegExp[] = [
   /\[Deep reasoning[^\]]*\]/gi,
 ];
 
-const THINKING_BULLET_TEMPLATE = [
-  "- Task: (what the user wants, in your own words)",
-  "- Unknowns: (what is missing or ambiguous)",
-  "- Self-check: (1–2 questions you must answer before replying)",
-  "- Plan: (steps for the final answer; no draft wording)",
-].join("\n");
-
 /** Stage 1 uses a minimal system prompt so small models do not paste marketing copy into thinking. */
 export function composeSystemPromptForThinkingStage(
   fullAssistantSystemPrompt: string,
@@ -60,21 +53,18 @@ export function composeSystemPromptForThinkingStage(
 export function buildThinkingSystemAddon(stage: ThinkingStage): string {
   if (stage === "combined") {
     return [
-      "## Deep reasoning (single stream)",
+      "## Reasoning then answer (one message)",
       "",
       "Output contract:",
-      `1. Start with ${THINKING_OPEN_TAG} (no preamble).`,
-      `2. Inside the tags: bullet-only private reasoning (see template).`,
-      `3. After ${THINKING_CLOSE_TAG}: the complete user-facing answer only.`,
+      `1. Start with ${THINKING_OPEN_TAG}.`,
+      `2. Inside the tags: a short internal note (2–4 plain sentences) — how you interpret the question and how you will answer. No bullet labels like "Task:" or "Plan:".`,
+      `3. After ${THINKING_CLOSE_TAG}: the full reply the user should read.`,
       "",
-      "Thinking template (mandatory shape):",
-      THINKING_BULLET_TEMPLATE,
+      "Thinking should feel like notes to yourself, not a message to the user.",
+      "Do not paste your greeting or final answer inside thinking.",
+      '- Example for "hi": <thinking>Simple greeting; keep the reply warm and short.</thinking>Hello! What can I help you with?',
       "",
-      "Rules:",
-      "- Thinking is NOT the answer — no greetings, no paragraphs to the user, no AiBoT marketing.",
-      '- Example "hi": <thinking>\\n- Task: greet\\n- Plan: one friendly line\\n</thinking>\\nHello! How can I help?',
-      "",
-      "Accuracy: do not invent facts; mark uncertainty inside thinking bullets.",
+      "Be accurate; note uncertainty briefly if it matters.",
     ].join("\n");
   }
 
@@ -83,18 +73,15 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
       "## Stage 1 — private reasoning only",
       "",
       "Output contract:",
-      `1. Reply MUST be only ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
-      `2. After ${THINKING_CLOSE_TAG} output nothing.`,
+      `1. Reply with only ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
+      `2. Nothing after the closing tag.`,
       "",
-      "Thinking template (mandatory — short bullets, not prose):",
-      THINKING_BULLET_TEMPLATE,
+      "Inside thinking: a brief, natural internal monologue (2–4 sentences).",
+      "You may wonder aloud, sanity-check, or outline approach — plain language only.",
+      "No labeled sections (Task/Unknowns/Plan), no bullet checklist, no emoji.",
+      "Do not write the user-facing reply here (no Hello…, no full paragraphs they would read).",
       "",
-      "Forbidden inside thinking:",
-      "- Any sentence you would send to the user (greetings, apologies, full answers).",
-      "- Platform marketing or 'I am an AI assistant…' identity scripts.",
-      "- Repeating stage 2 wording; only plan and checks.",
-      "",
-      "Accuracy: separate facts vs assumptions in bullets; note what you still need to verify.",
+      "Accuracy: separate facts from guesses when it matters.",
     ].join("\n");
   }
 
@@ -113,10 +100,10 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
 
 export function getThinkingModeUserSuffix(stage: ThinkingStage): string {
   if (stage === "combined") {
-    return `\n\n[Reasoning mode] Use thinking bullets then your answer in one message.`;
+    return `\n\n[Reasoning mode] Brief ${THINKING_OPEN_TAG} note, then your answer.`;
   }
   if (stage === "thinking") {
-    return `\n\n[Reasoning mode — stage 1] Bullets only inside ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`;
+    return `\n\n[Reasoning mode — stage 1] Short private thinking in ${THINKING_OPEN_TAG} only.`;
   }
   return `\n\n[Reasoning mode — stage 2] Final answer only.`;
 }
@@ -126,7 +113,7 @@ export function getStage2ContinuationUserPrompt(): string {
     "Write the final answer for the user now.",
     "",
     "Rules:",
-    "- Do not repeat the reasoning bullets or paste the stage-1 trace.",
+    "- Do not repeat the reasoning trace verbatim.",
     "- Do not open with a platform pitch unless they asked who you are.",
     "- Use markdown when it helps (lists, code blocks).",
   ].join("\n");
@@ -157,16 +144,27 @@ export function looksLikeUserFacingProse(text: string): boolean {
   return firstPerson >= 2 && t.length > 70;
 }
 
-/** Replace draft answers smuggled into the thinking panel with a short plan stub. */
+const RIGID_THINKING_LABEL =
+  /^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:/im;
+
+/** Light cleanup for display (keeps normal prose thinking intact). */
 export function polishThinkingDisplayContent(raw: string): string {
-  const t = stripPromptLeakage(raw.trim());
+  let t = stripPromptLeakage(raw.trim());
   if (!t) return t;
-  if (!looksLikeUserFacingProse(t)) return t;
-  return [
-    "- Task: interpret the user's message",
-    "- Self-check: what do they actually need?",
-    "- Plan: reply concisely in stage 2 (no identity script unless asked)",
-  ].join("\n");
+
+  if (RIGID_THINKING_LABEL.test(t)) {
+    t = t
+      .replace(/^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:\s*/gim, "")
+      .replace(/\n{2,}/g, " ")
+      .trim();
+    if (t.length > 220) t = `${t.slice(0, 217).trim()}…`;
+    return t || "Considering the request.";
+  }
+
+  if (looksLikeUserFacingProse(t)) {
+    return "Drafted the reply in reasoning by mistake — showing answer below.";
+  }
+  return t;
 }
 
 function wordJaccardSimilarity(a: string, b: string): number {
@@ -205,7 +203,7 @@ export function repairDuplicateThinkingAndAnswer(parts: {
   const betterMain = main.length >= think.length ? main : think;
   return {
     thinkingContent: polishThinkingDisplayContent(
-      "- Task: answered above\n- Note: reasoning overlapped the reply; showing plan only.",
+      "Reasoning overlapped the answer; condensed for display.",
     ),
     mainResponse: betterMain,
   };
@@ -247,7 +245,7 @@ export function repairSwappedThinkingAnswer(parts: {
 export function normalizeThinkingStage1Output(raw: string): string {
   const text = stripPromptLeakage(raw.trim());
   if (!text) {
-    return `${THINKING_OPEN_TAG}\n- Task: (missing)\n- Plan: respond carefully\n${THINKING_CLOSE_TAG}`;
+    return `${THINKING_OPEN_TAG}\n(No reasoning returned.)\n${THINKING_CLOSE_TAG}`;
   }
 
   const openMatch = text.match(
