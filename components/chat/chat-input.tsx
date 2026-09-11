@@ -212,23 +212,20 @@ export function ChatInput({
             }}
           />
 
-          <div className="flex min-w-0 items-center gap-1.5 px-2 pb-2 pt-0 sm:gap-2 sm:px-3 sm:pb-3">
-            <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overscroll-x-contain scrollbar-none [-webkit-overflow-scrolling:touch] sm:gap-1">
-              {showComposerModel && (
-                <>
-                  <ModelSelector
-                    value={model}
-                    onValueChange={onModelChange}
-                    modelStorageKey={modelStorageKey}
-                    thinkingEnabled={isThinking}
-                    onThinkingChange={onThinkingChange}
-                    showModelList={showModelSelector && !thinkingMenuOnly}
-                    triggerVariant="compact"
-                  />
-                  <div className="mx-0.5 h-4 w-px shrink-0 bg-border/50" />
-                </>
-              )}
+          <div className="flex min-w-0 items-center gap-1 px-2 pb-2 pt-0 sm:gap-2 sm:px-3 sm:pb-3">
+            {showComposerModel && (
+              <ModelSelector
+                value={model}
+                onValueChange={onModelChange}
+                modelStorageKey={modelStorageKey}
+                thinkingEnabled={isThinking}
+                onThinkingChange={onThinkingChange}
+                showModelList={showModelSelector && !thinkingMenuOnly}
+                triggerVariant="compact"
+              />
+            )}
 
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 overflow-x-auto overscroll-x-contain scrollbar-none [-webkit-overflow-scrolling:touch] sm:justify-start sm:gap-1">
               <input
                 type="file"
                 multiple

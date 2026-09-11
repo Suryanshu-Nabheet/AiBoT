@@ -201,8 +201,7 @@ export const en = {
   "model.platform": "Platform Models",
   "model.external": "External Models",
   "model.thinkingPower": "Thinking",
-  "model.thinkingHint": "Two-step reasoning · more accurate, slower",
-  "model.thinkingMenu": "Model & thinking",
+  "model.thinkingMenu": "Options",
   "model.thinkingShort": "Think",
   "model.thinkingOffShort": "Fast",
 
