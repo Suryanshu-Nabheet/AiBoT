@@ -25,7 +25,9 @@ export function ChatThreadViewport({
 }: ChatThreadViewportProps) {
   return (
     <div ref={scrollRef} className={cn(CHAT_THREAD_SCROLL_CLASS, className)}>
-      <div className={cn(chatThreadContentWrapClass(variant), contentClassName)}>
+      <div
+        className={cn(chatThreadContentWrapClass(variant), contentClassName)}
+      >
         {children}
       </div>
     </div>

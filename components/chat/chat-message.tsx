@@ -133,7 +133,10 @@ export const ChatMessage = memo(
     });
 
     useEffect(() => {
-      if (userToggledThinkingRef.current || didAutoCollapseThinkingRef.current) {
+      if (
+        userToggledThinkingRef.current ||
+        didAutoCollapseThinkingRef.current
+      ) {
         return;
       }
       if (hasClosingThinkingTag && mainResponse?.trim()) {
@@ -319,11 +322,7 @@ export const ChatMessage = memo(
         {message.isError &&
           message.errorType === "rate_limit" &&
           onModelSelect && (
-            <div
-              className={cn(
-                shellPadding,
-              )}
-            >
+            <div className={cn(shellPadding)}>
               <div className={innerWidth[layout]}>
                 <div className="flex flex-col gap-2">
                   <p className="ml-1 text-xs font-medium text-muted-foreground">

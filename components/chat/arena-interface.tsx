@@ -224,7 +224,12 @@ export default function ArenaInterface({
   const handleStopArena = useCallback(() => {
     if (leftChat.isLoading) leftChat.stopHelpers.stop();
     if (rightChat.isLoading) rightChat.stopHelpers.stop();
-  }, [leftChat.isLoading, leftChat.stopHelpers, rightChat.isLoading, rightChat.stopHelpers]);
+  }, [
+    leftChat.isLoading,
+    leftChat.stopHelpers,
+    rightChat.isLoading,
+    rightChat.stopHelpers,
+  ]);
 
   const handleSpeech = useCallback(() => {
     if (isListening && recognitionRef.current) {
