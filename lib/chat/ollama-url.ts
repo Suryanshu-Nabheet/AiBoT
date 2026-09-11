@@ -43,37 +43,78 @@ export function ollamaBaseCandidates(preferredRaw: string): string[] {
   });
 }
 
-/** Browser fetch to the user's machine (HTTPS sites need local address space). */
+/** Browser fetch to the user's machine (HTTPS may need local address space). */
 export function fetchOllama(
   url: string,
   init?: RequestInit,
+  useLocalAddressSpace = true,
 ): Promise<Response> {
   const requestInit: LocalNetworkRequestInit = {
     ...init,
     mode: init?.mode ?? "cors",
     cache: init?.cache ?? "no-store",
   };
-  if (typeof window !== "undefined" && window.isSecureContext) {
+  if (
+    useLocalAddressSpace &&
+    typeof window !== "undefined" &&
+    window.isSecureContext
+  ) {
     requestInit.targetAddressSpace = "local";
   }
   return fetch(url, requestInit);
 }
 
+export type OllamaTagsProbeResult =
+  | { ok: true; models: unknown[]; resolvedBase: string }
+  | { ok: false; error: string };
+
+export async function probeOllamaTags(
+  preferredBase: string,
+): Promise<OllamaTagsProbeResult> {
+  const errors: string[] = [];
+  const secure = typeof window !== "undefined" && window.isSecureContext;
+  const localModes = secure ? [true, false] : [false];
+
+  for (const base of ollamaBaseCandidates(preferredBase)) {
+    for (const useLocal of localModes) {
+      const label = `${base}${useLocal ? " (local)" : ""}`;
+      try {
+        const res = await fetchOllama(
+          `${base}/api/tags`,
+          { method: "GET" },
+          useLocal,
+        );
+        if (!res.ok) {
+          errors.push(`${label}: HTTP ${res.status}`);
+          continue;
+        }
+        const data = await res.json();
+        const models = Array.isArray(data?.models) ? data.models : [];
+        return { ok: true, models, resolvedBase: base };
+      } catch (err) {
+        errors.push(
+          `${label}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    error:
+      errors.length > 0
+        ? errors.join(" · ")
+        : "Could not reach Ollama on this device.",
+  };
+}
+
+/** @deprecated Use probeOllamaTags */
 export async function fetchOllamaTags(
   preferredBase: string,
 ): Promise<{ models: unknown[]; resolvedBase: string } | null> {
-  for (const base of ollamaBaseCandidates(preferredBase)) {
-    try {
-      const res = await fetchOllama(`${base}/api/tags`, { method: "GET" });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const models = Array.isArray(data?.models) ? data.models : [];
-      return { models, resolvedBase: base };
-    } catch {
-      /* try next candidate */
-    }
-  }
-  return null;
+  const result = await probeOllamaTags(preferredBase);
+  if (!result.ok) return null;
+  return { models: result.models, resolvedBase: result.resolvedBase };
 }
 
 export async function postOllamaChat(
@@ -81,22 +122,33 @@ export async function postOllamaChat(
   body: unknown,
   signal?: AbortSignal,
 ): Promise<Response> {
+  const secure = typeof window !== "undefined" && window.isSecureContext;
+  const localModes = secure ? [true, false] : [false];
+
   let lastError: unknown;
   let lastResponse: Response | null = null;
+
   for (const base of ollamaBaseCandidates(preferredBase)) {
-    try {
-      const res = await fetchOllama(`${base}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal,
-      });
-      if (res.ok) return res;
-      lastResponse = res;
-    } catch (err) {
-      lastError = err;
+    for (const useLocal of localModes) {
+      try {
+        const res = await fetchOllama(
+          `${base}/api/chat`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal,
+          },
+          useLocal,
+        );
+        if (res.ok) return res;
+        lastResponse = res;
+      } catch (err) {
+        lastError = err;
+      }
     }
   }
+
   if (lastResponse) return lastResponse;
   throw lastError ?? new Error("Ollama unreachable");
 }

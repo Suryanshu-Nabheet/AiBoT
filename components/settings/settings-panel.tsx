@@ -7,7 +7,13 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -40,7 +46,7 @@ import { LOCALES, type Locale } from "@/lib/i18n";
 import { getNotificationPermission } from "@/lib/desktop-notifications";
 import packageJson from "@/package.json";
 import { BrandIcon } from "@/components/ui/brand-icon";
-import { fetchOllamaTags, normalizeOllamaUrl } from "@/lib/chat/ollama-url";
+import { normalizeOllamaUrl, probeOllamaTags } from "@/lib/chat/ollama-url";
 
 type SettingsSection =
   | "general"
@@ -125,6 +131,7 @@ export function SettingsPanel() {
     setDesktopNotifications,
     completionSound,
     setCompletionSound,
+    hasLoaded,
   } = useSettings();
 
   const [activeSection, setActiveSection] =
@@ -134,6 +141,7 @@ export function SettingsPanel() {
   );
   const [isScanning, setIsScanning] = useState(false);
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const [ollamaScanDetail, setOllamaScanDetail] = useState<string | null>(null);
   const [selectedOS, setSelectedOS] = useState<"macos" | "windows" | "linux">(
     "macos",
   );
@@ -158,37 +166,64 @@ export function SettingsPanel() {
     }
   }, []);
 
-  const macOllamaOriginsCommand =
-    typeof window !== "undefined" && window.isSecureContext
-      ? `launchctl setenv OLLAMA_ORIGINS "${window.location.origin},*"`
-      : 'launchctl setenv OLLAMA_ORIGINS "*"';
+  const siteOrigin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  const ollamaOriginsValue = siteOrigin ? `${siteOrigin},*` : "*";
 
-  const handleAutoDetect = async () => {
-    setIsScanning(true);
-    setShowTroubleshooter(false);
+  const macOllamaEnvFileCommand = `mkdir -p ~/.ollama && printf '%s\\n' 'OLLAMA_ORIGINS="${ollamaOriginsValue}"' > ~/.ollama/env`;
 
-    const result = await fetchOllamaTags(ollamaUrl);
-    if (result) {
-      setOllamaModels(result.models as typeof ollamaModels);
-      if (result.resolvedBase !== normalizeOllamaUrl(ollamaUrl)) {
-        setOllamaUrl(result.resolvedBase);
-        toast.success(t("localLlm.scan.loopback"));
-      } else if (result.models.length > 0) {
-        toast.success(
-          t("localLlm.scan.success", { count: result.models.length }),
-        );
+  const runOllamaScan = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      setIsScanning(true);
+      if (!silent) setShowTroubleshooter(false);
+      setOllamaScanDetail(null);
+
+      const result = await probeOllamaTags(ollamaUrl);
+      if (result.ok) {
+        setOllamaModels(result.models as typeof ollamaModels);
+        const usedLoopback =
+          result.resolvedBase !== normalizeOllamaUrl(ollamaUrl);
+        if (usedLoopback) setOllamaUrl(result.resolvedBase);
+        setOllamaStatus("connected");
+        setShowTroubleshooter(false);
+        if (!silent) {
+          if (usedLoopback) {
+            toast.success(t("localLlm.scan.loopback"));
+          } else if (result.models.length > 0) {
+            toast.success(
+              t("localLlm.scan.success", { count: result.models.length }),
+            );
+          } else {
+            toast.warning(t("localLlm.scan.empty"));
+          }
+        }
       } else {
-        toast.warning(t("localLlm.scan.empty"));
+        console.warn("Ollama scan failed:", result.error);
+        setOllamaStatus("disconnected");
+        setOllamaScanDetail(result.error);
+        setShowTroubleshooter(true);
+        if (!silent) toast.error(t("localLlm.scan.fail"));
       }
-      setOllamaStatus("connected");
-    } else {
-      console.warn("Ollama scan failed for all loopback candidates");
-      setOllamaStatus("disconnected");
-      setShowTroubleshooter(true);
-      toast.error(t("localLlm.scan.fail"));
+      setIsScanning(false);
+    },
+    [ollamaUrl, setOllamaModels, setOllamaStatus, setOllamaUrl, t],
+  );
+
+  const handleAutoDetect = () => runOllamaScan();
+
+  const didProbeLocalLlmRef = useRef(false);
+  useEffect(() => {
+    if (
+      !hasLoaded ||
+      activeSection !== "local-llm" ||
+      didProbeLocalLlmRef.current
+    ) {
+      return;
     }
-    setIsScanning(false);
-  };
+    didProbeLocalLlmRef.current = true;
+    void runOllamaScan({ silent: true });
+  }, [activeSection, hasLoaded, runOllamaScan]);
 
   const handleVerifyKey = async (provider: keyof ApiKeys, key: string) => {
     if (!key) return;
@@ -716,6 +751,11 @@ export function SettingsPanel() {
                 </div>
 
                 <div className="border-t border-border/40 pt-5 space-y-4">
+                  {ollamaScanDetail && (
+                    <p className="text-[10px] font-mono text-red-400/90 break-all leading-relaxed">
+                      {ollamaScanDetail}
+                    </p>
+                  )}
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       {t("localLlm.diagnostics.os")}
@@ -746,30 +786,31 @@ export function SettingsPanel() {
                           from your menu bar icon.
                         </p>
                         <p>
-                          2. Open your <strong>Terminal</strong> app and paste
-                          this command to allow your browser to communicate with
-                          the local server:
+                          2. In <strong>Terminal</strong>, write CORS settings
+                          for the menu-bar app (launchctl alone often does not
+                          apply to Ollama.app):
                         </p>
-                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
+                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between gap-2">
                           <span className="break-all">
-                            {macOllamaOriginsCommand}
+                            {macOllamaEnvFileCommand}
                           </span>
                           <button
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(
-                                macOllamaOriginsCommand,
+                                macOllamaEnvFileCommand,
                               );
                               toast.success(t("localLlm.copied"));
                             }}
-                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors shrink-0"
                           >
                             <Copy className="size-3.5" />
                           </button>
                         </div>
                         <p>
-                          3. Restart the Ollama app by opening it from your
-                          Applications folder or running:
+                          3. Quit Ollama, then restart (or run{" "}
+                          <code className="text-foreground">pkill ollama</code>{" "}
+                          if needed):
                         </p>
                         <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
                           <span>open -a Ollama</span>
@@ -798,15 +839,14 @@ export function SettingsPanel() {
                           command to configure user variables:
                         </p>
                         <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
-                          <span>
-                            {
-                              '[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "*", "User")'
-                            }
+                          <span className="break-all">
+                            {`[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "${ollamaOriginsValue}", "User")`}
                           </span>
                           <button
+                            type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(
-                                '[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "*", "User")',
+                                `[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "${ollamaOriginsValue}", "User")`,
                               );
                               toast.success(t("localLlm.copied"));
                             }}

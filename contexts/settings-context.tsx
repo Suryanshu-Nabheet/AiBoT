@@ -142,12 +142,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setOllamaModelsState(JSON.parse(storedOllamaModels));
 
       const storedStatus = localStorage.getItem("aibot_ollama_status");
-      if (
-        storedStatus === "connected" ||
-        storedStatus === "disconnected" ||
-        storedStatus === "unknown"
-      ) {
+      if (storedStatus === "connected" || storedStatus === "disconnected") {
         setOllamaStatus(storedStatus);
+      } else {
+        setOllamaStatus("unknown");
       }
 
       const storedModels = localStorage.getItem("aibot_enabled_models");
