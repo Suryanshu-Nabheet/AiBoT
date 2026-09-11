@@ -5,14 +5,18 @@
  * See LICENSE file for details
  */
 
-import React from "react";
 import ChatInterface from "@/components/chat/chat-interface";
+import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
 
 const ChatPage = () => {
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-      <ChatInterface />
-    </div>
+    <PageShell>
+      <div className="relative min-h-0 flex-1">
+        <PageViewSlot>
+          <ChatInterface />
+        </PageViewSlot>
+      </div>
+    </PageShell>
   );
 };
 

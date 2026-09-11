@@ -58,11 +58,11 @@ export function AIVoiceInput({
   const textColor = "text-blue-700";
 
   return (
-    <div className="w-full py-4 flex flex-col items-center justify-center">
-      <div className="relative max-w-xl w-full mx-auto flex items-center flex-col gap-4">
+    <div className="flex w-full max-w-full flex-col items-center justify-center px-2 py-2 sm:py-4">
+      <div className="relative mx-auto flex w-full max-w-xl flex-col items-center gap-4">
         <button
           className={cn(
-            "group w-24 h-24 rounded-2xl flex items-center justify-center transition-all z-50 shadow-sm",
+            "group flex size-20 sm:size-24 items-center justify-center rounded-2xl transition-all z-50 shadow-sm",
             isActive
               ? "bg-transparent cursor-default shadow-none"
               : "bg-white hover:bg-slate-50 border border-slate-200 cursor-pointer shadow-md",

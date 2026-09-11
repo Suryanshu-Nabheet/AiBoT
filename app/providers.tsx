@@ -10,22 +10,30 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ExecutionProvider } from "@/contexts/execution-context";
+import { useVisualViewportHeight } from "@/hooks/use-visual-viewport-height";
 
 const queryClient = new QueryClient();
+
+function ViewportHeightSync({ children }: { children: React.ReactNode }) {
+  useVisualViewportHeight();
+  return <>{children}</>;
+}
 
 export const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ExecutionProvider>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
-      </ExecutionProvider>
+      <ViewportHeightSync>
+        <ExecutionProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </ExecutionProvider>
+      </ViewportHeightSync>
     </QueryClientProvider>
   );
 };

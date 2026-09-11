@@ -24,6 +24,7 @@ import { Message, Role } from "@/lib/types";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ThinkingOverlay } from "@/components/ui/thinking-overlay";
+import { PageShell } from "@/components/layout/page-shell";
 
 const EMPTY_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -273,13 +274,13 @@ Then provide the COMPLETE HTML code.`;
   };
 
   return (
-    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-y-auto bg-background xl:flex-row xl:overflow-hidden">
+    <PageShell className="bg-background xl:flex-row">
       {/* Left: Chat Interface - 50% on desktop */}
-      <div className="flex min-h-0 w-full flex-col border-b bg-background xl:min-h-0 xl:w-1/2 xl:border-b-0 xl:border-r">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col border-b bg-background basis-0 xl:h-full xl:w-1/2 xl:flex-none xl:border-b-0 xl:border-r">
         {/* Header */}
         <div className="p-3 sm:p-4 border-b flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               <Code className="size-6 text-blue-600" weight="bold" />
               <span>
                 Ai <span className="text-blue-600">Coder</span>
@@ -292,12 +293,7 @@ Then provide the COMPLETE HTML code.`;
         </div>
 
         {/* Chat Messages */}
-        <div
-          className={cn(
-            "overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 xl:flex-1",
-            messages.length > 0 && "min-h-[8rem] flex-1",
-          )}
-        >
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-3 sm:space-y-4">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -321,10 +317,10 @@ Then provide the COMPLETE HTML code.`;
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t bg-muted/10">
+        <div className="shrink-0 border-t bg-muted/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
           <div className="relative">
             <textarea
-              className="w-full min-h-[100px] p-3 pr-12 rounded-lg border focus:ring-2 focus:ring-blue-500/20 outline-none resize-none bg-background text-sm"
+              className="w-full min-h-[88px] max-h-[min(30dvh,200px)] resize-none rounded-lg border bg-background p-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 sm:min-h-[100px]"
               placeholder="Describe your website (e.g., 'A landing page for a coffee shop with menu and contact form')"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -360,9 +356,9 @@ Then provide the COMPLETE HTML code.`;
       </div>
 
       {/* Right: Code/Preview Area */}
-      <div className="flex min-h-[58dvh] w-full flex-1 flex-col overflow-hidden bg-background xl:min-h-0 xl:w-1/2">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background basis-0 xl:h-full xl:w-1/2 xl:flex-none">
         {/* Tabs */}
-        <div className="flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b bg-background/50 px-2 backdrop-blur-sm sm:px-3">
+        <div className="flex h-12 shrink-0 items-center gap-1 overflow-x-auto overscroll-x-contain border-b bg-background/50 px-2 backdrop-blur-sm scrollbar-none sm:px-3">
           <button
             onClick={() => setActiveTab("code")}
             className={cn(
@@ -487,6 +483,6 @@ Then provide the COMPLETE HTML code.`;
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

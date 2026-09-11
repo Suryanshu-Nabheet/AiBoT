@@ -8,11 +8,16 @@
 "use client";
 
 import { SettingsPanel } from "@/components/settings/settings-panel";
+import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
 
 export default function SettingsPage() {
   return (
-    <div className="h-full min-h-0 w-full overflow-hidden">
-      <SettingsPanel />
-    </div>
+    <PageShell>
+      <div className="relative min-h-0 flex-1">
+        <PageViewSlot>
+          <SettingsPanel />
+        </PageViewSlot>
+      </div>
+    </PageShell>
   );
 }

@@ -10,56 +10,66 @@
 import ChatInterface from "@/components/chat/chat-interface";
 import ArenaInterface from "@/components/chat/arena-interface";
 import { SettingsPanel } from "@/components/settings/settings-panel";
-import { ViewMode } from "@/components/home/settings-toggle";
-import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { useViewMode } from "@/contexts/view-mode-context";
+import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
+
+const viewMotion = {
+  initial: { opacity: 0, scale: 0.98 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.98 },
+  transition: { duration: 0.2 },
+};
+
+const settingsMotion = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 10 },
+  transition: { duration: 0.3, ease: "easeOut" as const },
+};
 
 export default function HomePage() {
   const { viewMode } = useViewMode();
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
-      <div className="relative min-h-0 w-full flex-1">
-        <AnimatePresence mode="popLayout">
+    <PageShell>
+      <div className="relative min-h-0 flex-1">
+        <AnimatePresence mode="wait" initial={false}>
           {viewMode === "direct" && (
             <motion.div
               key="direct"
-              className="h-full w-full"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.2 }}
+              {...viewMotion}
+              className="absolute inset-0"
             >
-              <ChatInterface storageKey="directModel" />
+              <PageViewSlot>
+                <ChatInterface storageKey="directModel" />
+              </PageViewSlot>
             </motion.div>
           )}
           {viewMode === "side-by-side" && (
             <motion.div
               key="side-by-side"
-              className="h-full w-full"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.2 }}
+              {...viewMotion}
+              className="absolute inset-0"
             >
-              <ArenaInterface />
+              <PageViewSlot>
+                <ArenaInterface />
+              </PageViewSlot>
             </motion.div>
           )}
           {viewMode === "settings" && (
             <motion.div
               key="settings"
-              className="h-full w-full"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
+              {...settingsMotion}
+              className="absolute inset-0"
             >
-              <SettingsPanel />
+              <PageViewSlot>
+                <SettingsPanel />
+              </PageViewSlot>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </PageShell>
   );
 }

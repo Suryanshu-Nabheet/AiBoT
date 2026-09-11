@@ -8,13 +8,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ChatCircle, HouseLine, WarningCircle } from "@phosphor-icons/react";
+import { ChatCircle, HouseLine } from "@phosphor-icons/react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 export default function NotFound() {
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background px-6">
+    <div className="relative flex min-h-app w-full max-w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-background px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-6">
       {/* Background decoration */}
       <div className="absolute inset-0 z-0">
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[120px] size-[500px]" />
@@ -27,7 +27,7 @@ export default function NotFound() {
         className="relative z-10 flex flex-col items-center max-w-lg w-full text-center"
       >
         {/* 404 Heading - now a regular heading */}
-        <h1 className="text-8xl font-black tracking-tighter text-foreground mb-4 md:text-9xl">
+        <h1 className="mb-4 text-7xl font-black tracking-tighter text-foreground sm:text-8xl md:text-9xl">
           404
         </h1>
 

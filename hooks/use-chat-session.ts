@@ -17,7 +17,9 @@ import { useExecutionContext } from "@/contexts/execution-context";
 import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import {
-  getThinkingModeUserSuffix,
+  buildChatMessagesForThinkingStage,
+  buildThinkingSystemAddon,
+  normalizeThinkingStage1Output,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -377,8 +379,10 @@ export function useChatSession({
 
     try {
       const isOllama = model.startsWith("ollama/");
-      const stage1Content = `${apiContent}${getThinkingModeUserSuffix("thinking")}`;
-      const stage2Content = `${apiContent}${getThinkingModeUserSuffix("final")}`;
+      const historyForThinking = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
@@ -394,20 +398,23 @@ export function useChatSession({
 
         const baseSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}${localeReplyDirective(locale)}`;
 
-        const stage1SystemPrompt = `${baseSystemPrompt}\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n- Stage 1: thinking-only.\n- Your response MUST start with <thinking> with no characters before it.\n- Put all reasoning inside <thinking>...</thinking>.\n- You MUST NOT output any final answer content outside of </thinking> for this stage.\n- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
-
-        const stage2SystemPrompt = `${baseSystemPrompt}\n\nIMPORTANT: Stage 2: final-only.\n- Do not include any <thinking>...</thinking> or related tags.\n- Output ONLY the final answer.`;
-
-        const buildOllamaPayload = (stage: ThinkingStage, content: string) => {
-          const systemPrompt =
-            stage === "thinking" ? stage1SystemPrompt : stage2SystemPrompt;
+        const buildOllamaPayload = (
+          stage: ThinkingStage,
+          priorReasoning?: string,
+        ) => {
+          const systemPrompt = `${baseSystemPrompt}\n\n${buildThinkingSystemAddon(stage)}`;
+          const chatMessages = buildChatMessagesForThinkingStage({
+            history: historyForThinking,
+            userContent: apiContent,
+            stage,
+            priorReasoning,
+          });
           return {
             model: ollamaModelName,
             messages: [
               { role: "system", content: systemPrompt },
-              ...messages,
-              { ...userMessage, content },
-            ].map((m) => ({ role: m.role, content: m.content })),
+              ...chatMessages,
+            ],
             stream: true,
           };
         };
@@ -428,7 +435,7 @@ export function useChatSession({
           ]);
 
           // Stage 1: thinking-only
-          const chatPayload1 = buildOllamaPayload("thinking", stage1Content);
+          const chatPayload1 = buildOllamaPayload("thinking");
           let res1: Response;
           try {
             res1 = await fetch(`${targetUrl}/api/chat`, {
@@ -470,14 +477,23 @@ export function useChatSession({
             return;
           }
 
-          const stage1Final = await processStream(res1, true, true, {
+          const stage1Raw = await processStream(res1, true, true, {
             finalize: false,
             tempId,
             contentPrefix: "",
           });
+          const stage1Final = normalizeThinkingStage1Output(stage1Raw);
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? { ...m, content: stage1Final, isThinkingRequested: true }
+                : m,
+            ),
+          );
 
           // Stage 2: final-only (append to same message)
-          const chatPayload2 = buildOllamaPayload("final", stage2Content);
+          const chatPayload2 = buildOllamaPayload("final", stage1Final);
           let res2: Response;
           try {
             res2 = await fetch(`${targetUrl}/api/chat`, {
@@ -600,17 +616,19 @@ export function useChatSession({
         ]);
 
         // Stage 1: thinking-only
+        const stage1Messages = buildChatMessagesForThinkingStage({
+          history: historyForThinking,
+          userContent: apiContent,
+          stage: "thinking",
+        });
+
         const res1 = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [
-              ...messages,
-              { ...userMessage, content: stage1Content },
-            ].map((m) => ({ role: m.role, content: m.content })),
+            messages: stage1Messages,
             model,
             conversationId,
-            isThinking: true,
             thinkingStage: "thinking",
             customKeys: apiKeys,
             locale,
@@ -633,10 +651,26 @@ export function useChatSession({
           return;
         }
 
-        const stage1Final = await processStream(res1, true, false, {
+        const stage1Raw = await processStream(res1, true, false, {
           finalize: false,
           tempId,
           contentPrefix: "",
+        });
+        const stage1Final = normalizeThinkingStage1Output(stage1Raw);
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? { ...m, content: stage1Final, isThinkingRequested: true }
+              : m,
+          ),
+        );
+
+        const stage2Messages = buildChatMessagesForThinkingStage({
+          history: historyForThinking,
+          userContent: apiContent,
+          stage: "final",
+          priorReasoning: stage1Final,
         });
 
         // Stage 2: final-only (append to same message)
@@ -644,14 +678,11 @@ export function useChatSession({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [
-              ...messages,
-              { ...userMessage, content: stage2Content },
-            ].map((m) => ({ role: m.role, content: m.content })),
+            messages: stage2Messages,
             model,
             conversationId,
-            isThinking: false,
             thinkingStage: "final",
+            priorReasoning: stage1Final,
             customKeys: apiKeys,
             locale,
           }),

@@ -37,6 +37,9 @@ import { useSmoothTyping } from "@/hooks/use-smooth-typing";
 import { Message, Role } from "@/lib/types";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useTranslation } from "@/hooks/use-translation";
+import { PageShell } from "@/components/layout/page-shell";
+import { parseAssistantThinkingContent } from "@/lib/chat/thinking-mode";
+import { useThinkingMode } from "@/hooks/use-thinking-mode";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -84,86 +87,16 @@ const MessageComponent = memo(
       message.shouldAnimate,
     );
 
-    // Parsing Thinking blocks - Only for Agent responses
-    let thinkingContent = "";
-    let mainResponse = isUser ? message.content : displayedContent;
-    let hasThinkingTag = false;
-    let hasClosingThinkingTag = false;
-
-    if (!isUser) {
-      const rawContent = displayedContent; // Use displayedContent to maintain typing animation
-      const isThinkingMode = message.isThinkingRequested;
-
-      const transitionRegex =
-        /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
-      const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
-      const closingThinkingRegex =
-        /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
-      hasClosingThinkingTag = closingThinkingRegex.test(rawContent);
-
-      const transitionMatch =
-        rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
-
-      if (transitionMatch) {
-        hasThinkingTag = true;
-        const splitMarker = transitionMatch[0];
-        const parts = rawContent.split(splitMarker);
-        // Extract reasoning (strip opening tags)
-        thinkingContent = parts[0]
-          .replace(
-            /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi,
-            "",
-          )
-          .trim();
-        // Extract main response (strip any remaining hallucinated tags)
-        mainResponse = parts
-          .slice(1)
-          .join(splitMarker)
-          .replace(/<\/?[^>]+(>|$)/g, "")
-          .trim();
-      } else {
-        const anyOpenTag =
-          /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
-        const openMatch = rawContent.match(anyOpenTag);
-
-        if (openMatch) {
-          hasThinkingTag = true;
-          // If we have an opening tag but no closing tag yet, everything after it is thinking
-          thinkingContent = rawContent.split(openMatch[0])[1]?.trim() || "";
-          mainResponse = "";
-        } else {
-          // NO TAGS FOUND:
-          // Even if thinking was requested, if the model isn't providing tags,
-          // don't trap the answer in the reasoning bar.
-          // Treat the entire thing as the main response.
-          thinkingContent = "";
-          mainResponse = rawContent;
-        }
-      }
-
-      // Cleanup common prompt leakage / hallucinations
-      const leakagePatterns = [
-        /\[CRITICAL SYSTEM OVERRIDE.*?\]/gi,
-        /NUCLEAR REASONING LOCK/gi,
-        /FAILURE TO COMPLY.*?DO NOT IGNORE THIS\./gi,
-        /\[MANDATORY: START WITH.*?\]/gi,
-        /The response must now begin with and end with/gi,
-        /IMPORTANT:\s*When you respond[^\n]*/gi,
-        /All reasoning MUST be inside <thinking>\.\.\.<\/thinking>\.?/gi,
-        /After <\/thinking>, provide the final answer[^\n]*/gi,
-      ];
-
-      leakagePatterns.forEach((pattern) => {
-        mainResponse = mainResponse.replace(pattern, "").trim();
-        thinkingContent = thinkingContent.replace(pattern, "").trim();
-      });
-
-      // Stage 1 (thinking-only) must never render a visible "final response"
-      // alongside the reasoning panel.
-      if (message.isThinkingRequested && hasThinkingTag) {
-        mainResponse = "";
-      }
-    }
+    const {
+      thinkingContent,
+      mainResponse,
+      hasThinkingTag,
+      hasClosingThinkingTag,
+      hideAnswerPanel,
+    } = parseAssistantThinkingContent(
+      isUser ? message.content : displayedContent,
+      { isUser, isThinkingRequested: message.isThinkingRequested },
+    );
 
     const hasThinkingPanel = !isUser && (hasThinkingTag || thinkingContent);
     const compactAgentContentClass = hasThinkingPanel
@@ -221,7 +154,7 @@ const MessageComponent = memo(
             </AnimatePresence>
           </div>
         )}
-        {!isUser && !!message.isThinkingRequested && hasThinkingTag ? null : (
+        {!isUser && hideAnswerPanel ? null : (
           <div
             className={cn(
               "text-sm overflow-hidden break-words",
@@ -359,7 +292,8 @@ export default function ArenaInterface({
   >([]);
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [isThinking, setIsThinking] = useState(false);
+  const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
+    useThinkingMode("aibot_arena_thinking_enabled");
 
   const [leftLoadingStatus, setLeftLoadingStatus] = useState(
     "AiBoT is thinking...",
@@ -628,18 +562,19 @@ export default function ArenaInterface({
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-background relative overflow-hidden">
+    <PageShell className="relative bg-background">
       {/* Split Area */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto divide-y divide-border md:flex-row md:overflow-hidden md:divide-x md:divide-y-0">
+      <div className="flex min-h-0 flex-1 flex-col divide-y divide-border overflow-hidden md:flex-row md:divide-x md:divide-y-0">
         {/* LEFT PANEL */}
-        <div className="relative flex min-h-[38dvh] min-w-0 flex-1 flex-col md:min-h-0">
-          <div className="absolute top-2 left-4 z-10">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col basis-0">
+          <div className="absolute top-2 left-2 right-2 z-10 sm:left-4 sm:right-auto">
             <ModelSelector
               value={leftChat.model}
               onValueChange={leftChat.setModel}
+              triggerClassName="h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]"
             />
           </div>
-          <div className="flex-1 overflow-y-auto pt-12 pb-5 scrollbar-thin">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-12 pb-3 scrollbar-thin sm:pb-5">
             {leftChat.messages.map((m, i) => {
               const isLast = i === leftChat.messages.length - 1;
               const isAgentGenerating =
@@ -699,14 +634,15 @@ export default function ArenaInterface({
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="relative flex min-h-[38dvh] min-w-0 flex-1 flex-col md:min-h-0">
-          <div className="absolute top-2 left-4 z-10">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col basis-0">
+          <div className="absolute top-2 left-2 right-2 z-10 sm:left-4 sm:right-auto">
             <ModelSelector
               value={rightChat.model}
               onValueChange={rightChat.setModel}
+              triggerClassName="h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]"
             />
           </div>
-          <div className="flex-1 overflow-y-auto pt-12 pb-5 scrollbar-thin">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-12 pb-3 scrollbar-thin sm:pb-5">
             {rightChat.messages.map((m, i) => {
               const isLast = i === rightChat.messages.length - 1;
               const isAgentGenerating =
@@ -778,8 +714,8 @@ export default function ArenaInterface({
         isEnhancing={isEnhancing}
         onEnhance={handleEnhance}
         isThinking={isThinking}
-        onThinkingToggle={() => setIsThinking((prev) => !prev)}
-        // No Model Selector for Arena
+        onThinkingChange={setIsThinking}
+        thinkingMenuOnly
         showModelSelector={false}
         placeholder={
           isListening
@@ -788,6 +724,6 @@ export default function ArenaInterface({
         }
         className="shrink-0"
       />
-    </div>
+    </PageShell>
   );
 }

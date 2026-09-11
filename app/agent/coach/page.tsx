@@ -21,6 +21,7 @@ import SpeechRecognition, {
 import { AIVoiceInput } from "@/components/ui/ai-voice-input";
 import AITextLoading from "@/components/ui/ai-text-loading";
 import AIVoiceOutput from "@/components/ui/ai-voice-output";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function CoachAgentPage() {
   // State
@@ -188,14 +189,14 @@ export default function CoachAgentPage() {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto bg-background text-foreground font-sans">
+    <PageShell className="relative bg-background font-sans text-foreground">
       {/* Background Accents */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/50 via-background to-background opacity-70 pointer-events-none" />
 
       {/* Top Bar - Minimalist */}
       <div className="relative z-50 flex w-full shrink-0 items-start justify-between p-4 sm:p-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             <SpeakerHigh className="size-6 text-blue-600" weight="bold" />
             <span>
               Ai <span className="text-blue-600">Coach</span>
@@ -220,8 +221,8 @@ export default function CoachAgentPage() {
       </div>
 
       {/* Center - Visualizer & Controls - Fixed Height Container for Alignment */}
-      <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-6 sm:py-10">
-        <div className="flex min-h-[260px] w-full max-w-xl items-center justify-center sm:min-h-[320px]">
+      <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-hidden px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:py-10">
+        <div className="flex min-h-[200px] w-full max-w-xl items-center justify-center sm:min-h-[320px]">
           {/* Center - Visualizer & Controls */}
           <AnimatePresence mode="wait">
             {isProcessing ? (
@@ -284,7 +285,7 @@ export default function CoachAgentPage() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="absolute inset-y-0 right-0 w-full md:w-[400px] bg-background/95 backdrop-blur-xl border-l z-[60] shadow-2xl flex flex-col"
+            className="absolute inset-y-0 right-0 z-[60] flex w-full max-w-full flex-col border-l bg-background/95 shadow-2xl backdrop-blur-xl md:w-[min(400px,100vw)]"
           >
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-semibold text-lg text-foreground">
@@ -298,15 +299,15 @@ export default function CoachAgentPage() {
                 <X className="size-5" />
               </Button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={cn(
                     "flex flex-col gap-1 p-3 rounded-xl text-sm border shadow-sm",
                     msg.role === Role.User
-                      ? "bg-blue-50 border-blue-100 ml-8 text-blue-900"
-                      : "bg-white border-slate-100 mr-8 text-slate-900",
+                      ? "ml-2 border-blue-100 bg-blue-50 text-blue-900 sm:ml-8"
+                      : "mr-2 border-slate-100 bg-white text-slate-900 sm:mr-8",
                   )}
                 >
                   <span className="text-[10px] font-bold opacity-60 uppercase">
@@ -319,6 +320,6 @@ export default function CoachAgentPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageShell>
   );
 }

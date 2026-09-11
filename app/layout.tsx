@@ -23,6 +23,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  viewportFit: "cover",
 };
 
 const font = Plus_Jakarta_Sans({
@@ -47,7 +48,17 @@ export default function RootLayout({
             </SettingsProvider>
           </ViewModeProvider>
         </Providers>
-        <Toaster />
+        <Toaster
+          position="bottom-right"
+          offset={{
+            bottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+            right: "calc(0.75rem + env(safe-area-inset-right, 0px))",
+          }}
+          mobileOffset={{
+            bottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+            right: "calc(0.75rem + env(safe-area-inset-right, 0px))",
+          }}
+        />
       </body>
     </html>
   );

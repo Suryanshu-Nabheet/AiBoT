@@ -27,6 +27,7 @@ import ReactMarkdown from "react-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { Geist_Mono } from "next/font/google";
 import AITextLoading from "@/components/ui/ai-text-loading";
+import { PageShell, PageScrollRegion } from "@/components/layout/page-shell";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -183,12 +184,12 @@ export default function AssignmentSummarizerPage() {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
+    <PageShell className="relative bg-background">
       {/* Background decoration */}
-      <div className="absolute top-0 right-0 -z-10 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 left-0 -z-10 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+      <div className="pointer-events-none absolute top-0 right-0 -z-10 size-[min(500px,90vw)] rounded-full bg-blue-500/5 blur-3xl translate-x-1/2 -translate-y-1/2" />
+      <div className="pointer-events-none absolute bottom-0 left-0 -z-10 size-[min(500px,90vw)] rounded-full bg-cyan-500/5 blur-3xl -translate-x-1/2 translate-y-1/2" />
 
-      <div className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <PageScrollRegion className="mx-auto w-full max-w-5xl p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 lg:p-8">
         <div className="mb-6 text-center sm:mb-10">
           <h1 className="mb-2 flex items-center justify-center gap-2 text-xl font-bold tracking-tight text-foreground sm:mb-3 sm:text-2xl">
             <FileText className="size-6 text-blue-600" weight="bold" />
@@ -276,7 +277,7 @@ export default function AssignmentSummarizerPage() {
             transition={{ delay: 0.1 }}
             className="flex flex-col gap-4"
           >
-            <div className="flex h-full min-h-[300px] flex-col rounded-xl border bg-card p-4 shadow-sm sm:p-6">
+            <div className="flex min-h-[240px] flex-col rounded-xl border bg-card p-4 shadow-sm sm:min-h-[300px] sm:p-6">
               <h3 className="font-semibold text-lg mb-4">
                 How can I help you?
               </h3>
@@ -291,10 +292,10 @@ export default function AssignmentSummarizerPage() {
                   onChange={(e) => setTask(e.target.value)}
                 />
               </div>
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex w-full justify-stretch sm:justify-end">
                 <Button
                   size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25"
+                  className="h-11 w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25 sm:w-auto"
                   onClick={handleSummarize}
                   disabled={isProcessing || files.length === 0}
                 >
@@ -334,7 +335,7 @@ export default function AssignmentSummarizerPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card border rounded-xl p-8 shadow-sm mb-8"
+              className="mb-8 rounded-xl border bg-card p-4 shadow-sm sm:p-8"
             >
               <div className="flex items-center justify-between mb-4 gap-2">
                 <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
@@ -411,7 +412,7 @@ export default function AssignmentSummarizerPage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </div>
+      </PageScrollRegion>
+    </PageShell>
   );
 }

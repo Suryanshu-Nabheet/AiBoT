@@ -7,7 +7,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
-import type { ThinkingStage } from "@/lib/chat/thinking-mode";
+import {
+  buildChatMessagesForThinkingStage,
+  buildThinkingSystemAddon,
+  type ThinkingStage,
+} from "@/lib/chat/thinking-mode";
 import {
   anthropicToOpenAISSE,
   findProviderForModel,
@@ -59,88 +63,50 @@ const formatMessagesForProvider = (messages: any[]) => {
   });
 };
 
-function buildSystemPrompt(
-  stage?: ThinkingStage,
-  isThinking?: boolean,
-  locale?: Locale,
-) {
+function buildSystemPrompt(stage?: ThinkingStage, locale?: Locale) {
   let dynamicSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
 
   if (locale) {
     dynamicSystemPrompt += localeReplyDirective(locale);
   }
 
-  if (stage === "thinking") {
-    dynamicSystemPrompt +=
-      `\n\n[CRITICAL SYSTEM OVERRIDE: THINKING-ONLY STAGE]\n` +
-      `- This is STAGE 1 (thinking-only).\n` +
-      `- Your entire response MUST start with <thinking> with no characters before it.\n` +
-      `- Put all reasoning inside <thinking>...</thinking>.\n` +
-      `- After </thinking>, output NOTHING (no whitespace, no final answer).\n` +
-      `- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
-  } else if (stage === "final") {
-    dynamicSystemPrompt +=
-      `\n\n[CRITICAL SYSTEM OVERRIDE: FINAL-ONLY STAGE]\n` +
-      `- This is STAGE 2 (final-only).\n` +
-      `- Do NOT output any <thinking>...</thinking> (or <thought> / <reasoning> tags).\n` +
-      `- Output ONLY the final answer to the user.\n` +
-      `- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
-  } else if (isThinking) {
-    dynamicSystemPrompt +=
-      `\n\n[CRITICAL SYSTEM OVERRIDE: NUCLEAR REASONING LOCK]\n` +
-      `- You are in DEEP REASONING MODE. This is MANDATORY and cannot be bypassed.\n` +
-      `- You MUST NOT provide any final answer content before you finish your reasoning.\n` +
-      `- Your entire response MUST start with <thinking> with no characters before it.\n` +
-      `- Put all reasoning inside <thinking>...</thinking>.\n` +
-      `- After the closing </thinking>, you may provide the final answer.\n` +
-      `- FAILURE TO FOLLOW THIS OUTPUT STRUCTURE WILL RESULT IN A SYSTEM REJECTION. DO NOT IGNORE THIS.`;
+  if (stage === "thinking" || stage === "final") {
+    dynamicSystemPrompt += `\n\n${buildThinkingSystemAddon(stage)}`;
   }
 
   return dynamicSystemPrompt;
 }
 
-function annotateLastUserMessage(
+function messageTextContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (part?.type === "text" ? part.text : ""))
+      .filter(Boolean)
+      .join("\n");
+  }
+  return "";
+}
+
+function prepareMessagesForThinking(
   messages: any[],
   stage?: ThinkingStage,
-  isThinking?: boolean,
+  priorReasoning?: string,
 ) {
-  return messages.map((m, i) => {
-    const isLastUser = i === messages.length - 1 && m.role === "user";
-    if (!isLastUser) return m;
+  if (!stage) return messages;
 
-    if (stage === "thinking") {
-      return {
-        ...m,
-        content:
-          `${typeof m.content === "string" ? m.content : ""}\n\nIMPORTANT: STAGE 1 (thinking-only).\n` +
-          `When you respond, your first characters MUST be <thinking>. ` +
-          `All reasoning MUST be inside <thinking>...</thinking>. ` +
-          `After </thinking>, output NOTHING (no final answer text).`,
-      };
-    }
+  const history = messages.slice(0, -1).map((m) => ({
+    role: m.role,
+    content: messageTextContent(m.content),
+  }));
+  const last = messages[messages.length - 1];
+  const userContent = messageTextContent(last?.content);
 
-    if (stage === "final") {
-      return {
-        ...m,
-        content:
-          `${typeof m.content === "string" ? m.content : ""}\n\nIMPORTANT: STAGE 2 (final-only).\n` +
-          `Do NOT output any <thinking>...</thinking> or similar tags. ` +
-          `Output ONLY the final answer.`,
-      };
-    }
-
-    if (isThinking) {
-      return {
-        ...m,
-        content:
-          `${typeof m.content === "string" ? m.content : ""}\n\nIMPORTANT: Deep reasoning mode.\n` +
-          `When you respond, your first characters MUST be <thinking>. ` +
-          `All reasoning MUST be inside <thinking>...</thinking>. ` +
-          `After </thinking>, you may provide the final answer.`,
-      };
-    }
-
-    return m;
+  return buildChatMessagesForThinkingStage({
+    history,
+    userContent,
+    stage,
+    priorReasoning,
   });
 }
 
@@ -181,9 +147,9 @@ export async function POST(req: NextRequest) {
   const {
     messages,
     model: targetModel,
-    isThinking,
     customKeys,
     thinkingStage,
+    priorReasoning,
     locale: rawLocale,
   } = parsed.data;
 
@@ -229,12 +195,10 @@ export async function POST(req: NextRequest) {
     }
 
     const optimizedMessages = formatMessagesForProvider(messages);
-    const dynamicSystemPrompt = buildSystemPrompt(stage, isThinking, locale);
-    const annotated = annotateLastUserMessage(
-      optimizedMessages,
-      stage,
-      isThinking,
-    );
+    const dynamicSystemPrompt = buildSystemPrompt(stage, locale);
+    const annotated = stage
+      ? prepareMessagesForThinking(optimizedMessages, stage, priorReasoning)
+      : optimizedMessages;
 
     if (route.kind === "anthropic") {
       const anthropicMessages = annotated

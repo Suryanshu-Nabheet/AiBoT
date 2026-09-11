@@ -1164,7 +1164,7 @@ Environment="OLLAMA_ORIGINS=*"`}
   };
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden border-t border-border/50 bg-background xl:flex-row">
+    <div className="relative flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden border-t border-border/50 bg-background xl:flex-row">
       {/* Settings Sidebar - AGENT MODE INSPIRED SIZING */}
       <div className="relative z-20 flex w-full shrink-0 flex-col border-b border-border/50 bg-muted/[0.02] xl:w-[260px] xl:border-r xl:border-b-0">
         <div className="px-4 pt-4 pb-2 sm:px-6 xl:p-7 xl:pb-10">
@@ -1253,8 +1253,8 @@ Environment="OLLAMA_ORIGINS=*"`}
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border/50 scrollbar-track-transparent">
-          <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10 xl:px-14 xl:py-16">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-border/50 scrollbar-track-transparent">
+          <div className="mx-auto w-full max-w-4xl px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-10 xl:px-14 xl:py-16">
             {renderSection()}
           </div>
         </div>

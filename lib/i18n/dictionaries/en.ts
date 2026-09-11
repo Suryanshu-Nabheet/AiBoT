@@ -191,6 +191,8 @@ export const en = {
   "composer.voice": "Voice input",
   "composer.thinking": "Thinking mode",
   "composer.enhance": "Enhance prompt",
+  "composer.send": "Send message",
+  "composer.stop": "Stop generating",
 
   // Model selector
   "model.select": "Select model",
@@ -198,6 +200,11 @@ export const en = {
   "model.empty": "No model found.",
   "model.platform": "Platform Models",
   "model.external": "External Models",
+  "model.thinkingPower": "Thinking",
+  "model.thinkingHint": "Two-step reasoning · more accurate, slower",
+  "model.thinkingMenu": "Model & thinking",
+  "model.thinkingShort": "Think",
+  "model.thinkingOffShort": "Fast",
 
   // Toasts
   "toast.pdf.success": "PDF downloaded successfully!",

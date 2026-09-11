@@ -20,11 +20,11 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === "/" || pathname?.startsWith("/chat/");
 
   return (
-    <div className="flex h-[100dvh] w-full max-w-full overflow-hidden">
-      <SidebarProvider>
+    <div className="flex h-app max-h-app w-full max-w-full min-h-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]">
+      <SidebarProvider className="h-app max-h-app min-h-0 w-full overflow-hidden">
         <UIStructure />
         <CommandPalette />
-        <SidebarInset className="relative min-h-0 bg-sidebar p-0 md:p-2">
+        <SidebarInset className="relative flex min-h-0 h-full flex-1 flex-col bg-sidebar p-0 md:p-2">
           <div className="relative flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden border border-sidebar-border/50 bg-background shadow-sm md:rounded-2xl">
             <header className="flex h-12 w-full shrink-0 items-center gap-0 overflow-hidden select-none z-10">
               {/* Left and Center of Header - White Background */}

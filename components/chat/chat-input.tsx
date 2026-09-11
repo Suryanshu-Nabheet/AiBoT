@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import {
   PaperPlaneRightIcon,
@@ -15,7 +15,6 @@ import {
   PaperclipIcon,
   MagicWandIcon,
   MicrophoneIcon,
-  Lightbulb as LightbulbIcon,
   X as XIcon,
 } from "@phosphor-icons/react";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,12 +39,15 @@ interface ChatInputProps {
   isEnhancing?: boolean;
   onEnhance?: () => void;
   isThinking?: boolean;
-  onThinkingToggle?: () => void;
+  onThinkingChange?: (enabled: boolean) => void;
   model?: string;
   onModelChange?: (model: string) => void;
+  modelStorageKey?: string;
   showModelSelector?: boolean;
+  /** Arena: thinking toggle without model list in composer */
+  thinkingMenuOnly?: boolean;
   placeholder?: string;
-  className?: string; // Allow override
+  className?: string;
 }
 
 export function ChatInput({
@@ -61,10 +63,12 @@ export function ChatInput({
   isEnhancing = false,
   onEnhance,
   isThinking = false,
-  onThinkingToggle,
+  onThinkingChange,
   model,
   onModelChange,
+  modelStorageKey,
   showModelSelector = false,
+  thinkingMenuOnly = false,
   placeholder,
   className,
 }: ChatInputProps) {
@@ -72,6 +76,9 @@ export function ChatInput({
   const resolvedPlaceholder = placeholder ?? t("composer.placeholder");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showComposerModel =
+    (showModelSelector && model && onModelChange) || thinkingMenuOnly;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -144,7 +151,7 @@ export function ChatInput({
   return (
     <div
       className={cn(
-        "z-10 w-full bg-gradient-to-t from-background via-background to-transparent px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-4 sm:pt-6",
+        "z-10 w-full max-w-full shrink-0 bg-gradient-to-t from-background via-background to-transparent px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4 md:pt-6",
         className,
       )}
     >
@@ -154,28 +161,27 @@ export function ChatInput({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
           onSubmit={onSubmit}
-          className="relative flex max-w-full flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-muted/40 shadow-xl ring-1 ring-white/10 backdrop-blur-xl sm:rounded-3xl dark:ring-white/5"
+          className="relative flex w-full max-w-full min-w-0 flex-col gap-0 overflow-hidden rounded-2xl border border-border/50 bg-muted/40 shadow-xl ring-1 ring-white/10 backdrop-blur-xl sm:rounded-3xl dark:ring-white/5"
         >
-          {/* Attachments Preview */}
           {attachments.length > 0 && (
-            <div className="flex px-4 pt-3 gap-2 overflow-x-auto scrollbar-none">
+            <div className="flex gap-2 overflow-x-auto px-4 pt-3 scrollbar-none">
               {attachments.map((att, i) => (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   key={i}
-                  className="relative group flex items-center justify-center bg-background/50 border border-white/10 rounded-xl overflow-hidden w-16 h-16 flex-shrink-0"
+                  className="relative group flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-background/50"
                 >
                   {att.type.startsWith("image/") ? (
                     <img
                       src={att.content}
                       alt={att.name}
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                      className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100"
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-1 text-center">
                       <PaperclipIcon className="size-5 text-muted-foreground" />
-                      <span className="text-[8px] leading-tight truncate w-full px-1 text-muted-foreground mt-1">
+                      <span className="mt-1 w-full truncate px-1 text-[8px] leading-tight text-muted-foreground">
                         {att.name}
                       </span>
                     </div>
@@ -183,7 +189,7 @@ export function ChatInput({
                   <button
                     type="button"
                     onClick={() => removeAttachment(i)}
-                    className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                    className="absolute top-0.5 right-0.5 rounded-full bg-black/50 p-0.5 text-white opacity-0 backdrop-blur-sm transition-all hover:bg-red-500 group-hover:opacity-100"
                   >
                     <XIcon className="size-3" />
                   </button>
@@ -197,7 +203,7 @@ export function ChatInput({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={resolvedPlaceholder}
-            className="min-h-[56px] max-h-[35dvh] w-full resize-none border-0 bg-transparent px-3 py-3 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 sm:px-4 sm:py-4 md:px-5 md:text-[15px] scrollbar-thin scrollbar-thumb-muted-foreground/20"
+            className="min-h-[48px] max-h-[min(35dvh,240px)] w-full min-w-0 resize-none border-0 bg-transparent px-3 py-2.5 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 sm:min-h-[56px] sm:px-4 sm:py-3 md:px-5 md:py-4 md:text-[15px] scrollbar-thin scrollbar-thumb-muted-foreground/20"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -206,16 +212,20 @@ export function ChatInput({
             }}
           />
 
-          {/* Toolbar */}
-          <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-0 sm:px-3 sm:pb-3">
-            {/* Left Tools: Input & AI */}
-            <div className="flex items-center gap-1.5">
-              {/* Model Selector - First */}
-              {showModelSelector && model && onModelChange && (
+          <div className="flex min-w-0 items-center gap-1.5 px-2 pb-2 pt-0 sm:gap-2 sm:px-3 sm:pb-3">
+            <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overscroll-x-contain scrollbar-none [-webkit-overflow-scrolling:touch] sm:gap-1">
+              {showComposerModel && (
                 <>
-                  <ModelSelector value={model} onValueChange={onModelChange} />
-                  {/* Divider - Only shown if model selector is present */}
-                  <div className="h-4 w-[1px] bg-border/50 mx-1" />
+                  <ModelSelector
+                    value={model}
+                    onValueChange={onModelChange}
+                    modelStorageKey={modelStorageKey}
+                    thinkingEnabled={isThinking}
+                    onThinkingChange={onThinkingChange}
+                    showModelList={showModelSelector && !thinkingMenuOnly}
+                    triggerVariant="compact"
+                  />
+                  <div className="mx-0.5 h-4 w-px shrink-0 bg-border/50" />
                 </>
               )}
 
@@ -227,27 +237,25 @@ export function ChatInput({
                 onChange={handleFileSelect}
               />
 
-              {/* Attachment */}
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="size-9 shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground sm:size-8"
                 onClick={() => fileInputRef.current?.click()}
                 title={t("composer.attach")}
               >
                 <PaperclipIcon className="size-[18px]" />
               </Button>
 
-              {/* Voice Input */}
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
                 className={cn(
-                  "size-8 rounded-full transition-all duration-300",
+                  "size-9 shrink-0 rounded-full sm:size-8",
                   isListening
-                    ? "text-red-500 bg-red-500/10 animate-pulse"
+                    ? "animate-pulse bg-red-500/10 text-red-500"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 onClick={onSpeechToggle}
@@ -260,46 +268,14 @@ export function ChatInput({
                 )}
               </Button>
 
-              {/* Thinking Mode */}
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
                 className={cn(
-                  "size-8 rounded-full transition-all duration-300",
-                  isThinking
-                    ? "text-amber-400 bg-amber-400/10"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-                onClick={onThinkingToggle}
-                title={t("composer.thinking")}
-              >
-                <LightbulbIcon
-                  weight={isThinking ? "fill" : "regular"}
-                  className={cn(
-                    "size-[18px]",
-                    isThinking && "animate-pulse brightness-125",
-                  )}
-                  style={
-                    isThinking
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))",
-                        }
-                      : {}
-                  }
-                />
-              </Button>
-
-              {/* Enhance Prompt */}
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className={cn(
-                  "size-8 rounded-full transition-all duration-300",
+                  "size-9 shrink-0 rounded-full max-[360px]:hidden sm:size-8",
                   isEnhancing
-                    ? "text-purple-400 bg-purple-400/10"
+                    ? "bg-purple-400/10 text-purple-400"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 onClick={onEnhance}
@@ -312,34 +288,26 @@ export function ChatInput({
               </Button>
             </div>
 
-            {/* Right Tools: Submit */}
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center">
               {isLoading ? (
                 <Button
                   type="button"
                   size="icon"
-                  className="size-8 rounded-full p-0 bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-none border border-red-500/20"
+                  className="size-9 rounded-full border border-red-500/20 bg-red-500/10 p-0 text-red-500 shadow-none hover:bg-red-500/20 sm:size-8"
                   onClick={onStop}
+                  aria-label={t("composer.stop")}
                 >
                   <StopIcon weight="fill" className="size-[14px]" />
                 </Button>
               ) : (
                 <Button
-                  asChild
                   type="submit"
                   size="icon"
-                  className="size-8 rounded-full p-0"
+                  className="size-9 rounded-full p-0 sm:size-8"
                   disabled={!query.trim() && attachments.length === 0}
+                  aria-label={t("composer.send")}
                 >
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <PaperPlaneRightIcon
-                      weight="fill"
-                      className="size-[14px]"
-                    />
-                  </motion.button>
+                  <PaperPlaneRightIcon weight="fill" className="size-[14px]" />
                 </Button>
               )}
             </div>

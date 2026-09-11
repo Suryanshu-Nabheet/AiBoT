@@ -48,6 +48,9 @@ import {
 } from "@/components/ui/tooltip";
 import { ThinkingBar } from "@/components/core/thinking-bar";
 import { useTranslation } from "@/hooks/use-translation";
+import { useThinkingMode } from "@/hooks/use-thinking-mode";
+import { PageShell } from "@/components/layout/page-shell";
+import { parseAssistantThinkingContent } from "@/lib/chat/thinking-mode";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -109,84 +112,17 @@ const MessageComponent = memo(
 
     const contentToShow = isUser ? message.content : displayedContent;
 
-    // Parsing Thinking blocks - Only for Agent responses
-    let thinkingContent = "";
-    let mainResponse = isUser ? message.content : contentToShow;
-    let hasThinkingTag = false;
-    let hasClosingThinkingTag = false;
-
-    if (!isUser) {
-      const rawContent = contentToShow; // Use contentToShow (animated) to preserve typing flow
-      const isThinkingMode = message.isThinkingRequested;
-
-      const transitionRegex =
-        /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
-      const genericTagRegex = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
-      const closingThinkingRegex =
-        /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
-      hasClosingThinkingTag = closingThinkingRegex.test(rawContent);
-
-      const transitionMatch =
-        rawContent.match(transitionRegex) || rawContent.match(genericTagRegex);
-
-      if (transitionMatch) {
-        hasThinkingTag = true;
-        const splitMarker = transitionMatch[0];
-        const parts = rawContent.split(splitMarker);
-        // Extract reasoning (strip opening tags)
-        thinkingContent = parts[0]
-          .replace(
-            /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/gi,
-            "",
-          )
-          .trim();
-        // Extract main response (strip any remaining hallucinated tags)
-        mainResponse = parts
-          .slice(1)
-          .join(splitMarker)
-          .replace(/<\/?[^>]+(>|$)/g, "")
-          .trim();
-      } else {
-        const anyOpenTag =
-          /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
-        const openMatch = rawContent.match(anyOpenTag);
-
-        if (openMatch) {
-          hasThinkingTag = true;
-          // If we have an opening tag but no closing tag yet, everything after it is thinking
-          thinkingContent = rawContent.split(openMatch[0])[1]?.trim() || "";
-          mainResponse = "";
-        } else {
-          // NO TAGS FOUND: Treat as main response
-          thinkingContent = "";
-          mainResponse = rawContent;
-        }
-      }
-
-      // Cleanup common prompt leakage / hallucinations
-      const leakagePatterns = [
-        /\[CRITICAL SYSTEM OVERRIDE.*?\]/gi,
-        /NUCLEAR REASONING LOCK/gi,
-        /FAILURE TO COMPLY.*?DO NOT IGNORE THIS\./gi,
-        /\[MANDATORY: START WITH.*?\]/gi,
-        /The response must now begin with and end with/gi,
-        /IMPORTANT:\s*When you respond[^\n]*/gi,
-        /All reasoning MUST be inside <thinking>\.\.\.<\/thinking>\.?/gi,
-        /After <\/thinking>, provide the final answer[^\n]*/gi,
-      ];
-
-      leakagePatterns.forEach((pattern) => {
-        mainResponse = mainResponse.replace(pattern, "").trim();
-        thinkingContent = thinkingContent.replace(pattern, "").trim();
-      });
-
-      // Stage 1 (thinking-only) must never render a visible "final response"
-      // alongside the reasoning panel. Providers sometimes leak extra text
-      // after <thinking>...</thinking>, so we defensively hide it here.
-      if (message.isThinkingRequested && hasThinkingTag) {
-        mainResponse = "";
-      }
-    }
+    const parsedThinking = parseAssistantThinkingContent(contentToShow, {
+      isUser,
+      isThinkingRequested: message.isThinkingRequested,
+    });
+    const {
+      thinkingContent,
+      mainResponse,
+      hasThinkingTag,
+      hasClosingThinkingTag,
+      hideAnswerPanel,
+    } = parsedThinking;
 
     const hasThinkingPanel = !isUser && (hasThinkingTag || thinkingContent);
     const compactAgentContentClass = hasThinkingPanel
@@ -279,9 +215,7 @@ const MessageComponent = memo(
                 )}
 
                 {/* Message Content */}
-                {!isUser &&
-                !!message.isThinkingRequested &&
-                hasThinkingTag ? null : (
+                {!isUser && hideAnswerPanel ? null : (
                   <div
                     className={cn(
                       "text-sm w-full max-w-full overflow-hidden break-words",
@@ -534,7 +468,8 @@ export default function ChatInterface({
   // Enterprise Features State (UI only)
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [isThinking, setIsThinking] = useState(false);
+  const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
+    useThinkingMode("aibot_thinking_enabled");
   const [loadingStatus, setLoadingStatus] = useState(() =>
     t("chat.status.thinking"),
   );
@@ -844,12 +779,7 @@ export default function ChatInterface({
   }, []);
 
   return (
-    <div
-      className={cn(
-        "flex flex-col h-full w-full max-w-full relative overflow-hidden bg-background touch-none",
-        className,
-      )}
-    >
+    <PageShell className={cn("relative bg-background", className)}>
       {/* Scrollable Message Area - independent scroll */}
       <div
         ref={scrollContainerRef}
@@ -857,9 +787,9 @@ export default function ChatInterface({
       >
         <div className="mx-auto w-full max-w-4xl px-2 pb-6 pt-4 sm:px-4 sm:pt-6 md:pt-8">
           {showWelcome && messages.length === 0 ? (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-8 text-center px-4">
+            <div className="flex min-h-[min(60dvh,100%)] flex-col items-center justify-center space-y-6 text-center px-4 py-8 sm:space-y-8">
               <div className="space-y-4">
-                <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-foreground">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground">
                   Ai<span className="text-primary">BoT</span>
                 </h1>
                 <p className="text-muted-foreground text-base md:text-lg max-w-lg mx-auto leading-relaxed">
@@ -892,7 +822,7 @@ export default function ChatInterface({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-28 right-3 z-20 rounded-full bg-primary p-2 text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 sm:right-6"
+            className="absolute bottom-[calc(7.5rem+env(safe-area-inset-bottom,0px))] right-3 z-20 rounded-full bg-primary p-2 text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 sm:bottom-28 sm:right-6"
             onClick={() => scrollToBottom()}
           >
             <ArrowDownIcon className="size-5" />
@@ -913,9 +843,10 @@ export default function ChatInterface({
         isEnhancing={isEnhancing}
         onEnhance={handleEnhance}
         isThinking={isThinking}
-        onThinkingToggle={() => setIsThinking((prev) => !prev)}
+        onThinkingChange={setIsThinking}
         model={model}
         onModelChange={setModel}
+        modelStorageKey={storageKey}
         showModelSelector={true}
         placeholder={
           isListening
@@ -924,6 +855,6 @@ export default function ChatInterface({
         }
         className="shrink-0"
       />
-    </div>
+    </PageShell>
   );
 }
