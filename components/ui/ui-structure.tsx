@@ -17,11 +17,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarInput,
-  SidebarSeparator,
   Sidebar,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import {
   Collapsible,
@@ -40,11 +36,10 @@ import {
   TerminalWindow,
   CaretDown,
   SpeakerHigh,
-  ArrowCounterClockwise,
   Plus,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
 import { useViewMode } from "@/contexts/view-mode-context";
@@ -52,13 +47,8 @@ import { useTranslation } from "@/hooks/use-translation";
 
 export const UIStructure = () => {
   const { t } = useTranslation();
-  const {
-    executions,
-    loading,
-    refreshExecutions,
-    removeExecution,
-    updateExecution,
-  } = useExecutionContext();
+  const { executions, loading, removeExecution, updateExecution } =
+    useExecutionContext();
   const [hoverChatId, setHoverChatId] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editTitle, setEditTitle] = useState("");

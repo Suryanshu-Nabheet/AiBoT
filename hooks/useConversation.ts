@@ -60,10 +60,30 @@ export function useConversationById(id: string | undefined) {
   return { conversation, loading, error };
 }
 
-// Helper function to save conversation to sessionStorage
-export function saveConversation(conversation: Conversation) {
-  try {
-    if (typeof window !== "undefined") {
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+let persistChain: Promise<void> = Promise.resolve();
+
+// Helper function to save conversation to sessionStorage (debounced per id).
+export function saveConversation(conversation: Conversation, debounceMs = 400) {
+  if (typeof window === "undefined") return;
+
+  const existing = saveTimers.get(conversation.id);
+  if (existing) clearTimeout(existing);
+
+  saveTimers.set(
+    conversation.id,
+    setTimeout(() => {
+      saveTimers.delete(conversation.id);
+      flushSaveConversation(conversation);
+    }, debounceMs),
+  );
+}
+
+export function flushSaveConversation(conversation: Conversation) {
+  if (typeof window === "undefined") return;
+
+  persistChain = persistChain.then(() => {
+    try {
       const stored = sessionStorage.getItem("conversations");
       const conversations: Record<string, Conversation> = stored
         ? JSON.parse(stored)
@@ -75,8 +95,8 @@ export function saveConversation(conversation: Conversation) {
       };
 
       sessionStorage.setItem("conversations", JSON.stringify(conversations));
+    } catch (error) {
+      console.error("Error saving conversation:", error);
     }
-  } catch (error) {
-    console.error("Error saving conversation:", error);
-  }
+  });
 }

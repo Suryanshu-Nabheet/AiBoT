@@ -7,7 +7,7 @@
 
 "use client";
 
-import { Gear, ChatCircleDots, Columns, Check } from "@phosphor-icons/react";
+import { Gear } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,

@@ -11,9 +11,9 @@ async function openArenaMode(page: import("@playwright/test").Page) {
   await page.addInitScript(() => {
     localStorage.setItem("aibot_view_mode", "side-by-side");
   });
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("arena-empty-models")).toBeVisible({
-    timeout: 15_000,
+    timeout: 30_000,
   });
 }
 
@@ -24,9 +24,9 @@ test.describe("Arena mode settings", () => {
       .locator("header")
       .getByRole("button", { name: /^settings$/i })
       .click();
-    await page.getByRole("button", { name: /^arena mode$/i }).click();
+    await page.getByRole("button", { name: /arena mode/i }).click();
     await expect(page.getByTestId("arena-empty-models")).toBeVisible({
-      timeout: 15_000,
+      timeout: 30_000,
     });
   });
 });

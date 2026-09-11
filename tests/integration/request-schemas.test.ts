@@ -29,6 +29,16 @@ describe("chatRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts arena combined thinking stage", () => {
+    const result = chatRequestSchema.safeParse(
+      createChatRequestBody({
+        isThinking: true,
+        thinkingStage: "combined",
+      }),
+    );
+    expect(result.success).toBe(true);
+  });
+
   it("rejects empty messages", () => {
     const result = chatRequestSchema.safeParse(
       createChatRequestBody({ messages: [] }),

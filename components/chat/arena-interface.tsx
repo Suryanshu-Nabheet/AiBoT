@@ -8,11 +8,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { v4 } from "uuid";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { ModelSelector } from "@/components/ui/model-selector";
-import { useChatSession } from "@/hooks/use-chat-session";
+import { useArenaChat } from "@/hooks/use-arena-chat";
 import { ChatInput } from "./chat-input";
 import { ChatThread } from "./chat-thread";
 import { Message } from "@/lib/types";
@@ -85,24 +84,12 @@ export default function ArenaInterface({
   conversationId?: string;
 }) {
   const { t } = useTranslation();
-  // Shared conversation ID for both panels to keep history unified
-  const [arenaConversationId] = useState(() => initialConversationId || v4());
-
-  // --- Dual Sessions ---
-  const leftChat = useChatSession({
-    storageKey: "arena-a",
-    sessionId: "arena-a",
-    conversationId: arenaConversationId,
-    executionType: "ARENA",
-    viewMode: "side-by-side",
-  });
-  const rightChat = useChatSession({
-    storageKey: "arena-b",
-    sessionId: "arena-b",
-    conversationId: arenaConversationId,
-    executionType: "ARENA",
-    viewMode: "side-by-side",
-  });
+  const {
+    left: leftChat,
+    right: rightChat,
+    submitBoth,
+    stopBoth,
+  } = useArenaChat(initialConversationId);
 
   // --- Shared Input State ---
   const [query, setQuery] = useState("");
@@ -188,7 +175,7 @@ export default function ArenaInterface({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // --- Handlers ---
-  const handleSharedSubmit = async (e: React.FormEvent) => {
+  const handleSharedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
       (!query.trim() && attachments.length === 0) ||
@@ -198,31 +185,22 @@ export default function ArenaInterface({
       return;
 
     const currentQuery = query;
-    const currentAttachments = [...attachments]; // Capture current state
+    const currentAttachments = [...attachments];
 
     setQuery("");
-    setAttachments([]); // Clear immediately
+    setAttachments([]);
 
-    void Promise.all([
-      leftChat.handleSend(
-        currentQuery,
-        currentAttachments,
-        undefined,
-        leftThinking.thinkingEnabled,
-      ),
-      rightChat.handleSend(
-        currentQuery,
-        currentAttachments,
-        undefined,
-        rightThinking.thinkingEnabled,
-      ),
-    ]);
+    submitBoth(
+      currentQuery,
+      currentAttachments,
+      leftThinking.thinkingEnabled,
+      rightThinking.thinkingEnabled,
+    );
   };
 
   const handleStopBoth = useCallback(() => {
-    leftChat.stopHelpers.stop();
-    rightChat.stopHelpers.stop();
-  }, [leftChat.stopHelpers, rightChat.stopHelpers]);
+    stopBoth();
+  }, [stopBoth]);
 
   const handleSpeech = useCallback(() => {
     if (isListening && recognitionRef.current) {

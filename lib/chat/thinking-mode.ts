@@ -12,7 +12,7 @@
  * Stage 2 (final): model produces the user-facing answer, grounded on stage 1.
  */
 
-export type ThinkingStage = "thinking" | "final";
+export type ThinkingStage = "thinking" | "final" | "combined";
 
 export const THINKING_OPEN_TAG = "<thinking>";
 export const THINKING_CLOSE_TAG = "</thinking>";
@@ -35,6 +35,29 @@ const PROMPT_LEAKAGE_PATTERNS: RegExp[] = [
 
 /** System-prompt extension for each thinking stage (no hostile / "nuclear" wording). */
 export function buildThinkingSystemAddon(stage: ThinkingStage): string {
+  if (stage === "combined") {
+    return [
+      "## Deep reasoning (single stream)",
+      "Reason first, then answer in one reply so multiple models can run in parallel.",
+      "",
+      "Output contract:",
+      `1. The first characters of your reply MUST be ${THINKING_OPEN_TAG} (no preamble).`,
+      `2. Put all analysis, plans, checks, and intermediate conclusions inside ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
+      `3. Immediately after ${THINKING_CLOSE_TAG}, continue with the complete user-facing final answer in the same message.`,
+      "",
+      "Quality bar:",
+      "- Restate the user's goal and constraints inside the thinking block.",
+      "- Note unknowns and state explicit assumptions.",
+      "- For non-trivial tasks, compare approaches briefly, then commit to one.",
+      "- For math/code, sanity-check before closing the thinking block.",
+      "",
+      "Accuracy (mandatory):",
+      "- Do not invent facts, statistics, quotes, URLs, paper titles, or product names.",
+      '- If you are unsure, write "uncertain" and what evidence would resolve it.',
+      "- The final answer must follow from the reasoning; never fabricate citations or sources.",
+    ].join("\n");
+  }
+
   if (stage === "thinking") {
     return [
       "## Deep reasoning (stage 1 of 2)",
@@ -76,6 +99,14 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
 
 /** Short user-message suffix (stage 1) — complements the system addon. */
 export function getThinkingModeUserSuffix(stage: ThinkingStage): string {
+  if (stage === "combined") {
+    return [
+      "",
+      "[Deep reasoning — thinking then answer]",
+      `Use ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG} for reasoning, then the final answer in the same reply.`,
+    ].join("\n");
+  }
+
   if (stage === "thinking") {
     return [
       "",
@@ -247,12 +278,12 @@ export function buildChatMessagesForThinkingStage(params: {
   const { history, userContent, stage, priorReasoning } = params;
   const prior = priorReasoning?.trim();
 
-  if (stage === "thinking") {
+  if (stage === "thinking" || stage === "combined") {
     return [
       ...history,
       {
         role: "user",
-        content: `${userContent}${getThinkingModeUserSuffix("thinking")}`,
+        content: `${userContent}${getThinkingModeUserSuffix(stage)}`,
       },
     ];
   }

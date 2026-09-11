@@ -9,10 +9,16 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { v4 } from "uuid";
-import { toast } from "sonner";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
-import { useConversationById, saveConversation } from "@/hooks/useConversation";
+import {
+  useConversationById,
+  saveConversation,
+  flushSaveConversation,
+} from "@/hooks/useConversation";
+import type { ArenaPreparedLane } from "@/lib/chat/arena-types";
+import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
+import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
@@ -78,7 +84,7 @@ export function useChatSession({
   const [executionCreated, setExecutionCreated] = useState(false);
 
   // Initialize conversationId with session persistence logic
-  const [conversationId, setConversationId] = useState<string | null>(() => {
+  const [conversationId] = useState<string | null>(() => {
     if (initialConversationId) return initialConversationId;
     if (sessionId && typeof window !== "undefined") {
       try {
@@ -124,7 +130,7 @@ export function useChatSession({
   }, [persistedModelId, model]);
 
   useEffect(() => {
-    if (conversation?.messages && conversationPersistId) {
+    if (conversation?.messages && conversationPersistId && !isLoading) {
       // Mark all restored messages as not needing animation
       const nonAnimatingMessages = conversation.messages.map((m) => ({
         ...m,
@@ -133,7 +139,7 @@ export function useChatSession({
       setMessages(nonAnimatingMessages);
       setShowWelcome(false);
     }
-  }, [conversation, conversationPersistId]);
+  }, [conversation, conversationPersistId, isLoading]);
 
   // --- Handlers ---
   const handleModelChange = useCallback(
@@ -196,24 +202,10 @@ export function useChatSession({
           const trimmedLine = line.trim();
           if (!trimmedLine) continue;
 
-          if (isOllama) {
-            try {
-              const data = JSON.parse(trimmedLine);
-              const content = data.message?.content || data.response;
-              if (content) accumulated += content;
-            } catch (e) {
-              // Silently ignore parse errors for partial/malformed JSON in stream
-            }
-          } else if (trimmedLine.startsWith("data: ")) {
-            if (trimmedLine === "data: [DONE]") continue;
-            try {
-              const data = JSON.parse(trimmedLine.slice(6));
-              const content = data.choices?.[0]?.delta?.content || data.content;
-              if (content) accumulated += content;
-            } catch (e) {
-              // Silently ignore parse errors for partial/malformed JSON in stream
-            }
-          }
+          const delta = isOllama
+            ? deltaFromOllamaLine(trimmedLine)
+            : deltaFromSseLine(trimmedLine);
+          if (delta) accumulated += delta;
         }
 
         updateCounter++;
@@ -327,6 +319,7 @@ export function useChatSession({
   ) => {
     const inputQuery = manualQuery || query;
     if (!inputQuery.trim() || isLoading) return;
+    if (executionType === "ARENA") return;
 
     const thinkingRequested = !!isThinking;
     thinkingRequestedRef.current = thinkingRequested;
@@ -390,6 +383,9 @@ export function useChatSession({
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
+    const newAgentMessageId = () =>
+      `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
     try {
       const isOllama = model.startsWith("ollama/");
       const historyForThinking = messages.map((m) => ({
@@ -434,7 +430,7 @@ export function useChatSession({
 
         // Stage 1 + Stage 2 (merged into one assistant message)
         if (thinkingRequested) {
-          const tempId = `ai-${Date.now()}`;
+          const tempId = newAgentMessageId();
 
           // Create the placeholder once so UI renders as a single message bubble.
           setMessages((prev) => [
@@ -615,7 +611,7 @@ export function useChatSession({
 
       // Non-Ollama provider (single OpenAI/OpenRouter proxy)
       if (thinkingRequested) {
-        const tempId = `ai-${Date.now()}`;
+        const tempId = newAgentMessageId();
 
         // Create placeholder once so Stage 1 + Stage 2 render as one bubble.
         setMessages((prev) => [
@@ -643,7 +639,7 @@ export function useChatSession({
             model,
             conversationId: conversationPersistId ?? conversationId,
             thinkingStage: "thinking",
-            customKeys: apiKeys,
+            customKeys: sanitizeCustomKeysForRequest(apiKeys),
             locale,
           }),
           signal: abortControllerRef.current.signal,
@@ -696,7 +692,7 @@ export function useChatSession({
             conversationId: conversationPersistId ?? conversationId,
             thinkingStage: "final",
             priorReasoning: stage1Final,
-            customKeys: apiKeys,
+            customKeys: sanitizeCustomKeysForRequest(apiKeys),
             locale,
           }),
           signal: abortControllerRef.current.signal,
@@ -736,7 +732,7 @@ export function useChatSession({
           model,
           conversationId: conversationPersistId ?? conversationId,
           isThinking: false,
-          customKeys: apiKeys,
+          customKeys: sanitizeCustomKeysForRequest(apiKeys),
           locale,
         }),
         signal: abortControllerRef.current.signal,
@@ -775,6 +771,190 @@ export function useChatSession({
     }
   };
 
+  const prepareArenaTurn = useCallback(
+    (
+      manualQuery: string,
+      manualAttachments: { name: string; content: string; type: string }[],
+      isThinking?: boolean,
+    ): ArenaPreparedLane | null => {
+      if (!manualQuery.trim() || isLoading) return null;
+
+      const thinkingRequested = !!isThinking;
+      thinkingRequestedRef.current = thinkingRequested;
+      requestStartedAtRef.current = Date.now();
+      setShowWelcome(false);
+      const currentQuery = manualQuery.trim();
+
+      let apiContent = currentQuery;
+      if (manualAttachments.length > 0) {
+        const aiContext = manualAttachments
+          .map((a) =>
+            a.type.startsWith("image/")
+              ? `![${a.name}](${a.content})`
+              : `\n\nFile: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``,
+          )
+          .join("\n");
+        apiContent = `${aiContext}\n\n${currentQuery}`;
+      }
+
+      const userMessage: Message = {
+        id: `user-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        role: Role.User,
+        content: currentQuery,
+        attachments: [...manualAttachments],
+      };
+
+      const historyForThinking = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const tempId = `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+      setMessages((prev) => [
+        ...prev,
+        userMessage,
+        {
+          id: tempId,
+          role: Role.Agent,
+          content: "",
+          isThinkingRequested: thinkingRequested,
+        },
+      ]);
+      setIsLoading(true);
+
+      if (
+        !executionCreated &&
+        conversationId &&
+        shouldRegisterExecutionForSession(sessionId)
+      ) {
+        const title =
+          currentQuery.length > 50
+            ? currentQuery.substring(0, 50) + "..."
+            : currentQuery;
+        addExecution({
+          id: conversationId,
+          title,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          type: executionType || ("CONVERSATION" as any),
+          mode: viewMode || "direct",
+        });
+        setExecutionCreated(true);
+      }
+
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      abortControllerRef.current = new AbortController();
+
+      const thinkingStage = thinkingRequested ? "combined" : undefined;
+      const apiMessages = thinkingRequested
+        ? buildChatMessagesForThinkingStage({
+            history: historyForThinking,
+            userContent: apiContent,
+            stage: "combined",
+          })
+        : [...historyForThinking, { role: "user", content: apiContent }];
+
+      return {
+        laneId: sessionId ?? "arena",
+        model,
+        messages: apiMessages.map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+        thinkingStage,
+        tempId,
+        thinkingRequested,
+      };
+    },
+    [
+      addExecution,
+      conversationId,
+      executionCreated,
+      executionType,
+      isLoading,
+      messages,
+      model,
+      sessionId,
+      viewMode,
+    ],
+  );
+
+  const applyArenaStreamDelta = useCallback(
+    (tempId: string, content: string, thinkingRequested: boolean) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, content, isThinkingRequested: thinkingRequested }
+            : m,
+        ),
+      );
+    },
+    [],
+  );
+
+  const cancelArenaTurn = useCallback((tempId: string) => {
+    setMessages((prev) => {
+      const agentIdx = prev.findIndex((m) => m.id === tempId);
+      if (agentIdx < 0) return prev;
+      const userBefore =
+        agentIdx > 0 && prev[agentIdx - 1]?.role === Role.User
+          ? prev[agentIdx - 1].id
+          : null;
+      return prev.filter(
+        (m) => m.id !== tempId && (!userBefore || m.id !== userBefore),
+      );
+    });
+    setIsLoading(false);
+    thinkingRequestedRef.current = false;
+    requestStartedAtRef.current = null;
+  }, []);
+
+  const finalizeArenaTurn = useCallback(
+    (
+      tempId: string,
+      errorMessage?: string,
+      options?: { refreshSidebar?: boolean },
+    ) => {
+      setMessages((prev) => {
+        const updatedMessages = prev.map((m) =>
+          m.id === tempId
+            ? {
+                ...m,
+                content: errorMessage ?? m.content,
+                isError: !!errorMessage,
+                isThinkingRequested: false,
+              }
+            : m,
+        );
+
+        if (conversationPersistId) {
+          flushSaveConversation({
+            id: conversationPersistId,
+            title:
+              updatedMessages
+                .find((m) => m.role === Role.User)
+                ?.content.substring(0, 50) ||
+              translate(locale, "chat.defaultTitle"),
+            createdAt: new Date().toISOString(),
+            messages: updatedMessages,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        return updatedMessages;
+      });
+
+      setIsLoading(false);
+      if (options?.refreshSidebar !== false) {
+        refreshExecutions();
+      }
+      requestStartedAtRef.current = null;
+      thinkingRequestedRef.current = false;
+    },
+    [conversationPersistId, locale, refreshExecutions],
+  );
+
   const stopHelpers = {
     stop: () => abortControllerRef.current?.abort(),
   };
@@ -791,6 +971,10 @@ export function useChatSession({
     attachments,
     setAttachments,
     handleSend,
+    prepareArenaTurn,
+    cancelArenaTurn,
+    applyArenaStreamDelta,
+    finalizeArenaTurn,
     stopHelpers,
     conversationId,
   };

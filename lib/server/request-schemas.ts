@@ -11,7 +11,11 @@ import { z } from "zod";
 
 const MAX_MESSAGE_LENGTH = 32_000;
 const MAX_HISTORY_MESSAGES = 50;
-const apiKey = z.string().trim().min(8).max(512).optional();
+const apiKey = z.preprocess((val) => {
+  if (val === undefined || val === null) return undefined;
+  const s = String(val).trim();
+  return s.length === 0 ? undefined : s;
+}, z.string().min(8).max(512).optional());
 
 export const chatRequestSchema = z.object({
   messages: z
@@ -36,7 +40,7 @@ export const chatRequestSchema = z.object({
     .max(MAX_HISTORY_MESSAGES),
   model: z.string().trim().min(1).max(200),
   isThinking: z.boolean().optional(),
-  thinkingStage: z.enum(["thinking", "final"]).optional(),
+  thinkingStage: z.enum(["thinking", "final", "combined"]).optional(),
   /** Normalized stage-1 reasoning block; required for grounded stage-2 answers. */
   priorReasoning: z.string().max(48_000).optional(),
   locale: z.string().max(10).optional(),

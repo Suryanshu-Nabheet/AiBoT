@@ -13,6 +13,7 @@ import {
   PLAIN_ASSISTANT,
 } from "../fixtures/thinking-content";
 import {
+  buildChatMessagesForThinkingStage,
   isSubstantiveThinkingContent,
   normalizeThinkingStage1Output,
   parseAssistantThinkingContent,
@@ -86,6 +87,20 @@ describe("stripPromptLeakage", () => {
     );
     expect(cleaned).not.toContain("NUCLEAR");
     expect(cleaned).toContain("Real content");
+  });
+});
+
+describe("buildChatMessagesForThinkingStage", () => {
+  it("adds combined suffix for arena single-stream thinking", () => {
+    const msgs = buildChatMessagesForThinkingStage({
+      history: [],
+      userContent: "Compare A and B",
+      stage: "combined",
+    });
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0].content).toContain("Compare A and B");
+    expect(msgs[0].content).toContain(THINKING_OPEN_TAG);
+    expect(msgs[0].content).toContain("final answer");
   });
 });
 

@@ -7,42 +7,19 @@
 
 "use client";
 
-import { v4 } from "uuid";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import {
-  CopyIcon,
-  CheckIcon,
-  PaperPlaneRightIcon,
-  StopIcon,
-  ArrowDownIcon,
-  MagicWandIcon,
-  MicrophoneIcon,
-  PaperclipIcon,
-  X as XIcon,
-  DownloadSimple as DownloadIcon,
-} from "@phosphor-icons/react";
-import Image from "next/image";
+import { ArrowDownIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
 import { ChatThread } from "./chat-thread";
-import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
-import { useExecutionContext } from "@/contexts/execution-context";
-import { Role } from "@/lib/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useTranslation } from "@/hooks/use-translation";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
 import { PageShell } from "@/components/layout/page-shell";
+
 interface ChatInterfaceProps {
   conversationId?: string;
   storageKey?: string;
@@ -65,7 +42,6 @@ export default function ChatInterface({
     attachments,
     setAttachments,
     handleSend,
-    conversationId,
     stopHelpers,
   } = useChatSession({
     conversationId: initialConversationId,
@@ -73,7 +49,6 @@ export default function ChatInterface({
     viewMode: "direct",
   });
 
-  // Enterprise Features State (UI only)
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
@@ -119,8 +94,7 @@ export default function ChatInterface({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -149,11 +123,9 @@ export default function ChatInterface({
       return;
     }
 
-    // Fallback when the container ref isn't ready yet.
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
-  // Handle scroll visibility
   const handleScroll = useCallback(() => {
     if (scrollRafRef.current !== null) return;
 
@@ -164,7 +136,6 @@ export default function ChatInterface({
       if (!container) return;
 
       const { scrollTop, scrollHeight, clientHeight } = container;
-      // Distance from the bottom. When close enough, hide the button.
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       const isBottom = distanceFromBottom < 100;
 
@@ -185,7 +156,6 @@ export default function ChatInterface({
 
   const isEmptyChat = messages.length === 0;
 
-  // Auto-scroll on new messages (thread mode only)
   useEffect(() => {
     if (isEmptyChat) return;
     scrollToBottom("auto");
@@ -197,81 +167,6 @@ export default function ChatInterface({
     disabled: isLoading,
     loading: isLoading,
   });
-
-  // --- Enterprise Feature Handlers ---
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      const newAttachments: { name: string; content: string; type: string }[] =
-        [];
-
-      // Dynamically import extractTextFromFile
-      const { extractTextFromFile } = await import("@/lib/file-utils");
-
-      for (const file of files) {
-        try {
-          // Check if it's an image
-          if (file.type.startsWith("image/")) {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            await new Promise<void>((resolve) => {
-              reader.onload = () => {
-                if (typeof reader.result === "string") {
-                  newAttachments.push({
-                    name: file.name,
-                    content: reader.result,
-                    type: file.type,
-                  });
-                }
-                resolve();
-              };
-            });
-          } else if (
-            // Document types that need extraction
-            file.name.endsWith(".pdf") ||
-            file.name.endsWith(".docx") ||
-            file.name.endsWith(".doc") ||
-            file.name.endsWith(".pptx") ||
-            file.name.endsWith(".xlsx") ||
-            file.name.endsWith(".xls")
-          ) {
-            try {
-              const extractedText = await extractTextFromFile(file);
-              newAttachments.push({
-                name: file.name,
-                content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n*For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
-                type: "text/plain",
-              });
-              toast.success(t("toast.file.extracted", { name: file.name }));
-            } catch (extractError) {
-              console.error(`Failed to extract ${file.name}:`, extractError);
-              toast.error(t("toast.file.extractFail", { name: file.name }));
-            }
-          } else {
-            // Text based files (txt, md, json, etc.)
-            const text = await file.text();
-            newAttachments.push({
-              name: file.name,
-              content: text,
-              type: file.type,
-            });
-          }
-        } catch (err) {
-          console.error(`Error reading ${file.name}:`, err);
-          toast.error(t("toast.file.readFail", { name: file.name }));
-        }
-      }
-
-      setAttachments((prev) => [...prev, ...newAttachments]);
-      // Reset input
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const handleSpeech = useCallback(() => {
     if (isListening && recognitionRef.current) {
@@ -285,7 +180,7 @@ export default function ChatInterface({
       return;
     }
 
-    const recognition = new (window as any).webkitSpeechRecognition();
+    const recognition = new window.webkitSpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = locale === "hi" ? "hi-IN" : "en-US";
@@ -302,20 +197,18 @@ export default function ChatInterface({
       recognitionRef.current = null;
     };
 
-    recognition.onerror = (event: any) => {
-      console.error("Speech error", event.error);
+    recognition.onerror = () => {
       setIsListening(false);
       recognitionRef.current = null;
-      // toast.error("Speech recognition error"); // Optional: suppress trivial errors
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       setQuery((prev) => (prev ? prev + " " + transcript : transcript));
     };
 
     recognition.start();
-  }, [isListening, t, locale]);
+  }, [isListening, t, locale, setQuery]);
 
   const handleEnhance = async () => {
     if (!query.trim()) {
@@ -323,14 +216,14 @@ export default function ChatInterface({
       return;
     }
 
-    const originalQuery = query; // Save original message
+    const originalQuery = query;
     setIsEnhancing(true);
 
     try {
       const res = await fetch("/api/enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: query, locale }),
+        body: JSON.stringify({ prompt: query }),
       });
 
       if (!res.ok) {
@@ -340,27 +233,15 @@ export default function ChatInterface({
 
       const data = await res.json();
 
-      // Check if response is an actual enhancement or an error message
       if (data.enhanced) {
         const enhanced = data.enhanced.trim();
-
-        // Check if it's an error/instruction message (not an enhancement)
         const isErrorMessage =
           enhanced.toLowerCase().includes("please provide") ||
-          enhanced.toLowerCase().includes("give more") ||
-          enhanced.toLowerCase().includes("add more details") ||
-          enhanced.toLowerCase().includes("be more specific") ||
-          enhanced.toLowerCase().includes("too short") ||
-          enhanced.toLowerCase().includes("need more context") ||
-          enhanced.length < originalQuery.length; // Enhanced should be longer
+          enhanced.length < originalQuery.length;
 
         if (isErrorMessage) {
-          // Show as toast, keep original message
-          toast.info(enhanced, {
-            duration: 4000,
-          });
+          toast.info(enhanced, { duration: 4000 });
         } else {
-          // Valid enhancement - replace the message
           setQuery(enhanced);
           toast.success(t("toast.enhance.success"));
         }
@@ -375,15 +256,10 @@ export default function ChatInterface({
     }
   };
 
-  // -----------------------------------
-
   const handleCreateChat = (e: React.FormEvent) => {
     e.preventDefault();
     handleSend(undefined, undefined, undefined, isThinking);
   };
-
-  // NOTE: Logic successfully extracted to useChatSession
-  // The rest of this file is purely UI Rendering
 
   const handleCopy = useCallback(async (content: string) => {
     await navigator.clipboard.writeText(content);

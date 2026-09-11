@@ -11,7 +11,6 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useState,
   ReactNode,
 } from "react";
@@ -46,11 +45,9 @@ function readStoredViewMode(): ViewMode {
 }
 
 export function ViewModeProvider({ children }: { children: ReactNode }) {
-  const [viewMode, setViewModeState] = useState<ViewMode>("direct");
-
-  useEffect(() => {
-    setViewModeState(readStoredViewMode());
-  }, []);
+  const [viewMode, setViewModeState] = useState<ViewMode>(() =>
+    readStoredViewMode(),
+  );
 
   const setViewMode = useCallback((mode: ViewMode) => {
     setViewModeState(mode);
