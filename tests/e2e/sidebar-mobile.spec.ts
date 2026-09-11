@@ -18,9 +18,9 @@ test.describe("Mobile sidebar", () => {
     const search = page.getByPlaceholder(/search chats/i);
     await expect(search).toBeVisible();
 
-    const activeTag = await page.evaluate(() =>
-      document.activeElement?.getAttribute("placeholder"),
+    const searchFocused = await search.evaluate(
+      (el) => el === document.activeElement,
     );
-    expect(activeTag).not.toMatch(/search chats/i);
+    expect(searchFocused).toBe(false);
   });
 });

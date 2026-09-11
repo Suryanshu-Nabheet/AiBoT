@@ -603,7 +603,10 @@ export default function ArenaInterface({
               {t("chat.welcome.greeting")}
             </p>
 
-            <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div
+              className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2"
+              data-testid="arena-empty-models"
+            >
               <ModelSelector
                 value={leftChat.model}
                 onValueChange={leftChat.setModel}

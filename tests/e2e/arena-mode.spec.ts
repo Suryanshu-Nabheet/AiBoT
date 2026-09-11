@@ -7,25 +7,45 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe("Arena mode", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: /^settings$/i }).click();
-    await page.getByRole("button", { name: /arena mode/i }).click();
+async function openArenaMode(page: import("@playwright/test").Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("aibot_view_mode", "side-by-side");
   });
+  await page.goto("/");
+  await expect(page.getByTestId("arena-empty-models")).toBeVisible({
+    timeout: 15_000,
+  });
+}
 
+test.describe("Arena mode settings", () => {
+  test("layout switch opens empty arena", async ({ page }) => {
+    await page.goto("/");
+    await page
+      .locator("header")
+      .getByRole("button", { name: /^settings$/i })
+      .click();
+    await page.getByRole("button", { name: /^arena mode$/i }).click();
+    await expect(page.getByTestId("arena-empty-models")).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+});
+
+test.describe("Arena mode", () => {
   test("empty arena matches direct chat layout with per-panel model toggles", async ({
     page,
   }) => {
+    await openArenaMode(page);
+
     await expect(
       page.getByText(/what can i help you with today/i),
     ).toBeVisible();
 
-    const main = page.locator("main");
-    await expect(main.getByRole("combobox")).toHaveCount(2);
-    await expect(main.getByText(/^options$/i)).toHaveCount(0);
+    const modelRow = page.getByTestId("arena-empty-models");
+    await expect(modelRow.getByRole("combobox")).toHaveCount(2);
+    await expect(page.locator("main").getByText(/^options$/i)).toHaveCount(0);
 
-    const composer = main.getByPlaceholder(/message aibot/i);
+    const composer = page.locator("main").getByPlaceholder(/message aibot/i);
     await expect(composer).toBeVisible();
     await expect(composer).toBeEditable();
   });

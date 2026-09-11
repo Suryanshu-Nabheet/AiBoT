@@ -124,6 +124,8 @@ export function SettingsToggle({
         </DropdownMenuLabel>
         <div className="grid grid-cols-2 gap-1.5 p-0.5">
           <button
+            type="button"
+            aria-label={t("header.directChat")}
             onClick={() => onChange("direct")}
             className={cn(
               "flex flex-col items-center justify-center gap-2 p-2 rounded-lg transition-all duration-300 border",
@@ -138,6 +140,8 @@ export function SettingsToggle({
             </span>
           </button>
           <button
+            type="button"
+            aria-label={t("header.arenaMode")}
             onClick={() => onChange("side-by-side")}
             className={cn(
               "flex flex-col items-center justify-center gap-2 p-2 rounded-lg transition-all duration-300 border",
