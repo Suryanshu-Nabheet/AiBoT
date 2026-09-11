@@ -95,6 +95,7 @@ export function SettingsToggle({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={t("header.settings")}
               className={cn(
                 "h-8 w-8 rounded-lg bg-background/50 backdrop-blur-md border border-sidebar-border shadow-sm hover:bg-background transition-all duration-200",
                 className,

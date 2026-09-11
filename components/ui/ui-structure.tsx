@@ -117,6 +117,8 @@ export const UIStructure = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   autoFocus={false}
+                  tabIndex={0}
+                  enterKeyHint="search"
                 />
               </div>
               <div className="w-full flex flex-col gap-2">

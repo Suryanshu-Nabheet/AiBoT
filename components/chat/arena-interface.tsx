@@ -286,8 +286,10 @@ export default function ArenaInterface({
   >([]);
   const [isListening, setIsListening] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
-    useThinkingMode("aibot_arena_thinking_enabled");
+  const leftThinking = useThinkingMode("aibot_arena_a_thinking_enabled");
+  const rightThinking = useThinkingMode("aibot_arena_b_thinking_enabled");
+  const isEmptyArena =
+    leftChat.messages.length === 0 && rightChat.messages.length === 0;
 
   const [leftLoadingStatus, setLeftLoadingStatus] = useState(
     "AiBoT is thinking...",
@@ -299,11 +301,13 @@ export default function ArenaInterface({
   useEffect(() => {
     if (!leftChat.isLoading) {
       setLeftLoadingStatus(
-        isThinking ? "AiBoT is thinking..." : "AiBoT is generating...",
+        leftThinking.thinkingEnabled
+          ? "AiBoT is thinking..."
+          : "AiBoT is generating...",
       );
       return;
     }
-    const statuses = isThinking
+    const statuses = leftThinking.thinkingEnabled
       ? [
           "AiBoT is thinking...",
           "Analyzing logical branches...",
@@ -323,16 +327,18 @@ export default function ArenaInterface({
       setLeftLoadingStatus(statuses[i]);
     }, 2000);
     return () => clearInterval(interval);
-  }, [leftChat.isLoading, isThinking]);
+  }, [leftChat.isLoading, leftThinking.thinkingEnabled]);
 
   useEffect(() => {
     if (!rightChat.isLoading) {
       setRightLoadingStatus(
-        isThinking ? "AiBoT is thinking..." : "AiBoT is generating...",
+        rightThinking.thinkingEnabled
+          ? "AiBoT is thinking..."
+          : "AiBoT is generating...",
       );
       return;
     }
-    const statuses = isThinking
+    const statuses = rightThinking.thinkingEnabled
       ? [
           "AiBoT is thinking...",
           "Analyzing logical branches...",
@@ -352,7 +358,7 @@ export default function ArenaInterface({
       setRightLoadingStatus(statuses[i]);
     }, 2000);
     return () => clearInterval(interval);
-  }, [rightChat.isLoading, isThinking]);
+  }, [rightChat.isLoading, rightThinking.thinkingEnabled]);
 
   // --- Refs ---
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -380,13 +386,13 @@ export default function ArenaInterface({
         currentQuery,
         currentAttachments,
         undefined,
-        isThinking,
+        leftThinking.thinkingEnabled,
       ),
       rightChat.handleSend(
         currentQuery,
         currentAttachments,
         undefined,
-        isThinking,
+        rightThinking.thinkingEnabled,
       ),
     ]);
   };
@@ -555,8 +561,76 @@ export default function ArenaInterface({
     toast.success("Copied to clipboard");
   };
 
+  const arenaModelTriggerClass =
+    "h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]";
+
+  const sharedChatInput = (
+    <ChatInput
+      query={query}
+      setQuery={setQuery}
+      onSubmit={handleSharedSubmit}
+      isLoading={leftChat.isLoading || rightChat.isLoading}
+      attachments={attachments}
+      setAttachments={setAttachments}
+      isListening={isListening}
+      onSpeechToggle={handleSpeech}
+      isEnhancing={isEnhancing}
+      onEnhance={handleEnhance}
+      showModelSelector={false}
+      placeholder={
+        isListening
+          ? t("composer.placeholder.listening")
+          : isEmptyArena
+            ? t("composer.placeholder")
+            : t("composer.placeholder.arena")
+      }
+      dock={isEmptyArena ? "center" : "bottom"}
+      className={isEmptyArena ? "w-full" : "shrink-0"}
+    />
+  );
+
+  if (isEmptyArena) {
+    return (
+      <PageShell className="relative h-full min-h-0 w-full flex-col bg-background">
+        <div className="grid min-h-0 w-full flex-1 place-items-center overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="relative w-full max-w-4xl"
+          >
+            <p className="chat-welcome-line pointer-events-none absolute bottom-full left-0 right-0 mb-4 max-w-xl mx-auto text-balance px-2 text-center sm:mb-5 md:mb-6">
+              {t("chat.welcome.greeting")}
+            </p>
+
+            <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <ModelSelector
+                value={leftChat.model}
+                onValueChange={leftChat.setModel}
+                modelStorageKey="arena-a"
+                thinkingEnabled={leftThinking.thinkingEnabled}
+                onThinkingChange={leftThinking.setThinkingEnabled}
+                triggerClassName={arenaModelTriggerClass}
+              />
+              <ModelSelector
+                value={rightChat.model}
+                onValueChange={rightChat.setModel}
+                modelStorageKey="arena-b"
+                thinkingEnabled={rightThinking.thinkingEnabled}
+                onThinkingChange={rightThinking.setThinkingEnabled}
+                triggerClassName={arenaModelTriggerClass}
+              />
+            </div>
+
+            {sharedChatInput}
+          </motion.div>
+        </div>
+      </PageShell>
+    );
+  }
+
   return (
-    <PageShell className="relative bg-background">
+    <PageShell className="relative flex h-full min-h-0 flex-col bg-background">
       {/* Split Area */}
       <div className="flex min-h-0 flex-1 flex-col divide-y divide-border overflow-hidden md:flex-row md:divide-x md:divide-y-0">
         {/* LEFT PANEL */}
@@ -565,7 +639,10 @@ export default function ArenaInterface({
             <ModelSelector
               value={leftChat.model}
               onValueChange={leftChat.setModel}
-              triggerClassName="h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]"
+              modelStorageKey="arena-a"
+              thinkingEnabled={leftThinking.thinkingEnabled}
+              onThinkingChange={leftThinking.setThinkingEnabled}
+              triggerClassName={arenaModelTriggerClass}
             />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-12 pb-3 scrollbar-thin sm:pb-5">
@@ -607,7 +684,7 @@ export default function ArenaInterface({
                 Role.User &&
               leftLoadingStatus && (
                 <div className="px-6 mb-4">
-                  {isThinking ? (
+                  {leftThinking.thinkingEnabled ? (
                     <ThinkingBar text={t("chat.status.connecting")} />
                   ) : (
                     <TextShimmer
@@ -633,7 +710,10 @@ export default function ArenaInterface({
             <ModelSelector
               value={rightChat.model}
               onValueChange={rightChat.setModel}
-              triggerClassName="h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]"
+              modelStorageKey="arena-b"
+              thinkingEnabled={rightThinking.thinkingEnabled}
+              onThinkingChange={rightThinking.setThinkingEnabled}
+              triggerClassName={arenaModelTriggerClass}
             />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-12 pb-3 scrollbar-thin sm:pb-5">
@@ -674,7 +754,7 @@ export default function ArenaInterface({
                 Role.User &&
               rightLoadingStatus && (
                 <div className="px-6 mb-4">
-                  {isThinking ? (
+                  {rightThinking.thinkingEnabled ? (
                     <ThinkingBar text={t("chat.status.connecting")} />
                   ) : (
                     <TextShimmer
@@ -695,29 +775,7 @@ export default function ArenaInterface({
         </div>
       </div>
 
-      {/* Shared Input Area - Fixed at bottom */}
-      <ChatInput
-        query={query}
-        setQuery={setQuery}
-        onSubmit={handleSharedSubmit}
-        isLoading={leftChat.isLoading || rightChat.isLoading}
-        attachments={attachments}
-        setAttachments={setAttachments}
-        isListening={isListening}
-        onSpeechToggle={handleSpeech}
-        isEnhancing={isEnhancing}
-        onEnhance={handleEnhance}
-        isThinking={isThinking}
-        onThinkingChange={setIsThinking}
-        thinkingMenuOnly
-        showModelSelector={false}
-        placeholder={
-          isListening
-            ? t("composer.placeholder.listening")
-            : t("composer.placeholder.arena")
-        }
-        className="shrink-0"
-      />
+      {sharedChatInput}
     </PageShell>
   );
 }

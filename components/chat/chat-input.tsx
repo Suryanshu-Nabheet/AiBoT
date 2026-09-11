@@ -44,8 +44,6 @@ interface ChatInputProps {
   onModelChange?: (model: string) => void;
   modelStorageKey?: string;
   showModelSelector?: boolean;
-  /** Arena: thinking toggle without model list in composer */
-  thinkingMenuOnly?: boolean;
   placeholder?: string;
   className?: string;
   /** Centered on empty home vs docked to bottom during a thread */
@@ -70,7 +68,6 @@ export function ChatInput({
   onModelChange,
   modelStorageKey,
   showModelSelector = false,
-  thinkingMenuOnly = false,
   placeholder,
   className,
   dock = "bottom",
@@ -80,8 +77,7 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const showComposerModel =
-    (showModelSelector && model && onModelChange) || thinkingMenuOnly;
+  const showComposerModel = showModelSelector && model && onModelChange;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -226,7 +222,7 @@ export function ChatInput({
                 modelStorageKey={modelStorageKey}
                 thinkingEnabled={isThinking}
                 onThinkingChange={onThinkingChange}
-                showModelList={showModelSelector && !thinkingMenuOnly}
+                showModelList={showModelSelector}
                 triggerVariant="compact"
               />
             )}

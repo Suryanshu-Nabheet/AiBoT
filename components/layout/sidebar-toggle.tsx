@@ -24,11 +24,20 @@ export function SidebarToggle({ className }: { className?: string }) {
     <Tooltip>
       <TooltipTrigger asChild>
         <div
+          role="button"
+          tabIndex={0}
+          aria-label="Toggle sidebar"
           className={cn(
             "p-2 rounded-lg bg-background border border-sidebar-border text-sidebar-foreground/80 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200 shadow-sm hover:shadow-md ring-1 ring-black/5",
             className,
           )}
           onClick={toggleSidebar}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleSidebar();
+            }
+          }}
         >
           <SidebarSimple className="size-4" weight="bold" />
         </div>
