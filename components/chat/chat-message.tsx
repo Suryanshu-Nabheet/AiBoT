@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Geist_Mono } from "next/font/google";
 import {
   CheckIcon,
@@ -35,6 +35,7 @@ import {
   parseAssistantThinkingContent,
 } from "@/lib/chat/thinking-mode";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
+import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -45,10 +46,7 @@ const geistMono = Geist_Mono({
 
 export type ChatMessageLayout = "thread" | "arena";
 
-const shellPadding: Record<ChatMessageLayout, string> = {
-  thread: "px-2 sm:px-4 md:px-6 lg:px-8 py-2.5",
-  arena: "px-2 sm:px-3 py-2.5",
-};
+const shellPadding = cn("py-2.5", CHAT_THREAD_HORIZONTAL_INSET);
 
 const innerWidth: Record<ChatMessageLayout, string> = {
   thread: "max-w-4xl mx-auto",
@@ -101,13 +99,27 @@ export const ChatMessage = memo(
     });
 
     const isUser = message.role === Role.User;
+    const isStreaming = Boolean(isGenerating);
     const displayedContent = useSmoothTyping(
       message.content,
       5,
-      message.shouldAnimate,
+      Boolean(message.shouldAnimate && !isStreaming),
     );
     const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
-    const contentToShow = isUser ? message.content : displayedContent;
+    const userToggledThinkingRef = useRef(false);
+    const didAutoCollapseThinkingRef = useRef(false);
+
+    useEffect(() => {
+      userToggledThinkingRef.current = false;
+      didAutoCollapseThinkingRef.current = false;
+      setIsThinkingExpanded(true);
+    }, [message.id]);
+
+    const contentToShow = isUser
+      ? message.content
+      : isStreaming
+        ? message.content
+        : displayedContent;
 
     const {
       thinkingContent,
@@ -121,10 +133,19 @@ export const ChatMessage = memo(
     });
 
     useEffect(() => {
+      if (userToggledThinkingRef.current || didAutoCollapseThinkingRef.current) {
+        return;
+      }
       if (hasClosingThinkingTag && mainResponse?.trim()) {
+        didAutoCollapseThinkingRef.current = true;
         setIsThinkingExpanded(false);
       }
     }, [hasClosingThinkingTag, mainResponse]);
+
+    const handleThinkingToggle = useCallback(() => {
+      userToggledThinkingRef.current = true;
+      setIsThinkingExpanded((prev) => !prev);
+    }, []);
 
     const hasThinkingPanel =
       !isUser &&
@@ -138,7 +159,7 @@ export const ChatMessage = memo(
 
     return (
       <div className="w-full">
-        <div className={shellPadding[layout]}>
+        <div className={shellPadding}>
           <div className={innerWidth[layout]}>
             <div className="flex w-full">
               <div
@@ -182,7 +203,8 @@ export const ChatMessage = memo(
                   <ThinkingPanel
                     thinkingContent={thinkingContent}
                     isExpanded={isThinkingExpanded}
-                    onToggle={() => setIsThinkingExpanded(!isThinkingExpanded)}
+                    onToggle={handleThinkingToggle}
+                    isStreaming={isStreaming}
                     label={t("chat.thinking.label")}
                     remarkPlugins={remarkPlugins}
                     rehypePlugins={rehypePlugins}
@@ -299,8 +321,7 @@ export const ChatMessage = memo(
           onModelSelect && (
             <div
               className={cn(
-                shellPadding[layout],
-                layout === "thread" && "md:px-8 lg:px-12",
+                shellPadding,
               )}
             >
               <div className={innerWidth[layout]}>

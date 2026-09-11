@@ -15,6 +15,7 @@ import {
 } from "@/components/chat/chat-message";
 import { Message, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
 
 export const ChatThread = memo(
   ({
@@ -42,11 +43,16 @@ export const ChatThread = memo(
     className?: string;
     endRef?: React.Ref<HTMLDivElement>;
   }) => {
-    const statusPadding =
-      layout === "arena" ? "px-2 sm:px-3" : "px-2 sm:px-4 md:px-6 lg:px-8";
+    const statusPadding = CHAT_THREAD_HORIZONTAL_INSET;
 
     return (
-      <div className={cn("flex flex-col gap-1 pb-4 sm:gap-1.5", className)}>
+      <div
+        className={cn(
+          "flex min-w-0 flex-col gap-1 sm:gap-1.5",
+          layout === "arena" ? "pb-2" : "pb-4",
+          className,
+        )}
+      >
         {messages.map((message, i) => {
           const isLast = i === messages.length - 1;
           const isAgentGenerating =

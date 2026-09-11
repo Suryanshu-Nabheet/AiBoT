@@ -46,10 +46,12 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
       `3. Immediately after ${THINKING_CLOSE_TAG}, continue with the complete user-facing final answer in the same message.`,
       "",
       "Quality bar:",
+      "- Keep the thinking block brief (about 3–8 sentences) unless the task is genuinely complex.",
       "- Restate the user's goal and constraints inside the thinking block.",
       "- Note unknowns and state explicit assumptions.",
       "- For non-trivial tasks, compare approaches briefly, then commit to one.",
       "- For math/code, sanity-check before closing the thinking block.",
+      "- You MUST finish the thinking block before writing any part of the final answer.",
       "",
       "Accuracy (mandatory):",
       "- Do not invent facts, statistics, quotes, URLs, paper titles, or product names.",
@@ -69,6 +71,7 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
       `3. After ${THINKING_CLOSE_TAG}, output nothing—no final answer and no extra text.`,
       "",
       "Quality bar:",
+      "- Keep reasoning concise (about 3–8 sentences) unless the task is genuinely complex.",
       "- Restate the user's goal and constraints.",
       "- Note unknowns and state explicit assumptions.",
       "- For non-trivial tasks, compare approaches briefly, then commit to one.",
@@ -246,7 +249,8 @@ export function parseAssistantThinkingContent(
   mainResponse = stripPromptLeakage(mainResponse);
 
   const hideAnswerPanel =
-    !!options?.isThinkingRequested && !mainResponse.trim();
+    !!options?.isThinkingRequested &&
+    (!hasClosingThinkingTag || !mainResponse.trim());
 
   return {
     thinkingContent,

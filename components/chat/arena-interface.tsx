@@ -8,12 +8,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { v4 } from "uuid";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { ModelSelector } from "@/components/ui/model-selector";
-import { useArenaChat } from "@/hooks/use-arena-chat";
+import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
 import { ChatThread } from "./chat-thread";
+import { ChatThreadViewport } from "./chat-thread-viewport";
 import { Message } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { PageShell } from "@/components/layout/page-shell";
@@ -43,6 +45,7 @@ function ArenaPanel({
   onCopy: (content: string) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,7 +53,7 @@ function ArenaPanel({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col basis-0 bg-background">
-      <div className="z-10 shrink-0 border-b border-border/40 bg-background/95 px-3 py-2.5 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80">
+      <div className="z-10 shrink-0 border-b border-border/40 bg-background/95 px-3 py-2.5 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 sm:px-4">
         <ModelSelector
           value={model}
           onValueChange={onModelChange}
@@ -60,20 +63,20 @@ function ArenaPanel({
           triggerClassName={triggerClassName}
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin">
+      <ChatThreadViewport scrollRef={scrollRef} variant="arena">
         <ChatThread
           layout="arena"
           messages={messages}
           isLoading={isLoading}
           loadingStatus={loadingStatus}
-          thinkingRequested={thinkingEnabled && isLoading}
+          thinkingRequested={thinkingEnabled}
           onCopy={onCopy}
+          onModelSelect={onModelChange}
           pdfFileName="arena-response.pdf"
           pdfTitle="Arena Response"
           endRef={endRef}
-          className="pt-1 sm:pt-2"
         />
-      </div>
+      </ChatThreadViewport>
     </div>
   );
 }
@@ -84,12 +87,24 @@ export default function ArenaInterface({
   conversationId?: string;
 }) {
   const { t } = useTranslation();
-  const {
-    left: leftChat,
-    right: rightChat,
-    submitBoth,
-    stopBoth,
-  } = useArenaChat(initialConversationId);
+  // Shared conversation ID for both panels to keep history unified
+  const [arenaConversationId] = useState(() => initialConversationId || v4());
+
+  // --- Dual Sessions ---
+  const leftChat = useChatSession({
+    storageKey: "arena-a",
+    sessionId: "arena-a",
+    conversationId: arenaConversationId,
+    executionType: "ARENA",
+    viewMode: "side-by-side",
+  });
+  const rightChat = useChatSession({
+    storageKey: "arena-b",
+    sessionId: "arena-b",
+    conversationId: arenaConversationId,
+    executionType: "ARENA",
+    viewMode: "side-by-side",
+  });
 
   // --- Shared Input State ---
   const [query, setQuery] = useState("");
@@ -175,7 +190,7 @@ export default function ArenaInterface({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // --- Handlers ---
-  const handleSharedSubmit = (e: React.FormEvent) => {
+  const handleSharedSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
       (!query.trim() && attachments.length === 0) ||
@@ -185,22 +200,31 @@ export default function ArenaInterface({
       return;
 
     const currentQuery = query;
-    const currentAttachments = [...attachments];
+    const currentAttachments = [...attachments]; // Capture current state
 
     setQuery("");
-    setAttachments([]);
+    setAttachments([]); // Clear immediately
 
-    submitBoth(
-      currentQuery,
-      currentAttachments,
-      leftThinking.thinkingEnabled,
-      rightThinking.thinkingEnabled,
-    );
+    void Promise.all([
+      leftChat.handleSend(
+        currentQuery,
+        currentAttachments,
+        undefined,
+        leftThinking.thinkingEnabled,
+      ),
+      rightChat.handleSend(
+        currentQuery,
+        currentAttachments,
+        undefined,
+        rightThinking.thinkingEnabled,
+      ),
+    ]);
   };
 
-  const handleStopBoth = useCallback(() => {
-    stopBoth();
-  }, [stopBoth]);
+  const handleStopArena = useCallback(() => {
+    if (leftChat.isLoading) leftChat.stopHelpers.stop();
+    if (rightChat.isLoading) rightChat.stopHelpers.stop();
+  }, [leftChat.isLoading, leftChat.stopHelpers, rightChat.isLoading, rightChat.stopHelpers]);
 
   const handleSpeech = useCallback(() => {
     if (isListening && recognitionRef.current) {
@@ -296,10 +320,8 @@ export default function ArenaInterface({
     toast.success("Copied to clipboard");
   };
 
-  const arenaEmptyModelTriggerClass =
-    "h-9 w-full min-w-0 max-w-none shrink justify-start";
-  const arenaPanelModelTriggerClass =
-    "h-8 w-full min-w-0 max-w-full shrink justify-start";
+  const arenaModelTriggerClass =
+    "h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]";
 
   const sharedChatInput = (
     <ChatInput
@@ -307,7 +329,7 @@ export default function ArenaInterface({
       setQuery={setQuery}
       onSubmit={handleSharedSubmit}
       isLoading={leftChat.isLoading || rightChat.isLoading}
-      onStop={handleStopBoth}
+      onStop={handleStopArena}
       attachments={attachments}
       setAttachments={setAttachments}
       isListening={isListening}
@@ -345,26 +367,22 @@ export default function ArenaInterface({
               className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2"
               data-testid="arena-empty-models"
             >
-              <div className="min-w-0">
-                <ModelSelector
-                  value={leftChat.model}
-                  onValueChange={leftChat.setModel}
-                  modelStorageKey="arena-a"
-                  thinkingEnabled={leftThinking.thinkingEnabled}
-                  onThinkingChange={leftThinking.setThinkingEnabled}
-                  triggerClassName={arenaEmptyModelTriggerClass}
-                />
-              </div>
-              <div className="min-w-0">
-                <ModelSelector
-                  value={rightChat.model}
-                  onValueChange={rightChat.setModel}
-                  modelStorageKey="arena-b"
-                  thinkingEnabled={rightThinking.thinkingEnabled}
-                  onThinkingChange={rightThinking.setThinkingEnabled}
-                  triggerClassName={arenaEmptyModelTriggerClass}
-                />
-              </div>
+              <ModelSelector
+                value={leftChat.model}
+                onValueChange={leftChat.setModel}
+                modelStorageKey="arena-a"
+                thinkingEnabled={leftThinking.thinkingEnabled}
+                onThinkingChange={leftThinking.setThinkingEnabled}
+                triggerClassName={arenaModelTriggerClass}
+              />
+              <ModelSelector
+                value={rightChat.model}
+                onValueChange={rightChat.setModel}
+                modelStorageKey="arena-b"
+                thinkingEnabled={rightThinking.thinkingEnabled}
+                onThinkingChange={rightThinking.setThinkingEnabled}
+                triggerClassName={arenaModelTriggerClass}
+              />
             </div>
 
             {sharedChatInput}
@@ -383,7 +401,7 @@ export default function ArenaInterface({
           modelStorageKey="arena-a"
           thinkingEnabled={leftThinking.thinkingEnabled}
           onThinkingChange={leftThinking.setThinkingEnabled}
-          triggerClassName={arenaPanelModelTriggerClass}
+          triggerClassName={arenaModelTriggerClass}
           messages={leftChat.messages}
           isLoading={leftChat.isLoading}
           loadingStatus={leftLoadingStatus}
@@ -395,7 +413,7 @@ export default function ArenaInterface({
           modelStorageKey="arena-b"
           thinkingEnabled={rightThinking.thinkingEnabled}
           onThinkingChange={rightThinking.setThinkingEnabled}
-          triggerClassName={arenaPanelModelTriggerClass}
+          triggerClassName={arenaModelTriggerClass}
           messages={rightChat.messages}
           isLoading={rightChat.isLoading}
           loadingStatus={rightLoadingStatus}

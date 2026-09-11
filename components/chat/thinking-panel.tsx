@@ -7,7 +7,6 @@
 
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import type { Components, Options } from "react-markdown";
 import { ThinkingBar } from "@/components/core/thinking-bar";
 import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
@@ -19,6 +18,7 @@ type ThinkingPanelProps = {
   thinkingContent: string;
   isExpanded: boolean;
   onToggle: () => void;
+  isStreaming?: boolean;
   label: string;
   remarkPlugins: Options["remarkPlugins"];
   rehypePlugins: Options["rehypePlugins"];
@@ -37,39 +37,42 @@ export function ThinkingPanel({
   markdownComponents,
   preprocessMarkdown,
   className,
+  isStreaming = false,
 }: ThinkingPanelProps) {
-  const hasBody = isSubstantiveThinkingContent(thinkingContent);
+  const hasBody =
+    isSubstantiveThinkingContent(thinkingContent) ||
+    (isStreaming && thinkingContent.trim().length > 0);
+
+  const showBody = isExpanded && hasBody;
 
   return (
     <div className={cn("w-full max-w-full", className)}>
       <ThinkingBar text={label} isExpanded={isExpanded} onClick={onToggle} />
-      <AnimatePresence initial={false}>
-        {isExpanded && hasBody && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div
-              className={cn(
-                chatMessageBodyClass,
-                "mb-0.5 border-l-2 border-border/55 py-1.5 pl-3 sm:pl-3.5",
-              )}
-            >
-              <AssistantMarkdown
-                content={thinkingContent}
-                variant="thinking"
-                remarkPlugins={remarkPlugins}
-                rehypePlugins={rehypePlugins}
-                components={markdownComponents}
-                preprocess={preprocessMarkdown}
-              />
-            </div>
-          </motion.div>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+          showBody ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
-      </AnimatePresence>
+        aria-hidden={!showBody}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div
+            className={cn(
+              chatMessageBodyClass,
+              "mb-0.5 border-l-2 border-border/55 py-1.5 pl-3 sm:pl-3.5",
+            )}
+          >
+            <AssistantMarkdown
+              content={thinkingContent}
+              variant="thinking"
+              remarkPlugins={remarkPlugins}
+              rehypePlugins={rehypePlugins}
+              components={markdownComponents}
+              preprocess={preprocessMarkdown}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

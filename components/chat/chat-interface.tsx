@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
 import { ChatThread } from "./chat-thread";
+import { ChatThreadViewport } from "./chat-thread-viewport";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 import { useTranslation } from "@/hooks/use-translation";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
@@ -312,24 +313,19 @@ export default function ChatInterface({
         </div>
       ) : (
         <>
-          <div
-            ref={scrollContainerRef}
-            className="min-h-0 flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden scroll-smooth overscroll-contain"
-          >
-            <div className="mx-auto w-full max-w-4xl px-2 pb-6 pt-4 sm:px-4 sm:pt-6 md:pt-8">
-              <div className="flex flex-col gap-1">
-                <ChatThread
-                  messages={messages}
-                  onCopy={handleCopy}
-                  onModelSelect={setModel}
-                  isLoading={isLoading}
-                  loadingStatus={loadingStatus}
-                  thinkingRequested={isThinking}
-                  endRef={messagesEndRef}
-                />
-              </div>
+          <ChatThreadViewport scrollRef={scrollContainerRef} variant="thread">
+            <div className="flex flex-col gap-1">
+              <ChatThread
+                messages={messages}
+                onCopy={handleCopy}
+                onModelSelect={setModel}
+                isLoading={isLoading}
+                loadingStatus={loadingStatus}
+                thinkingRequested={isThinking}
+                endRef={messagesEndRef}
+              />
             </div>
-          </div>
+          </ChatThreadViewport>
 
           <AnimatePresence>
             {showScrollButton && (

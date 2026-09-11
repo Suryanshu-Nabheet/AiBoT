@@ -11,12 +11,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { v4 } from "uuid";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
-import {
-  useConversationById,
-  saveConversation,
-  flushSaveConversation,
-} from "@/hooks/useConversation";
-import type { ArenaPreparedLane } from "@/lib/chat/arena-types";
+import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
 import { useExecutionContext } from "@/contexts/execution-context";
@@ -25,7 +20,6 @@ import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import {
   buildChatMessagesForThinkingStage,
   buildThinkingSystemAddon,
-  normalizeThinkingStage1Output,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -251,6 +245,9 @@ export function useChatSession({
       });
       return (options?.contentPrefix ?? "") + accumulated;
     } catch (e) {
+      if ((e as Error).name === "AbortError") {
+        return (options?.contentPrefix ?? "") + accumulated;
+      }
       console.error("Stream error", e);
       const errorContent = translate(locale, "errors.connectionInterrupted");
       if (options?.tempId) {
@@ -319,7 +316,6 @@ export function useChatSession({
   ) => {
     const inputQuery = manualQuery || query;
     if (!inputQuery.trim() || isLoading) return;
-    if (executionType === "ARENA") return;
 
     const thinkingRequested = !!isThinking;
     thinkingRequestedRef.current = thinkingRequested;
@@ -428,11 +424,10 @@ export function useChatSession({
           };
         };
 
-        // Stage 1 + Stage 2 (merged into one assistant message)
+        // Single stream: brief <thinking> block, then answer (same path as direct /api chat)
         if (thinkingRequested) {
           const tempId = newAgentMessageId();
 
-          // Create the placeholder once so UI renders as a single message bubble.
           setMessages((prev) => [
             ...prev,
             {
@@ -443,27 +438,26 @@ export function useChatSession({
             },
           ]);
 
-          // Stage 1: thinking-only
-          const chatPayload1 = buildOllamaPayload("thinking");
-          let res1: Response;
+          const chatPayload = buildOllamaPayload("combined");
+          let res: Response;
           try {
-            res1 = await fetch(`${targetUrl}/api/chat`, {
+            res = await fetch(`${targetUrl}/api/chat`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(chatPayload1),
+              body: JSON.stringify(chatPayload),
               signal: abortControllerRef.current.signal,
             });
           } catch (err) {
             console.warn(
-              "Primary Ollama chat connection failed (stage 1), trying loopback fallback...",
+              "Primary Ollama chat connection failed, trying loopback fallback...",
               err,
             );
             if (targetUrl.includes("localhost")) {
               const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-              res1 = await fetch(`${fallbackUrl}/api/chat`, {
+              res = await fetch(`${fallbackUrl}/api/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(chatPayload1),
+                body: JSON.stringify(chatPayload),
                 signal: abortControllerRef.current.signal,
               });
             } else {
@@ -471,14 +465,14 @@ export function useChatSession({
             }
           }
 
-          if (!res1.ok) {
-            const errorText = await res1.text();
+          if (!res.ok) {
+            const errorText = await res.text();
             setMessages((prev) => [
               ...prev,
               {
                 id: `error-${Date.now()}`,
                 role: Role.Agent,
-                content: httpErrorMessage(locale, res1.status, errorText),
+                content: httpErrorMessage(locale, res.status, errorText),
                 isError: true,
               },
             ]);
@@ -486,68 +480,9 @@ export function useChatSession({
             return;
           }
 
-          const stage1Raw = await processStream(res1, true, true, {
-            finalize: false,
-            tempId,
-            contentPrefix: "",
-          });
-          const stage1Final = normalizeThinkingStage1Output(stage1Raw);
-
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId
-                ? { ...m, content: stage1Final, isThinkingRequested: true }
-                : m,
-            ),
-          );
-
-          // Stage 2: final-only (append to same message)
-          const chatPayload2 = buildOllamaPayload("final", stage1Final);
-          let res2: Response;
-          try {
-            res2 = await fetch(`${targetUrl}/api/chat`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(chatPayload2),
-              signal: abortControllerRef.current.signal,
-            });
-          } catch (err) {
-            console.warn(
-              "Primary Ollama chat connection failed (stage 2), trying loopback fallback...",
-              err,
-            );
-            if (targetUrl.includes("localhost")) {
-              const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-              res2 = await fetch(`${fallbackUrl}/api/chat`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(chatPayload2),
-                signal: abortControllerRef.current.signal,
-              });
-            } else {
-              throw err;
-            }
-          }
-
-          if (!res2.ok) {
-            const errorText = await res2.text();
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `error-${Date.now()}`,
-                role: Role.Agent,
-                content: httpErrorMessage(locale, res2.status, errorText),
-                isError: true,
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-
-          await processStream(res2, false, true, {
+          await processStream(res, true, true, {
             finalize: true,
             tempId,
-            contentPrefix: stage1Final,
           });
 
           return;
@@ -613,7 +548,6 @@ export function useChatSession({
       if (thinkingRequested) {
         const tempId = newAgentMessageId();
 
-        // Create placeholder once so Stage 1 + Stage 2 render as one bubble.
         setMessages((prev) => [
           ...prev,
           {
@@ -624,35 +558,34 @@ export function useChatSession({
           },
         ]);
 
-        // Stage 1: thinking-only
-        const stage1Messages = buildChatMessagesForThinkingStage({
+        const combinedMessages = buildChatMessagesForThinkingStage({
           history: historyForThinking,
           userContent: apiContent,
-          stage: "thinking",
+          stage: "combined",
         });
 
-        const res1 = await fetch("/api/chat", {
+        const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: stage1Messages,
+            messages: combinedMessages,
             model,
             conversationId: conversationPersistId ?? conversationId,
-            thinkingStage: "thinking",
+            thinkingStage: "combined",
             customKeys: sanitizeCustomKeysForRequest(apiKeys),
             locale,
           }),
           signal: abortControllerRef.current.signal,
         });
 
-        if (!res1.ok) {
-          const errorText = await res1.text();
+        if (!res.ok) {
+          const errorText = await res.text();
           setMessages((prev) => [
             ...prev,
             {
               id: `error-${Date.now()}`,
               role: Role.Agent,
-              content: httpErrorMessage(locale, res1.status, errorText),
+              content: httpErrorMessage(locale, res.status, errorText),
               isError: true,
             },
           ]);
@@ -660,63 +593,9 @@ export function useChatSession({
           return;
         }
 
-        const stage1Raw = await processStream(res1, true, false, {
-          finalize: false,
-          tempId,
-          contentPrefix: "",
-        });
-        const stage1Final = normalizeThinkingStage1Output(stage1Raw);
-
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempId
-              ? { ...m, content: stage1Final, isThinkingRequested: true }
-              : m,
-          ),
-        );
-
-        const stage2Messages = buildChatMessagesForThinkingStage({
-          history: historyForThinking,
-          userContent: apiContent,
-          stage: "final",
-          priorReasoning: stage1Final,
-        });
-
-        // Stage 2: final-only (append to same message)
-        const res2 = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: stage2Messages,
-            model,
-            conversationId: conversationPersistId ?? conversationId,
-            thinkingStage: "final",
-            priorReasoning: stage1Final,
-            customKeys: sanitizeCustomKeysForRequest(apiKeys),
-            locale,
-          }),
-          signal: abortControllerRef.current.signal,
-        });
-
-        if (!res2.ok) {
-          const errorText = await res2.text();
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `error-${Date.now()}`,
-              role: Role.Agent,
-              content: httpErrorMessage(locale, res2.status, errorText),
-              isError: true,
-            },
-          ]);
-          setIsLoading(false);
-          return;
-        }
-
-        await processStream(res2, false, false, {
+        await processStream(res, true, false, {
           finalize: true,
           tempId,
-          contentPrefix: stage1Final,
         });
         return;
       }
@@ -771,190 +650,6 @@ export function useChatSession({
     }
   };
 
-  const prepareArenaTurn = useCallback(
-    (
-      manualQuery: string,
-      manualAttachments: { name: string; content: string; type: string }[],
-      isThinking?: boolean,
-    ): ArenaPreparedLane | null => {
-      if (!manualQuery.trim() || isLoading) return null;
-
-      const thinkingRequested = !!isThinking;
-      thinkingRequestedRef.current = thinkingRequested;
-      requestStartedAtRef.current = Date.now();
-      setShowWelcome(false);
-      const currentQuery = manualQuery.trim();
-
-      let apiContent = currentQuery;
-      if (manualAttachments.length > 0) {
-        const aiContext = manualAttachments
-          .map((a) =>
-            a.type.startsWith("image/")
-              ? `![${a.name}](${a.content})`
-              : `\n\nFile: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``,
-          )
-          .join("\n");
-        apiContent = `${aiContext}\n\n${currentQuery}`;
-      }
-
-      const userMessage: Message = {
-        id: `user-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        role: Role.User,
-        content: currentQuery,
-        attachments: [...manualAttachments],
-      };
-
-      const historyForThinking = messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      const tempId = `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-      setMessages((prev) => [
-        ...prev,
-        userMessage,
-        {
-          id: tempId,
-          role: Role.Agent,
-          content: "",
-          isThinkingRequested: thinkingRequested,
-        },
-      ]);
-      setIsLoading(true);
-
-      if (
-        !executionCreated &&
-        conversationId &&
-        shouldRegisterExecutionForSession(sessionId)
-      ) {
-        const title =
-          currentQuery.length > 50
-            ? currentQuery.substring(0, 50) + "..."
-            : currentQuery;
-        addExecution({
-          id: conversationId,
-          title,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          type: executionType || ("CONVERSATION" as any),
-          mode: viewMode || "direct",
-        });
-        setExecutionCreated(true);
-      }
-
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-      abortControllerRef.current = new AbortController();
-
-      const thinkingStage = thinkingRequested ? "combined" : undefined;
-      const apiMessages = thinkingRequested
-        ? buildChatMessagesForThinkingStage({
-            history: historyForThinking,
-            userContent: apiContent,
-            stage: "combined",
-          })
-        : [...historyForThinking, { role: "user", content: apiContent }];
-
-      return {
-        laneId: sessionId ?? "arena",
-        model,
-        messages: apiMessages.map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
-        thinkingStage,
-        tempId,
-        thinkingRequested,
-      };
-    },
-    [
-      addExecution,
-      conversationId,
-      executionCreated,
-      executionType,
-      isLoading,
-      messages,
-      model,
-      sessionId,
-      viewMode,
-    ],
-  );
-
-  const applyArenaStreamDelta = useCallback(
-    (tempId: string, content: string, thinkingRequested: boolean) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === tempId
-            ? { ...m, content, isThinkingRequested: thinkingRequested }
-            : m,
-        ),
-      );
-    },
-    [],
-  );
-
-  const cancelArenaTurn = useCallback((tempId: string) => {
-    setMessages((prev) => {
-      const agentIdx = prev.findIndex((m) => m.id === tempId);
-      if (agentIdx < 0) return prev;
-      const userBefore =
-        agentIdx > 0 && prev[agentIdx - 1]?.role === Role.User
-          ? prev[agentIdx - 1].id
-          : null;
-      return prev.filter(
-        (m) => m.id !== tempId && (!userBefore || m.id !== userBefore),
-      );
-    });
-    setIsLoading(false);
-    thinkingRequestedRef.current = false;
-    requestStartedAtRef.current = null;
-  }, []);
-
-  const finalizeArenaTurn = useCallback(
-    (
-      tempId: string,
-      errorMessage?: string,
-      options?: { refreshSidebar?: boolean },
-    ) => {
-      setMessages((prev) => {
-        const updatedMessages = prev.map((m) =>
-          m.id === tempId
-            ? {
-                ...m,
-                content: errorMessage ?? m.content,
-                isError: !!errorMessage,
-                isThinkingRequested: false,
-              }
-            : m,
-        );
-
-        if (conversationPersistId) {
-          flushSaveConversation({
-            id: conversationPersistId,
-            title:
-              updatedMessages
-                .find((m) => m.role === Role.User)
-                ?.content.substring(0, 50) ||
-              translate(locale, "chat.defaultTitle"),
-            createdAt: new Date().toISOString(),
-            messages: updatedMessages,
-            updatedAt: new Date().toISOString(),
-          });
-        }
-
-        return updatedMessages;
-      });
-
-      setIsLoading(false);
-      if (options?.refreshSidebar !== false) {
-        refreshExecutions();
-      }
-      requestStartedAtRef.current = null;
-      thinkingRequestedRef.current = false;
-    },
-    [conversationPersistId, locale, refreshExecutions],
-  );
-
   const stopHelpers = {
     stop: () => abortControllerRef.current?.abort(),
   };
@@ -971,10 +666,6 @@ export function useChatSession({
     attachments,
     setAttachments,
     handleSend,
-    prepareArenaTurn,
-    cancelArenaTurn,
-    applyArenaStreamDelta,
-    finalizeArenaTurn,
     stopHelpers,
     conversationId,
   };

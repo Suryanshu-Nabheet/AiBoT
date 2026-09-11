@@ -11,6 +11,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
   ReactNode,
 } from "react";
@@ -45,9 +46,12 @@ function readStoredViewMode(): ViewMode {
 }
 
 export function ViewModeProvider({ children }: { children: ReactNode }) {
-  const [viewMode, setViewModeState] = useState<ViewMode>(() =>
-    readStoredViewMode(),
-  );
+  // Always match SSR first paint ("direct"); restore preference after hydration.
+  const [viewMode, setViewModeState] = useState<ViewMode>("direct");
+
+  useEffect(() => {
+    setViewModeState(readStoredViewMode());
+  }, []);
 
   const setViewMode = useCallback((mode: ViewMode) => {
     setViewModeState(mode);

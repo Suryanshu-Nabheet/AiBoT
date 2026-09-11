@@ -48,6 +48,8 @@ interface ChatInputProps {
   className?: string;
   /** Centered on empty home vs docked to bottom during a thread */
   dock?: "bottom" | "center";
+  /** Optional ref for global typing / focus helpers */
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 export function ChatInput({
@@ -71,10 +73,12 @@ export function ChatInput({
   placeholder,
   className,
   dock = "bottom",
+  textareaRef: textareaRefProp,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t("composer.placeholder");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = textareaRefProp ?? internalTextareaRef;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const showComposerModel = showModelSelector && model && onModelChange;
