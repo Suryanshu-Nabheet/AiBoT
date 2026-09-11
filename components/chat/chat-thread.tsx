@@ -9,13 +9,11 @@
 
 import React, { memo } from "react";
 import { TextShimmer } from "@/components/core/text-shimmer";
-import { ThinkingBar } from "@/components/core/thinking-bar";
 import {
   ChatMessage,
   type ChatMessageLayout,
 } from "@/components/chat/chat-message";
 import { Message, Role } from "@/lib/types";
-import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 
 export const ChatThread = memo(
@@ -44,7 +42,6 @@ export const ChatThread = memo(
     className?: string;
     endRef?: React.Ref<HTMLDivElement>;
   }) => {
-    const { t } = useTranslation();
     const statusPadding =
       layout === "arena" ? "px-2 sm:px-3" : "px-2 sm:px-4 md:px-6 lg:px-8";
 
@@ -55,27 +52,23 @@ export const ChatThread = memo(
           const isAgentGenerating =
             isLoading && isLast && message.role === Role.Agent;
           const msgIsThinking = message.isThinkingRequested;
+          // Thinking mode uses ThinkingPanel on the message — avoid a second ThinkingBar here.
           const showLoadingStatus =
-            isAgentGenerating &&
-            (msgIsThinking ? !message.content.trim() : true);
+            isAgentGenerating && !msgIsThinking && Boolean(loadingStatus);
 
           return (
             <React.Fragment key={message.id || i}>
-              {showLoadingStatus && loadingStatus && (
+              {showLoadingStatus && (
                 <div className={cn(statusPadding, "mb-2")}>
                   <div
                     className={layout === "thread" ? "mx-auto max-w-4xl" : ""}
                   >
-                    {msgIsThinking ? (
-                      <ThinkingBar text={t("chat.thinking.inProgress")} />
-                    ) : (
-                      <TextShimmer
-                        className="text-sm font-medium opacity-60"
-                        duration={1.2}
-                      >
-                        {loadingStatus}
-                      </TextShimmer>
-                    )}
+                    <TextShimmer
+                      className="text-sm font-medium opacity-60"
+                      duration={1.2}
+                    >
+                      {loadingStatus}
+                    </TextShimmer>
                   </div>
                 </div>
               )}
@@ -95,19 +88,16 @@ export const ChatThread = memo(
         {isLoading &&
           messages.length > 0 &&
           messages[messages.length - 1].role === Role.User &&
-          loadingStatus && (
+          loadingStatus &&
+          !thinkingRequested && (
             <div className={cn(statusPadding, "mb-2")}>
               <div className={layout === "thread" ? "mx-auto max-w-4xl" : ""}>
-                {thinkingRequested ? (
-                  <ThinkingBar text={t("chat.status.connecting")} />
-                ) : (
-                  <TextShimmer
-                    className="text-sm font-medium opacity-60"
-                    duration={1.2}
-                  >
-                    {loadingStatus}
-                  </TextShimmer>
-                )}
+                <TextShimmer
+                  className="text-sm font-medium opacity-60"
+                  duration={1.2}
+                >
+                  {loadingStatus}
+                </TextShimmer>
               </div>
             </div>
           )}

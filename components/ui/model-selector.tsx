@@ -54,12 +54,7 @@ type SelectorModel = {
 };
 
 function displayModelName(name: string) {
-  let label = name.replace(" (Free)", "");
-  // Logo already indicates OpenRouter; keep the trigger label short and readable.
-  if (label.startsWith("OpenRouter ")) {
-    label = label.slice("OpenRouter ".length);
-  }
-  return label;
+  return name.replace(" (Free)", "");
 }
 
 function ModelListItem({
