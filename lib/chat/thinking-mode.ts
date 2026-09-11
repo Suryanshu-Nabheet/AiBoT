@@ -245,7 +245,7 @@ export function repairSwappedThinkingAnswer(parts: {
 }
 
 export function normalizeThinkingStage1Output(raw: string): string {
-  let text = stripPromptLeakage(raw.trim());
+  const text = stripPromptLeakage(raw.trim());
   if (!text) {
     return `${THINKING_OPEN_TAG}\n- Task: (missing)\n- Plan: respond carefully\n${THINKING_CLOSE_TAG}`;
   }
