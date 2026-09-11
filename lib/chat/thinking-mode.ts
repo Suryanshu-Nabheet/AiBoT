@@ -144,8 +144,7 @@ export function looksLikeUserFacingProse(text: string): boolean {
   return firstPerson >= 2 && t.length > 70;
 }
 
-const RIGID_THINKING_LABEL =
-  /^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:/im;
+const RIGID_THINKING_LABEL = /^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:/im;
 
 /** Light cleanup for display (keeps normal prose thinking intact). */
 export function polishThinkingDisplayContent(raw: string): string {
