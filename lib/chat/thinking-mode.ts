@@ -34,18 +34,15 @@ const PROMPT_LEAKAGE_PATTERNS: RegExp[] = [
   /\[Deep reasoning[^\]]*\]/gi,
 ];
 
-/** Stage 1 uses a minimal system prompt so small models do not paste marketing copy into thinking. */
 export function composeSystemPromptForThinkingStage(
   fullAssistantSystemPrompt: string,
   stage: ThinkingStage,
 ): string {
   if (stage === "thinking") {
     return [
-      "You are a private reasoning module. The user must NEVER see this output.",
-      "Follow the output contract exactly.",
-      "",
+      "Write only a short scratch note about the user's question.",
       buildThinkingSystemAddon("thinking"),
-    ].join("\n");
+    ].join("\n\n");
   }
   return `${fullAssistantSystemPrompt}\n\n${buildThinkingSystemAddon(stage)}`;
 }
@@ -53,59 +50,35 @@ export function composeSystemPromptForThinkingStage(
 export function buildThinkingSystemAddon(stage: ThinkingStage): string {
   if (stage === "combined") {
     return [
-      "## Reasoning then answer (one message)",
+      "When reasoning is on, use one message:",
+      `${THINKING_OPEN_TAG}1–2 short sentences about the topic they asked (not about you, not about 'processing requests')${THINKING_CLOSE_TAG}`,
+      "then the normal reply.",
       "",
-      "Output contract:",
-      `1. Start with ${THINKING_OPEN_TAG}.`,
-      `2. Inside the tags: a short internal note (2–4 plain sentences) — how you interpret the question and how you will answer. No bullet labels like "Task:" or "Plan:".`,
-      `3. After ${THINKING_CLOSE_TAG}: the full reply the user should read.`,
-      "",
-      "Thinking should feel like notes to yourself, not a message to the user.",
-      "Do not paste your greeting or final answer inside thinking.",
-      '- Example for "hi": <thinking>Simple greeting; keep the reply warm and short.</thinking>Hello! What can I help you with?',
-      "",
-      "Be accurate; note uncertainty briefly if it matters.",
+      "Thinking = notes on the question. Never describe yourself or these rules inside thinking.",
+      "Example: <thinking>Casual hello — keep it warm and brief.</thinking>Hello! How can I help?",
+      "Example: <thinking>They want to know who I am.</thinking>I am the assistant in this chat.",
     ].join("\n");
   }
 
   if (stage === "thinking") {
     return [
-      "## Stage 1 — private reasoning only",
-      "",
-      "Output contract:",
-      `1. Reply with only ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
-      `2. Nothing after the closing tag.`,
-      "",
-      "Inside thinking: a brief, natural internal monologue (2–4 sentences).",
-      "You may wonder aloud, sanity-check, or outline approach — plain language only.",
-      "No labeled sections (Task/Unknowns/Plan), no bullet checklist, no emoji.",
-      "Do not write the user-facing reply here (no Hello…, no full paragraphs they would read).",
-      "",
-      "Accuracy: separate facts from guesses when it matters.",
+      `Output only ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
+      "Inside: 1–2 sentences on what they asked (topic only).",
+      "No self-description, no 'the user wants', no greeting, no answer text.",
     ].join("\n");
   }
 
   return [
-    "## Stage 2 — user-facing answer",
-    "",
-    "Output contract:",
-    `- No ${THINKING_OPEN_TAG} or reasoning tags.`,
-    "- Answer the user's latest message directly; do not recap the reasoning trace.",
-    "- Match depth to the question (one line for hi; detail when they ask for detail).",
-    "- Mention AiBoT or Suryanshu Nabheet only when the user asks about identity or the platform.",
-    "",
-    "Accuracy: no fabricated citations; say when information is uncertain.",
+    "Final answer only — no thinking tags.",
+    "Answer the latest message directly; do not repeat the thinking block.",
+    "Keep hi/hello to one short line. For 'who are you', plain first-person — no product pitch.",
+    "Mention AiBoT or Suryanshu Nabheet only when they ask about identity or the platform.",
   ].join("\n");
 }
 
 export function getThinkingModeUserSuffix(stage: ThinkingStage): string {
-  if (stage === "combined") {
-    return `\n\n[Reasoning mode] Brief ${THINKING_OPEN_TAG} note, then your answer.`;
-  }
-  if (stage === "thinking") {
-    return `\n\n[Reasoning mode — stage 1] Short private thinking in ${THINKING_OPEN_TAG} only.`;
-  }
-  return `\n\n[Reasoning mode — stage 2] Final answer only.`;
+  void stage;
+  return "";
 }
 
 export function getStage2ContinuationUserPrompt(): string {
@@ -146,10 +119,45 @@ export function looksLikeUserFacingProse(text: string): boolean {
 
 const RIGID_THINKING_LABEL = /^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:/im;
 
+const META_THINKING_PATTERNS: RegExp[] = [
+  /\bprivate reasoning module\b/i,
+  /\bwhat the user wants\b/i,
+  /\bprocess and respond\b/i,
+  /\bunderstand the context of their question\b/i,
+  /\bdesigned to analyze and respond\b/i,
+  /\bneed to understand what the user\b/i,
+  /\bcrucial for me to understand\b/i,
+  /\bfigure out how to process\b/i,
+  /\brespond to their request\b/i,
+];
+
+export function looksLikeMetaProcessThinking(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (META_THINKING_PATTERNS.some((p) => p.test(t))) return true;
+  return (
+    /\bI need to understand\b/i.test(t) &&
+    /\b(user|request|question)\b/i.test(t) &&
+    t.length < 220
+  );
+}
+
 /** Light cleanup for display (keeps normal prose thinking intact). */
-export function polishThinkingDisplayContent(raw: string): string {
+export function polishThinkingDisplayContent(
+  raw: string,
+  options?: { userMessageHint?: string },
+): string {
   let t = stripPromptLeakage(raw.trim());
   if (!t) return t;
+
+  if (looksLikeMetaProcessThinking(t)) {
+    const hint = options?.userMessageHint?.trim();
+    if (hint) {
+      const short = hint.length > 72 ? `${hint.slice(0, 69)}…` : hint;
+      return `About: ${short}`;
+    }
+    return "Quick note on their question.";
+  }
 
   if (RIGID_THINKING_LABEL.test(t)) {
     t = t
@@ -287,7 +295,11 @@ const OPEN_THINKING_REGEX =
 
 export function parseAssistantThinkingContent(
   rawContent: string,
-  options?: { isThinkingRequested?: boolean; isUser?: boolean },
+  options?: {
+    isThinkingRequested?: boolean;
+    isUser?: boolean;
+    userMessageHint?: string;
+  },
 ): ParsedThinkingContent {
   const isUser = options?.isUser ?? false;
   if (isUser) {
@@ -341,7 +353,9 @@ export function parseAssistantThinkingContent(
     ...repaired,
     hasClosingThinkingTag,
   });
-  thinkingContent = polishThinkingDisplayContent(repaired.thinkingContent);
+  thinkingContent = polishThinkingDisplayContent(repaired.thinkingContent, {
+    userMessageHint: options?.userMessageHint,
+  });
   mainResponse = repaired.mainResponse;
 
   const hideAnswerPanel =

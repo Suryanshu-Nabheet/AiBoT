@@ -58,6 +58,15 @@ export const ChatThread = memo(
           const isAgentGenerating =
             isLoading && isLast && message.role === Role.Agent;
           const msgIsThinking = message.isThinkingRequested;
+          let userMessageHint = "";
+          if (message.role === Role.Agent) {
+            for (let j = i - 1; j >= 0; j--) {
+              if (messages[j].role === Role.User) {
+                userMessageHint = messages[j].content;
+                break;
+              }
+            }
+          }
           // Thinking mode uses ThinkingPanel on the message — avoid a second ThinkingBar here.
           const showLoadingStatus =
             isAgentGenerating && !msgIsThinking && Boolean(loadingStatus);
@@ -86,6 +95,7 @@ export const ChatThread = memo(
                 layout={layout}
                 pdfFileName={pdfFileName}
                 pdfTitle={pdfTitle}
+                userMessageHint={userMessageHint || undefined}
               />
             </React.Fragment>
           );

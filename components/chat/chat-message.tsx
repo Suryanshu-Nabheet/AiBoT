@@ -62,6 +62,7 @@ export const ChatMessage = memo(
     layout = "thread",
     pdfFileName = "ai-response.pdf",
     pdfTitle = "AI Response",
+    userMessageHint,
   }: {
     message: Message;
     onCopy: (content: string) => void;
@@ -70,6 +71,7 @@ export const ChatMessage = memo(
     layout?: ChatMessageLayout;
     pdfFileName?: string;
     pdfTitle?: string;
+    userMessageHint?: string;
   }) => {
     const { t } = useTranslation();
     const [isCopied, setIsCopied] = useState(false);
@@ -130,6 +132,7 @@ export const ChatMessage = memo(
     } = parseAssistantThinkingContent(contentToShow, {
       isUser,
       isThinkingRequested: message.isThinkingRequested,
+      userMessageHint,
     });
 
     useEffect(() => {

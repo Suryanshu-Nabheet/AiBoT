@@ -22,7 +22,6 @@ import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import {
   buildChatMessagesForThinkingStage,
   composeSystemPromptForThinkingStage,
-  normalizeThinkingStage1Output,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -421,7 +420,7 @@ export function useChatSession({
           };
         };
 
-        // Local models handle two-stage (reasoning → answer) more reliably than combined.
+        // Same single-stream thinking contract as cloud models (one system prompt, less confusion).
         if (thinkingRequested) {
           const tempId = newAgentMessageId();
 
@@ -435,21 +434,21 @@ export function useChatSession({
             },
           ]);
 
-          const chatPayload1 = buildOllamaPayload("thinking");
-          const res1 = await postOllamaChat(
+          const chatPayload = buildOllamaPayload("combined");
+          const res = await postOllamaChat(
             ollamaUrl,
-            chatPayload1,
+            chatPayload,
             abortControllerRef.current.signal,
           );
 
-          if (!res1.ok) {
-            const errorText = await res1.text();
+          if (!res.ok) {
+            const errorText = await res.text();
             setMessages((prev) => [
               ...prev,
               {
                 id: `error-${Date.now()}`,
                 role: Role.Agent,
-                content: httpErrorMessage(locale, res1.status, errorText),
+                content: httpErrorMessage(locale, res.status, errorText),
                 isError: true,
               },
             ]);
@@ -457,45 +456,9 @@ export function useChatSession({
             return;
           }
 
-          const stage1Raw = await processStream(res1, true, true, {
-            finalize: false,
-            tempId,
-            contentPrefix: "",
-          });
-          const stage1Final = normalizeThinkingStage1Output(stage1Raw);
-
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId ? { ...m, content: stage1Final } : m,
-            ),
-          );
-
-          const chatPayload2 = buildOllamaPayload("final", stage1Final);
-          const res2 = await postOllamaChat(
-            ollamaUrl,
-            chatPayload2,
-            abortControllerRef.current.signal,
-          );
-
-          if (!res2.ok) {
-            const errorText = await res2.text();
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `error-${Date.now()}`,
-                role: Role.Agent,
-                content: httpErrorMessage(locale, res2.status, errorText),
-                isError: true,
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-
-          await processStream(res2, false, true, {
+          await processStream(res, true, true, {
             finalize: true,
             tempId,
-            contentPrefix: stage1Final,
           });
 
           return;

@@ -15,8 +15,10 @@ import {
 import {
   buildChatMessagesForThinkingStage,
   isSubstantiveThinkingContent,
+  looksLikeMetaProcessThinking,
   normalizeThinkingStage1Output,
   parseAssistantThinkingContent,
+  polishThinkingDisplayContent,
   repairSwappedThinkingAnswer,
   stripPromptLeakage,
   THINKING_CLOSE_TAG,
@@ -113,16 +115,27 @@ describe("stripPromptLeakage", () => {
 });
 
 describe("buildChatMessagesForThinkingStage", () => {
-  it("adds combined suffix for arena single-stream thinking", () => {
+  it("passes user content unchanged (no reasoning suffix)", () => {
     const msgs = buildChatMessagesForThinkingStage({
       history: [],
       userContent: "Compare A and B",
       stage: "combined",
     });
     expect(msgs).toHaveLength(1);
-    expect(msgs[0].content).toContain("Compare A and B");
-    expect(msgs[0].content).toContain("Reasoning mode");
-    expect(msgs[0].content).toContain(THINKING_OPEN_TAG);
+    expect(msgs[0].content).toBe("Compare A and B");
+  });
+});
+
+describe("polishThinkingDisplayContent", () => {
+  it("replaces meta process monologue with topic hint", () => {
+    const meta =
+      "Okay, I need to understand what the user wants me to do. Then I'll process and respond to their request.";
+    expect(looksLikeMetaProcessThinking(meta)).toBe(true);
+    const polished = polishThinkingDisplayContent(meta, {
+      userMessageHint: "hi",
+    });
+    expect(polished).toBe("About: hi");
+    expect(polished).not.toContain("private reasoning");
   });
 });
 
