@@ -8,7 +8,7 @@
 "use client";
 
 import { v4 } from "uuid";
-import React, { useState, useRef, useEffect, useCallback, memo } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -25,403 +25,24 @@ import {
   DownloadSimple as DownloadIcon,
 } from "@phosphor-icons/react";
 import Image from "next/image";
-import { Geist_Mono } from "next/font/google";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ModelSelector } from "@/components/ui/model-selector";
-import { useModel } from "@/hooks/use-model";
-import { TextShimmer } from "@/components/core/text-shimmer";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
+import { ChatThread } from "./chat-thread";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 import { useExecutionContext } from "@/contexts/execution-context";
-import { useMarkdown } from "@/hooks/useMarkdown";
-import { useSmoothTyping } from "@/hooks/use-smooth-typing";
-import { Message, Role, MODELS } from "@/lib/types";
+import { Role } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ThinkingBar } from "@/components/core/thinking-bar";
-import { ThinkingPanel } from "@/components/chat/thinking-panel";
-import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { useTranslation } from "@/hooks/use-translation";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
 import { PageShell } from "@/components/layout/page-shell";
-import {
-  isSubstantiveThinkingContent,
-  parseAssistantThinkingContent,
-} from "@/lib/chat/thinking-mode";
-import { chatMessageBodyClass } from "@/lib/chat/message-prose";
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  preload: true,
-  display: "swap",
-});
-
-// Memoized Message Component
-const MessageComponent = memo(
-  ({
-    message,
-    onCopy,
-    onModelSelect,
-    isGenerating,
-  }: {
-    message: Message;
-    onCopy: (content: string) => void;
-    onModelSelect?: (modelId: string) => void;
-    isGenerating?: boolean;
-  }) => {
-    const { t } = useTranslation();
-    const [isCopied, setIsCopied] = useState(false);
-
-    const handleMessageCopy = useCallback(
-      async (content?: string) => {
-        const textToCopy =
-          typeof content === "string" ? content : message.content;
-        await onCopy(textToCopy);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-      },
-      [onCopy, message.content],
-    );
-    // Simplified Markdown usage for now, ensuring robustness
-    const {
-      preprocessMarkdown,
-      markdownComponents,
-      remarkPlugins,
-      rehypePlugins,
-    } = useMarkdown({
-      onCopy: handleMessageCopy,
-      copied: isCopied,
-      isWrapped: false,
-      // toggleWrap removed to hide useless button
-      resolvedTheme: "dark",
-      geistMono,
-    });
-
-    const isUser = message.role === Role.User;
-
-    const displayedContent = useSmoothTyping(
-      message.content,
-      5,
-      message.shouldAnimate,
-    );
-
-    const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
-
-    const contentToShow = isUser ? message.content : displayedContent;
-
-    const parsedThinking = parseAssistantThinkingContent(contentToShow, {
-      isUser,
-      isThinkingRequested: message.isThinkingRequested,
-    });
-    const {
-      thinkingContent,
-      mainResponse,
-      hasThinkingTag,
-      hasClosingThinkingTag,
-      hideAnswerPanel,
-    } = parsedThinking;
-
-    useEffect(() => {
-      if (hasClosingThinkingTag && mainResponse?.trim()) {
-        setIsThinkingExpanded(false);
-      }
-    }, [hasClosingThinkingTag, mainResponse]);
-
-    const hasThinkingPanel =
-      !isUser &&
-      (hasThinkingTag ||
-        isSubstantiveThinkingContent(thinkingContent) ||
-        (message.isThinkingRequested && !hasClosingThinkingTag));
-    const showAnswer =
-      !isUser && !hideAnswerPanel && Boolean(mainResponse?.trim());
-    const compactAgentContentClass =
-      "bg-transparent text-foreground px-0 shadow-none border-none";
-
-    return (
-      <div className="w-full">
-        {/* Outer wrapper with EXACT same padding as floating input */}
-        <div className="px-2 sm:px-4 md:px-6 lg:px-8 py-2.5">
-          {/* Inner container with same max-width as input */}
-          <div className="max-w-4xl mx-auto">
-            {/* Message alignment wrapper - full width */}
-            <div className="flex w-full">
-              {/* Message bubble container - auto-sized with max width */}
-              <div
-                className={cn(
-                  "flex flex-col max-w-full",
-                  isUser ? "items-end ml-auto" : "items-start mr-auto",
-                )}
-              >
-                {/* Attachments Rendering */}
-                {message.attachments && message.attachments.length > 0 && (
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {message.attachments.map((att, i) =>
-                      att.type.startsWith("image/") ? (
-                        <div
-                          key={i}
-                          className="relative rounded-lg overflow-hidden border border-border/50 max-w-full"
-                        >
-                          <img
-                            src={att.content}
-                            alt={att.name}
-                            className="max-h-[300px] w-auto object-contain rounded-lg"
-                            loading="lazy"
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          key={i}
-                          className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50 text-xs"
-                        >
-                          <PaperclipIcon className="size-3" />
-                          <span className="font-medium truncate max-w-[150px]">
-                            {att.name}
-                          </span>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                )}
-
-                {hasThinkingPanel && (
-                  <ThinkingPanel
-                    thinkingContent={thinkingContent}
-                    isExpanded={isThinkingExpanded}
-                    onToggle={() => setIsThinkingExpanded(!isThinkingExpanded)}
-                    label={t("chat.thinking.label")}
-                    remarkPlugins={remarkPlugins}
-                    rehypePlugins={rehypePlugins}
-                    markdownComponents={markdownComponents}
-                    preprocessMarkdown={preprocessMarkdown}
-                    className={showAnswer ? "pb-0" : "pb-1"}
-                  />
-                )}
-
-                {(isUser || showAnswer) && (
-                  <div
-                    className={cn(
-                      "w-full max-w-full overflow-hidden break-words",
-                      isUser
-                        ? "text-sm bg-muted text-foreground border border-border/50 rounded-2xl px-3.5 py-2.5 md:px-5 md:py-3.5 shadow-sm"
-                        : cn(
-                            compactAgentContentClass,
-                            chatMessageBodyClass,
-                            hasThinkingPanel && showAnswer
-                              ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
-                              : "py-1.5",
-                          ),
-                    )}
-                  >
-                    {isUser ? (
-                      <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere font-medium leading-relaxed">
-                        {mainResponse}
-                      </div>
-                    ) : (
-                      <AssistantMarkdown
-                        content={mainResponse}
-                        variant="answer"
-                        remarkPlugins={remarkPlugins}
-                        rehypePlugins={rehypePlugins}
-                        components={markdownComponents}
-                        preprocess={preprocessMarkdown}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* Copy and Download buttons - Only show after final response is complete */}
-                {!isUser &&
-                  showAnswer &&
-                  mainResponse.trim() &&
-                  !isGenerating &&
-                  (!message.isThinkingRequested || hasClosingThinkingTag) && (
-                    <div className="mt-3 flex items-center gap-1.5 self-start transition-opacity duration-200">
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                              onClick={() => handleMessageCopy(mainResponse)}
-                            >
-                              {isCopied ? (
-                                <CheckIcon className="size-4 text-green-500" />
-                              ) : (
-                                <CopyIcon className="size-4" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="bottom"
-                            className="text-[10px] px-2 py-1 font-bold"
-                          >
-                            {t("chat.message.copy")}
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
-                              onClick={async () => {
-                                try {
-                                  const { generatePDF } =
-                                    await import("@/lib/pdf-utils");
-                                  await generatePDF(
-                                    mainResponse,
-                                    "ai-response.pdf",
-                                    "AI Response",
-                                  );
-                                  toast.success(t("toast.pdf.success"));
-                                } catch (error) {
-                                  console.error("PDF generation error:", error);
-                                  toast.error(t("toast.pdf.fail"));
-                                }
-                              }}
-                            >
-                              <DownloadIcon className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="bottom"
-                            className="text-[10px] px-2 py-1 font-bold"
-                          >
-                            {t("chat.message.downloadPdf")}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Error / Rate Limit Interactive Actions */}
-        {message.isError &&
-          message.errorType === "rate_limit" &&
-          onModelSelect && (
-            <div className="px-4 md:px-8 lg:px-12 py-2">
-              <div className="max-w-4xl mx-auto flex flex-col gap-2">
-                <p className="text-xs text-muted-foreground font-medium ml-1">
-                  Recommended alternatives:
-                </p>
-                <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
-                  {MODELS.map((m) => (
-                    <Button
-                      key={m.id}
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-[10px] md:text-xs bg-background/50 hover:bg-background border-primary/10 hover:border-primary/50 whitespace-nowrap"
-                      onClick={() => onModelSelect(m.id)}
-                    >
-                      {m.name.replace(" (Free)", "")}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-      </div>
-    );
-  },
-);
-MessageComponent.displayName = "MessageComponent";
-
-const MessagesList = memo(
-  ({
-    messages,
-    onCopy,
-    onModelSelect,
-    isLoading,
-    loadingStatus,
-    isThinking,
-  }: {
-    messages: Array<Message>;
-    onCopy: (content: string) => void;
-    onModelSelect: (modelId: string) => void;
-    isLoading: boolean;
-    loadingStatus: string;
-    isThinking: boolean;
-  }) => {
-    const { t } = useTranslation();
-    return (
-      <div className="flex flex-col gap-3 pb-4 sm:gap-4">
-        {messages.map((message, i) => {
-          const isLast = i === messages.length - 1;
-          const isAgentGenerating =
-            isLoading && isLast && message.role === Role.Agent;
-
-          // Determine if we should show thinking bar for this specific message
-          const msgIsThinking = message.isThinkingRequested;
-
-          // Normal Mode: Show shimmer UNTIL THE END of generation
-          // Thinking Mode: Show reasoning bar ONLY UNTIL tokens start appearing (the ThinkingBar inside handles it after)
-          const showLoadingStatus =
-            isAgentGenerating &&
-            (msgIsThinking ? !message.content.trim() : true);
-
-          return (
-            <React.Fragment key={message.id || i}>
-              {showLoadingStatus && loadingStatus && (
-                <div className="px-2 sm:px-4 md:px-6 lg:px-8 mb-2">
-                  <div className="max-w-4xl mx-auto">
-                    {msgIsThinking ? (
-                      <ThinkingBar text={t("chat.thinking.inProgress")} />
-                    ) : (
-                      <TextShimmer
-                        className="text-sm font-medium opacity-60"
-                        duration={1.2}
-                      >
-                        {loadingStatus}
-                      </TextShimmer>
-                    )}
-                  </div>
-                </div>
-              )}
-              <MessageComponent
-                message={message}
-                onCopy={onCopy}
-                onModelSelect={onModelSelect}
-                isGenerating={isAgentGenerating}
-              />
-            </React.Fragment>
-          );
-        })}
-        {/* Case where AI is thinking but hasn't sent the first token yet */}
-        {isLoading &&
-          messages.length > 0 &&
-          messages[messages.length - 1].role === Role.User &&
-          loadingStatus && (
-            <div className="px-2 sm:px-4 md:px-6 lg:px-8">
-              <div className="max-w-4xl mx-auto">
-                {isThinking ? (
-                  <ThinkingBar text={t("chat.status.connecting")} />
-                ) : (
-                  <TextShimmer className="text-sm font-medium" duration={1}>
-                    {loadingStatus}
-                  </TextShimmer>
-                )}
-              </div>
-            </div>
-          )}
-      </div>
-    );
-  },
-);
-MessagesList.displayName = "MessagesList";
-
 interface ChatInterfaceProps {
   conversationId?: string;
   storageKey?: string;
@@ -821,15 +442,15 @@ export default function ChatInterface({
           >
             <div className="mx-auto w-full max-w-4xl px-2 pb-6 pt-4 sm:px-4 sm:pt-6 md:pt-8">
               <div className="flex flex-col gap-1">
-                <MessagesList
+                <ChatThread
                   messages={messages}
                   onCopy={handleCopy}
                   onModelSelect={setModel}
                   isLoading={isLoading}
                   loadingStatus={loadingStatus}
-                  isThinking={isThinking}
+                  thinkingRequested={isThinking}
+                  endRef={messagesEndRef}
                 />
-                <div ref={messagesEndRef} className="h-4" />
               </div>
             </div>
           </div>
