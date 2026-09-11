@@ -67,7 +67,7 @@ function ArenaPanel({
           messages={messages}
           isLoading={isLoading}
           loadingStatus={loadingStatus}
-          thinkingRequested={thinkingEnabled}
+          thinkingRequested={thinkingEnabled && isLoading}
           onCopy={onCopy}
           pdfFileName="arena-response.pdf"
           pdfTitle="Arena Response"
@@ -203,7 +203,7 @@ export default function ArenaInterface({
     setQuery("");
     setAttachments([]); // Clear immediately
 
-    await Promise.all([
+    void Promise.all([
       leftChat.handleSend(
         currentQuery,
         currentAttachments,
@@ -218,6 +218,11 @@ export default function ArenaInterface({
       ),
     ]);
   };
+
+  const handleStopBoth = useCallback(() => {
+    leftChat.stopHelpers.stop();
+    rightChat.stopHelpers.stop();
+  }, [leftChat.stopHelpers, rightChat.stopHelpers]);
 
   const handleSpeech = useCallback(() => {
     if (isListening && recognitionRef.current) {
@@ -324,6 +329,7 @@ export default function ArenaInterface({
       setQuery={setQuery}
       onSubmit={handleSharedSubmit}
       isLoading={leftChat.isLoading || rightChat.isLoading}
+      onStop={handleStopBoth}
       attachments={attachments}
       setAttachments={setAttachments}
       isListening={isListening}

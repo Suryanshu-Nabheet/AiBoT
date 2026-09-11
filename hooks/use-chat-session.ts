@@ -23,6 +23,10 @@ import {
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
+  getConversationPersistId,
+  shouldRegisterExecutionForSession,
+} from "@/lib/chat/conversation-persist";
+import {
   LONG_TASK_MS,
   playCompletionChime,
   showDesktopNotification,
@@ -103,8 +107,13 @@ export function useChatSession({
   const requestStartedAtRef = useRef<number | null>(null);
   const thinkingRequestedRef = useRef(false);
 
+  const conversationPersistId = getConversationPersistId(conversationId, {
+    sessionId,
+    executionType,
+  });
+
   // --- Hooks ---
-  const { conversation } = useConversationById(initialConversationId);
+  const { conversation } = useConversationById(conversationPersistId);
   const { refreshExecutions, addExecution } = useExecutionContext();
 
   // --- Effects ---
@@ -115,7 +124,7 @@ export function useChatSession({
   }, [persistedModelId, model]);
 
   useEffect(() => {
-    if (conversation?.messages && initialConversationId) {
+    if (conversation?.messages && conversationPersistId) {
       // Mark all restored messages as not needing animation
       const nonAnimatingMessages = conversation.messages.map((m) => ({
         ...m,
@@ -124,7 +133,7 @@ export function useChatSession({
       setMessages(nonAnimatingMessages);
       setShowWelcome(false);
     }
-  }, [conversation, initialConversationId]);
+  }, [conversation, conversationPersistId]);
 
   // --- Handlers ---
   const handleModelChange = useCallback(
@@ -233,9 +242,9 @@ export function useChatSession({
             : m,
         );
 
-        if (finalize && conversationId) {
+        if (finalize && conversationPersistId) {
           saveConversation({
-            id: conversationId,
+            id: conversationPersistId,
             title:
               updatedMessages
                 .find((m) => m.role === Role.User)
@@ -345,7 +354,7 @@ export function useChatSession({
     }
 
     const userMessage: Message = {
-      id: `user-${Date.now()}`,
+      id: `user-${sessionId ?? "chat"}-${Date.now()}`,
       role: Role.User,
       content: currentQuery, // Keep visible content clean
       attachments: [...currentAttachments],
@@ -358,7 +367,11 @@ export function useChatSession({
     setAttachments([]);
     setIsLoading(true);
 
-    if (!executionCreated && conversationId) {
+    if (
+      !executionCreated &&
+      conversationId &&
+      shouldRegisterExecutionForSession(sessionId)
+    ) {
       const title =
         currentQuery.length > 50
           ? currentQuery.substring(0, 50) + "..."
@@ -628,7 +641,7 @@ export function useChatSession({
           body: JSON.stringify({
             messages: stage1Messages,
             model,
-            conversationId,
+            conversationId: conversationPersistId ?? conversationId,
             thinkingStage: "thinking",
             customKeys: apiKeys,
             locale,
@@ -680,7 +693,7 @@ export function useChatSession({
           body: JSON.stringify({
             messages: stage2Messages,
             model,
-            conversationId,
+            conversationId: conversationPersistId ?? conversationId,
             thinkingStage: "final",
             priorReasoning: stage1Final,
             customKeys: apiKeys,
@@ -721,7 +734,7 @@ export function useChatSession({
             (m) => ({ role: m.role, content: m.content }),
           ),
           model,
-          conversationId,
+          conversationId: conversationPersistId ?? conversationId,
           isThinking: false,
           customKeys: apiKeys,
           locale,
