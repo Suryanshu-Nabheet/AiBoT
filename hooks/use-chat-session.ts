@@ -13,6 +13,7 @@ import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
+import { ollamaFetch } from "@/lib/chat/ollama-fetch";
 import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { ExecutionType } from "@/hooks/useExecution";
@@ -442,7 +443,7 @@ export function useChatSession({
           const chatPayload = buildOllamaPayload("combined");
           let res: Response;
           try {
-            res = await fetch(`${targetUrl}/api/chat`, {
+            res = await ollamaFetch(`${targetUrl}/api/chat`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(chatPayload),
@@ -455,7 +456,7 @@ export function useChatSession({
             );
             if (targetUrl.includes("localhost")) {
               const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-              res = await fetch(`${fallbackUrl}/api/chat`, {
+              res = await ollamaFetch(`${fallbackUrl}/api/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(chatPayload),
@@ -502,7 +503,7 @@ export function useChatSession({
 
         let res: Response;
         try {
-          res = await fetch(`${targetUrl}/api/chat`, {
+          res = await ollamaFetch(`${targetUrl}/api/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(chatPayload),
@@ -515,7 +516,7 @@ export function useChatSession({
           );
           if (targetUrl.includes("localhost")) {
             const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-            res = await fetch(`${fallbackUrl}/api/chat`, {
+            res = await ollamaFetch(`${fallbackUrl}/api/chat`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(chatPayload),

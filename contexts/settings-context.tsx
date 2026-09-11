@@ -34,11 +34,9 @@ export interface ApiKeys {
 
 export type OllamaConnectionStatus = "unknown" | "connected" | "disconnected";
 
-export type OllamaDiscoveredModel = {
-  name: string;
-  size?: number;
-  details?: { parameter_size?: string };
-};
+import type { OllamaDiscoveredModel } from "@/lib/chat/ollama-discover";
+
+export type { OllamaDiscoveredModel };
 
 export interface GeneralPreferences {
   locale: Locale;

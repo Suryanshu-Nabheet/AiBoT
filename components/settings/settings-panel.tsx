@@ -161,66 +161,28 @@ export function SettingsPanel() {
     setIsScanning(true);
     setShowTroubleshooter(false);
 
-    // Normalize URL
-    let targetUrl = ollamaUrl.trim();
-    if (!targetUrl) {
-      targetUrl = "http://localhost:11434";
-    }
-    if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = `http://${targetUrl}`;
-    }
-
     try {
-      console.log("Scanning Ollama at:", targetUrl);
-      const res = await fetch(`${targetUrl}/api/tags`, {
-        mode: "cors",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) throw new Error("Status " + res.status);
-      const data = await res.json();
-      const models = data.models || [];
-      setOllamaModels(models);
-      setOllamaStatus("connected");
-      if (models.length > 0) {
-        toast.success(t("localLlm.scan.success", { count: models.length }));
-        return;
-      } else {
-        toast.warning(t("localLlm.scan.empty"));
-        return;
-      }
-    } catch (primaryErr) {
-      console.warn("Primary connection to Ollama failed:", primaryErr);
+      const { discoverOllamaModels } =
+        await import("@/lib/chat/ollama-discover");
+      const result = await discoverOllamaModels(ollamaUrl);
 
-      // Fallback: If "localhost" was tried, attempt "127.0.0.1" as it is often bypassed by local network settings/CORS
-      if (targetUrl.includes("localhost")) {
-        const fallbackUrl = targetUrl.replace("localhost", "127.0.0.1");
-        try {
-          console.log("Scanning fallback Ollama at:", fallbackUrl);
-          const res = await fetch(`${fallbackUrl}/api/tags`, {
-            mode: "cors",
-            headers: { "Content-Type": "application/json" },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const models = data.models || [];
-            setOllamaModels(models);
-            setOllamaUrl(fallbackUrl);
-            setOllamaStatus("connected");
-            if (models.length > 0) {
-              toast.success(t("localLlm.scan.loopback"));
-              return;
-            }
-            toast.warning(t("localLlm.scan.empty"));
-            return;
-          }
-        } catch (fallbackErr) {
-          console.warn("Fallback loopback fetch failed:", fallbackErr);
-        }
+      if (result.ok) {
+        setOllamaModels(result.models);
+        setOllamaUrl(result.resolvedUrl);
+        setOllamaStatus("connected");
+        toast.success(
+          t("localLlm.scan.success", { count: result.models.length }),
+        );
+        return;
       }
 
       setOllamaStatus("disconnected");
       setShowTroubleshooter(true);
-      toast.error(t("localLlm.scan.fail"));
+      if (result.error === "empty") {
+        toast.warning(t("localLlm.scan.empty"));
+      } else {
+        toast.error(t("localLlm.scan.fail"));
+      }
     } finally {
       setIsScanning(false);
     }
