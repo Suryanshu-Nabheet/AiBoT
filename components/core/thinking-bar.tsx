@@ -8,8 +8,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Brain, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThinkingBrainIcon } from "@/components/core/thinking-brain-icon";
 
 interface ThinkingBarProps {
   text?: string;
@@ -37,9 +38,7 @@ export function ThinkingBar({
         className="flex items-center gap-2.5 cursor-pointer transition-colors hover:text-primary"
         onClick={onClick}
       >
-        <div className="flex h-6 w-6 items-center justify-center rounded-md text-primary/70 group-hover:text-primary transition-colors">
-          <Brain className="h-4 w-4" />
-        </div>
+        <ThinkingBrainIcon active className="group-hover:text-primary" />
         <span className="text-sm font-medium text-muted-foreground group-hover:text-primary/90 transition-colors">
           {text}
         </span>

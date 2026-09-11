@@ -11,8 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Cpu, Sparkles } from "lucide-react";
-import { Brain } from "@phosphor-icons/react";
+import { Check, ChevronsUpDown, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -31,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/hooks/use-translation";
 import { BrandIcon } from "@/components/ui/brand-icon";
+import { ThinkingBrainIcon } from "@/components/core/thinking-brain-icon";
 
 interface ModelSelectorProps {
   value?: string;
@@ -38,12 +38,9 @@ interface ModelSelectorProps {
   disabled?: boolean;
   triggerClassName?: string;
   modelStorageKey?: string;
-  /** Deep thinking (two-stage reasoning) */
   thinkingEnabled?: boolean;
   onThinkingChange?: (enabled: boolean) => void;
-  /** When false, only the thinking toggle is shown (e.g. arena shared input). */
   showModelList?: boolean;
-  /** Compact icon trigger for tight toolbars */
   triggerVariant?: "default" | "compact";
 }
 
@@ -98,6 +95,9 @@ export function ModelSelector({
     ? (selectedModelObj?.name ?? t("model.select"))
     : t("model.thinkingMenu");
 
+  const showBrainInTrigger =
+    thinkingEnabled || !showModelList || !selectedModelObj;
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
@@ -108,26 +108,24 @@ export function ModelSelector({
           aria-label={triggerLabel}
           disabled={disabled}
           className={cn(
-            "h-9 shrink-0 rounded-full border-none bg-muted/50 px-2 font-medium text-muted-foreground text-xs hover:bg-muted hover:text-foreground focus:ring-0 sm:h-8",
+            "group h-9 shrink-0 rounded-full border-none bg-muted/50 px-2 font-medium text-muted-foreground text-xs hover:bg-muted hover:text-foreground focus:ring-0 sm:h-8",
             triggerVariant === "compact"
               ? "max-w-[min(38vw,9.5rem)] justify-start gap-1"
               : "w-fit max-w-[min(42vw,160px)] sm:max-w-none justify-between",
             thinkingEnabled &&
-              "ring-1 ring-amber-400/30 bg-amber-400/[0.06] text-foreground",
+              "bg-primary/[0.06] text-foreground ring-1 ring-primary/25",
             triggerClassName,
           )}
         >
           <span className="flex min-w-0 items-center gap-1.5">
-            {thinkingEnabled ? (
-              <Brain className="size-4 shrink-0 text-amber-500" weight="fill" />
-            ) : showModelList && selectedModelObj ? (
+            {showBrainInTrigger ? (
+              <ThinkingBrainIcon active={thinkingEnabled} />
+            ) : (
               <BrandIcon
-                src={selectedModelObj.logo || "/icons/ai.svg"}
+                src={selectedModelObj!.logo || "/icons/ai.svg"}
                 alt=""
                 className="size-3.5 sm:size-4 shrink-0"
               />
-            ) : (
-              <Sparkles className="size-3.5 shrink-0 opacity-60" />
             )}
             {showModelList && (
               <span className="truncate text-left">
@@ -158,23 +156,25 @@ export function ModelSelector({
               className={cn(
                 "flex items-center justify-between gap-3 rounded-xl border p-2.5 transition-colors",
                 thinkingEnabled
-                  ? "border-amber-400/25 bg-gradient-to-br from-amber-500/10 via-violet-500/5 to-emerald-500/5"
+                  ? "border-primary/20 bg-primary/[0.04]"
                   : "border-border/40 bg-muted/30",
               )}
             >
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-foreground">
-                  {t("model.thinkingPower")}
-                </p>
-                <p className="text-[10px] leading-snug text-muted-foreground">
-                  {t("model.thinkingHint")}
-                </p>
+              <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                <ThinkingBrainIcon active={thinkingEnabled} size="md" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground">
+                    {t("model.thinkingPower")}
+                  </p>
+                  <p className="text-[10px] leading-snug text-muted-foreground">
+                    {t("model.thinkingHint")}
+                  </p>
+                </div>
               </div>
               <Switch
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
                 aria-label={t("model.thinkingPower")}
-                className="data-[state=checked]:bg-amber-500"
               />
             </div>
           </div>
