@@ -10,7 +10,7 @@ import "server-only";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import {
   buildChatMessagesForThinkingStage,
-  buildThinkingSystemAddon,
+  composeSystemPromptForThinkingStage,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -71,7 +71,7 @@ export function buildSystemPrompt(stage?: ThinkingStage, locale?: Locale) {
   }
 
   if (stage === "thinking" || stage === "final" || stage === "combined") {
-    dynamicSystemPrompt += `\n\n${buildThinkingSystemAddon(stage)}`;
+    return composeSystemPromptForThinkingStage(dynamicSystemPrompt, stage);
   }
 
   return dynamicSystemPrompt;

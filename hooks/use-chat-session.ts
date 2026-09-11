@@ -21,7 +21,8 @@ import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import {
   buildChatMessagesForThinkingStage,
-  buildThinkingSystemAddon,
+  composeSystemPromptForThinkingStage,
+  normalizeThinkingStage1Output,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -400,7 +401,10 @@ export function useChatSession({
           stage: ThinkingStage,
           priorReasoning?: string,
         ) => {
-          const systemPrompt = `${baseSystemPrompt}\n\n${buildThinkingSystemAddon(stage)}`;
+          const systemPrompt = composeSystemPromptForThinkingStage(
+            baseSystemPrompt,
+            stage,
+          );
           const chatMessages = buildChatMessagesForThinkingStage({
             history: historyForThinking,
             userContent: apiContent,
@@ -453,11 +457,18 @@ export function useChatSession({
             return;
           }
 
-          const stage1Final = await processStream(res1, true, true, {
+          const stage1Raw = await processStream(res1, true, true, {
             finalize: false,
             tempId,
             contentPrefix: "",
           });
+          const stage1Final = normalizeThinkingStage1Output(stage1Raw);
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId ? { ...m, content: stage1Final } : m,
+            ),
+          );
 
           const chatPayload2 = buildOllamaPayload("final", stage1Final);
           const res2 = await postOllamaChat(

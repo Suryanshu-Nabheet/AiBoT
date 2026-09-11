@@ -121,8 +121,8 @@ describe("buildChatMessagesForThinkingStage", () => {
     });
     expect(msgs).toHaveLength(1);
     expect(msgs[0].content).toContain("Compare A and B");
-    expect(msgs[0].content).toContain(THINKING_OPEN_TAG);
-    expect(msgs[0].content).toContain("final answer");
+    expect(msgs[0].content).toContain("Reasoning mode");
+    expect(msgs[0].content).toContain("thinking bullets");
   });
 });
 

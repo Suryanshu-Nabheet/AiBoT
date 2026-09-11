@@ -6,10 +6,10 @@
  */
 
 /**
- * Production two-stage "deep thinking" orchestration.
- *
- * Stage 1 (thinking): model emits reasoning inside <thinking>...</thinking> only.
- * Stage 2 (final): model produces the user-facing answer, grounded on stage 1.
+ * Thinking orchestration:
+ * - Stage 1 (thinking): private bullets only — task, unknowns, self-checks, plan.
+ * - Stage 2 (final): user-facing answer (Ollama + optional API two-stage).
+ * - Combined: one stream for cloud/arena (thinking tags + answer).
  */
 
 export type ThinkingStage = "thinking" | "final" | "combined";
@@ -31,113 +31,104 @@ const PROMPT_LEAKAGE_PATTERNS: RegExp[] = [
   /After <\/thinking>, provide the final answer[^\n]*/gi,
   /After <\/thinking>, output NOTHING[^\n]*/gi,
   /Do NOT output any <thinking>.*?tags\.?/gi,
+  /\[Deep reasoning[^\]]*\]/gi,
 ];
 
-/** System-prompt extension for each thinking stage (no hostile / "nuclear" wording). */
+const THINKING_BULLET_TEMPLATE = [
+  "- Task: (what the user wants, in your own words)",
+  "- Unknowns: (what is missing or ambiguous)",
+  "- Self-check: (1–2 questions you must answer before replying)",
+  "- Plan: (steps for the final answer; no draft wording)",
+].join("\n");
+
+/** Stage 1 uses a minimal system prompt so small models do not paste marketing copy into thinking. */
+export function composeSystemPromptForThinkingStage(
+  fullAssistantSystemPrompt: string,
+  stage: ThinkingStage,
+): string {
+  if (stage === "thinking") {
+    return [
+      "You are a private reasoning module. The user must NEVER see this output.",
+      "Follow the output contract exactly.",
+      "",
+      buildThinkingSystemAddon("thinking"),
+    ].join("\n");
+  }
+  return `${fullAssistantSystemPrompt}\n\n${buildThinkingSystemAddon(stage)}`;
+}
+
 export function buildThinkingSystemAddon(stage: ThinkingStage): string {
   if (stage === "combined") {
     return [
       "## Deep reasoning (single stream)",
-      "Reason first, then answer in one reply so multiple models can run in parallel.",
       "",
       "Output contract:",
-      `1. The first characters of your reply MUST be ${THINKING_OPEN_TAG} (no preamble).`,
-      `2. Put all analysis, plans, checks, and intermediate conclusions inside ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
-      `3. Immediately after ${THINKING_CLOSE_TAG}, continue with the complete user-facing final answer in the same message.`,
+      `1. Start with ${THINKING_OPEN_TAG} (no preamble).`,
+      `2. Inside the tags: bullet-only private reasoning (see template).`,
+      `3. After ${THINKING_CLOSE_TAG}: the complete user-facing answer only.`,
       "",
-      "Quality bar:",
-      "- Keep the thinking block brief (about 3–8 sentences) unless the task is genuinely complex.",
-      "- Restate the user's goal and constraints inside the thinking block.",
-      "- Note unknowns and state explicit assumptions.",
-      "- For non-trivial tasks, compare approaches briefly, then commit to one.",
-      "- For math/code, sanity-check before closing the thinking block.",
-      "- You MUST finish the thinking block before writing any part of the final answer.",
-      "- FORBIDDEN inside thinking: greetings, the full reply, or marketing copy about AiBoT.",
-      "- FORBIDDEN after thinking: describing what AiBoT is unless the user asked about the platform.",
-      '- Example — user says "hi": <thinking>Simple greeting; answer in one short line.</thinking>Hello! How can I help you today?',
+      "Thinking template (mandatory shape):",
+      THINKING_BULLET_TEMPLATE,
       "",
-      "Accuracy (mandatory):",
-      "- Do not invent facts, statistics, quotes, URLs, paper titles, or product names.",
-      '- If you are unsure, write "uncertain" and what evidence would resolve it.',
-      "- The final answer must follow from the reasoning; never fabricate citations or sources.",
+      "Rules:",
+      "- Thinking is NOT the answer — no greetings, no paragraphs to the user, no AiBoT marketing.",
+      '- Example "hi": <thinking>\\n- Task: greet\\n- Plan: one friendly line\\n</thinking>\\nHello! How can I help?',
+      "",
+      "Accuracy: do not invent facts; mark uncertainty inside thinking bullets.",
     ].join("\n");
   }
 
   if (stage === "thinking") {
     return [
-      "## Deep reasoning (stage 1 of 2)",
-      "You are in the reasoning-only phase. Think carefully before the user sees an answer.",
+      "## Stage 1 — private reasoning only",
       "",
       "Output contract:",
-      `1. The first characters of your reply MUST be ${THINKING_OPEN_TAG} (no preamble).`,
-      `2. Put all analysis, plans, checks, and intermediate conclusions inside ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
-      `3. After ${THINKING_CLOSE_TAG}, output nothing—no final answer and no extra text.`,
+      `1. Reply MUST be only ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
+      `2. After ${THINKING_CLOSE_TAG} output nothing.`,
       "",
-      "Quality bar:",
-      "- Keep reasoning concise (about 3–8 sentences) unless the task is genuinely complex.",
-      "- Restate the user's goal and constraints.",
-      "- Note unknowns and state explicit assumptions.",
-      "- For non-trivial tasks, compare approaches briefly, then commit to one.",
-      "- For math/code, sanity-check before closing the thinking block.",
-      "- Do not greet the user or write the final answer here—only private reasoning.",
+      "Thinking template (mandatory — short bullets, not prose):",
+      THINKING_BULLET_TEMPLATE,
       "",
-      "Accuracy (mandatory):",
-      "- Do not invent facts, statistics, quotes, URLs, paper titles, or product names.",
-      '- If you are unsure, write "uncertain" and what evidence would resolve it.',
-      "- Separate verified facts from hypotheses inside the thinking block.",
+      "Forbidden inside thinking:",
+      "- Any sentence you would send to the user (greetings, apologies, full answers).",
+      "- Platform marketing or 'I am an AI assistant…' identity scripts.",
+      "- Repeating stage 2 wording; only plan and checks.",
+      "",
+      "Accuracy: separate facts vs assumptions in bullets; note what you still need to verify.",
     ].join("\n");
   }
 
   return [
-    "## Deep reasoning (stage 2 of 2)",
-    "You are in the final-answer phase.",
+    "## Stage 2 — user-facing answer",
     "",
     "Output contract:",
-    `1. Do NOT use ${THINKING_OPEN_TAG}, ${THINKING_CLOSE_TAG}, <thought>, or <reasoning> tags.`,
-    "2. Deliver the complete user-facing answer only.",
-    "3. Be accurate, well-structured, and appropriately detailed.",
+    `- No ${THINKING_OPEN_TAG} or reasoning tags.`,
+    "- Answer the user's latest message directly; do not recap the reasoning trace.",
+    "- Match depth to the question (one line for hi; detail when they ask for detail).",
+    "- Mention AiBoT or Suryanshu Nabheet only when the user asks about identity or the platform.",
     "",
-    "Accuracy (mandatory):",
-    "- Only include claims that follow from the prior reasoning or the user's message.",
-    "- If information is missing, say what is unknown instead of guessing.",
-    "- Never fabricate citations, links, or sources. Prefer precise, hedged language when needed.",
+    "Accuracy: no fabricated citations; say when information is uncertain.",
   ].join("\n");
 }
 
-/** Short user-message suffix (stage 1) — complements the system addon. */
 export function getThinkingModeUserSuffix(stage: ThinkingStage): string {
   if (stage === "combined") {
-    return [
-      "",
-      "[Deep reasoning — thinking then answer]",
-      `Use ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG} for reasoning, then the final answer in the same reply.`,
-    ].join("\n");
+    return `\n\n[Reasoning mode] Use thinking bullets then your answer in one message.`;
   }
-
   if (stage === "thinking") {
-    return [
-      "",
-      "[Deep reasoning — stage 1]",
-      `Respond with ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG} only.`,
-    ].join("\n");
+    return `\n\n[Reasoning mode — stage 1] Bullets only inside ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`;
   }
-
-  return [
-    "",
-    "[Deep reasoning — stage 2]",
-    "Provide the final answer only (no thinking tags).",
-  ].join("\n");
+  return `\n\n[Reasoning mode — stage 2] Final answer only.`;
 }
 
-/** User turn after stage-1 assistant reasoning is in context. */
 export function getStage2ContinuationUserPrompt(): string {
   return [
-    "Using the reasoning in your previous assistant message, write the final answer for the user now.",
+    "Write the final answer for the user now.",
     "",
     "Rules:",
-    `- Do not include ${THINKING_OPEN_TAG} or repeat the full reasoning trace.`,
-    "- You may use at most one short bridging sentence if it improves clarity.",
-    "- Use markdown formatting suited to the question (lists, headings, code blocks when needed).",
+    "- Do not repeat the reasoning bullets or paste the stage-1 trace.",
+    "- Do not open with a platform pitch unless they asked who you are.",
+    "- Use markdown when it helps (lists, code blocks).",
   ].join("\n");
 }
 
@@ -149,67 +140,82 @@ export function stripPromptLeakage(text: string): string {
   return out;
 }
 
-/**
- * Ensures stage-1 output is a single well-formed thinking block (drops leaked answer tail).
- */
-export function normalizeThinkingStage1Output(raw: string): string {
-  let text = stripPromptLeakage(raw.trim());
-  if (!text) {
-    return `${THINKING_OPEN_TAG}\n(No structured reasoning was returned.)\n${THINKING_CLOSE_TAG}`;
+export function looksLikeUserFacingProse(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (
+    /\b(I am an AI|I'm an AI|How can I assist|How can I help you today|Let me know how I can help)\b/i.test(
+      t,
+    )
+  ) {
+    return true;
   }
-
-  const openMatch = text.match(
-    /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i,
-  );
-  const closeMatch = text.match(
-    /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i,
-  );
-
-  if (!openMatch) {
-    text = `${THINKING_OPEN_TAG}\n${text}\n${THINKING_CLOSE_TAG}`;
-  } else {
-    const openTag = openMatch[0];
-    const normalizedOpen =
-      openTag.toLowerCase() === "<thinking>" ? THINKING_OPEN_TAG : openTag;
-    if (openTag !== normalizedOpen && text.startsWith(openTag)) {
-      text = normalizedOpen + text.slice(openTag.length);
-    }
-    if (!closeMatch) {
-      text = `${text}\n${THINKING_CLOSE_TAG}`;
-    }
-  }
-
-  const closeIdx = text.search(/<\/thinking>/i);
-  if (closeIdx !== -1) {
-    text = text.slice(0, closeIdx + THINKING_CLOSE_TAG.length);
-  }
-
-  return text.trim();
+  if (/\bintegrated within the AiBoT platform\b/i.test(t)) return true;
+  if (/^(hello|hi|hey)[!,.]?\s/i.test(t) && t.length > 35) return true;
+  const sentences = t.split(/[.!?]+/).filter((s) => s.trim().length > 8);
+  const firstPerson = sentences.filter((s) => /^\s*I\b/i.test(s)).length;
+  return firstPerson >= 2 && t.length > 70;
 }
 
-export type ParsedThinkingContent = {
+/** Replace draft answers smuggled into the thinking panel with a short plan stub. */
+export function polishThinkingDisplayContent(raw: string): string {
+  const t = stripPromptLeakage(raw.trim());
+  if (!t) return t;
+  if (!looksLikeUserFacingProse(t)) return t;
+  return [
+    "- Task: interpret the user's message",
+    "- Self-check: what do they actually need?",
+    "- Plan: reply concisely in stage 2 (no identity script unless asked)",
+  ].join("\n");
+}
+
+function wordJaccardSimilarity(a: string, b: string): number {
+  const tokenize = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .replace(/[^\w\s]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length > 2),
+    );
+  const A = tokenize(a);
+  const B = tokenize(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  for (const w of A) if (B.has(w)) inter++;
+  const union = A.size + B.size - inter;
+  return inter / union;
+}
+
+export function repairDuplicateThinkingAndAnswer(parts: {
   thinkingContent: string;
   mainResponse: string;
-  hasThinkingTag: boolean;
   hasClosingThinkingTag: boolean;
-  /** Stage-1-only stream: hide answer panel until stage 2 arrives */
-  hideAnswerPanel: boolean;
-};
-
-const TRANSITION_REGEX =
-  /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
-const GENERIC_CLOSE_REGEX = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
-const CLOSING_THINKING_REGEX =
-  /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
-const OPEN_THINKING_REGEX =
-  /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+}): { thinkingContent: string; mainResponse: string } {
+  const { thinkingContent, mainResponse, hasClosingThinkingTag } = parts;
+  if (!hasClosingThinkingTag) return { thinkingContent, mainResponse };
+  const think = thinkingContent.trim();
+  const main = mainResponse.trim();
+  if (!think || !main || think.length < 40 || main.length < 40) {
+    return { thinkingContent, mainResponse };
+  }
+  if (wordJaccardSimilarity(think, main) < 0.42) {
+    return { thinkingContent, mainResponse };
+  }
+  const betterMain = main.length >= think.length ? main : think;
+  return {
+    thinkingContent: polishThinkingDisplayContent(
+      "- Task: answered above\n- Note: reasoning overlapped the reply; showing plan only.",
+    ),
+    mainResponse: betterMain,
+  };
+}
 
 const PLATFORM_ANSWER_BOILERPLATE =
   /\bthe aibot platform is\b|\baibot platform is a\b|\bleverage(s)? advanced ai\b/i;
 const CONVERSATIONAL_ANSWER =
   /\b(how can i help|what would you like|hello!|hi there|hey there)\b/i;
 
-/** Small models sometimes put the reply inside thinking and platform filler outside. */
 export function repairSwappedThinkingAnswer(parts: {
   thinkingContent: string;
   mainResponse: string;
@@ -227,20 +233,61 @@ export function repairSwappedThinkingAnswer(parts: {
     PLATFORM_ANSWER_BOILERPLATE.test(main) ||
     (main.length > 60 && /\baibot\b/i.test(main) && !/\baibot\b/i.test(think));
   const thinkLooksLikeReply =
-    CONVERSATIONAL_ANSWER.test(think) ||
-    (/^(hello|hi|hey)\b/i.test(think) && think.length < 280);
+    CONVERSATIONAL_ANSWER.test(think) || looksLikeUserFacingProse(think);
 
   if (mainLooksLikeBoilerplate && thinkLooksLikeReply) {
     return {
-      thinkingContent:
-        "User message was simple; model misplaced the reply into reasoning.",
+      thinkingContent: think,
       mainResponse: think,
     };
   }
   return { thinkingContent, mainResponse };
 }
 
-/** Shared parser for chat UI (streaming-safe). */
+export function normalizeThinkingStage1Output(raw: string): string {
+  let text = stripPromptLeakage(raw.trim());
+  if (!text) {
+    return `${THINKING_OPEN_TAG}\n- Task: (missing)\n- Plan: respond carefully\n${THINKING_CLOSE_TAG}`;
+  }
+
+  const openMatch = text.match(
+    /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i,
+  );
+  const closeMatch = text.match(
+    /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i,
+  );
+
+  let inner = text;
+  if (!openMatch) {
+    inner = text;
+  } else {
+    const openTag = openMatch[0];
+    const afterOpen = text.split(openTag)[1] ?? "";
+    inner = closeMatch
+      ? (afterOpen.split(closeMatch[0])[0] ?? afterOpen)
+      : afterOpen;
+  }
+
+  inner = polishThinkingDisplayContent(inner.trim());
+  return `${THINKING_OPEN_TAG}\n${inner}\n${THINKING_CLOSE_TAG}`;
+}
+
+export type ParsedThinkingContent = {
+  thinkingContent: string;
+  mainResponse: string;
+  hasThinkingTag: boolean;
+  hasClosingThinkingTag: boolean;
+  hideAnswerPanel: boolean;
+};
+
+const TRANSITION_REGEX =
+  /<\/thinking>|<\/thought>|<\/reasoning>|<final_response>|<\/\|thinking\|>|\[ANSWER\]|【Answer】|---ANSWER---/i;
+const GENERIC_CLOSE_REGEX = /<\/[a-zA-Z0-9_|]+>|<final_[a-zA-Z0-9_]+>/i;
+const CLOSING_THINKING_REGEX =
+  /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
+const OPEN_THINKING_REGEX =
+  /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+
 export function parseAssistantThinkingContent(
   rawContent: string,
   options?: { isThinkingRequested?: boolean; isUser?: boolean },
@@ -288,12 +335,16 @@ export function parseAssistantThinkingContent(
   thinkingContent = stripPromptLeakage(thinkingContent);
   mainResponse = stripPromptLeakage(mainResponse);
 
-  const repaired = repairSwappedThinkingAnswer({
+  let repaired = repairSwappedThinkingAnswer({
     thinkingContent,
     mainResponse,
     hasClosingThinkingTag,
   });
-  thinkingContent = repaired.thinkingContent;
+  repaired = repairDuplicateThinkingAndAnswer({
+    ...repaired,
+    hasClosingThinkingTag,
+  });
+  thinkingContent = polishThinkingDisplayContent(repaired.thinkingContent);
   mainResponse = repaired.mainResponse;
 
   const hideAnswerPanel =
@@ -309,7 +360,6 @@ export function parseAssistantThinkingContent(
   };
 }
 
-/** Skip rendering placeholder / empty reasoning traces in the UI. */
 export function isSubstantiveThinkingContent(text: string): boolean {
   const cleaned = text
     .replace(OPEN_THINKING_REGEX, "")
