@@ -13,6 +13,7 @@ import {
   PLAIN_ASSISTANT,
 } from "../fixtures/thinking-content";
 import {
+  assembleThinkingAndAnswer,
   buildChatMessagesForThinkingStage,
   isSubstantiveThinkingContent,
   looksLikeMetaProcessThinking,
@@ -107,10 +108,23 @@ describe("normalizeThinkingStage1Output", () => {
     expect(out).toContain(THINKING_CLOSE_TAG);
   });
 
+  it("uses user hint when stage 1 is empty", () => {
+    const out = normalizeThinkingStage1Output("", { userMessageHint: "hi" });
+    expect(out).toContain("About: hi");
+  });
+
   it("truncates content after closing tag", () => {
     const raw = `${THINKING_OPEN_TAG}trace${THINKING_CLOSE_TAG}\nLeaked answer`;
     const out = normalizeThinkingStage1Output(raw);
     expect(out).not.toContain("Leaked answer");
+  });
+});
+
+describe("assembleThinkingAndAnswer", () => {
+  it("leaves room after thinking for streamed answer", () => {
+    const think = `${THINKING_OPEN_TAG}\nnote\n${THINKING_CLOSE_TAG}`;
+    expect(assembleThinkingAndAnswer(think, "")).toBe(`${think}\n\n`);
+    expect(assembleThinkingAndAnswer(think, "Hello")).toBe(`${think}\n\nHello`);
   });
 });
 

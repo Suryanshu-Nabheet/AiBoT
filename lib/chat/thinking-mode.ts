@@ -6,10 +6,11 @@
  */
 
 /**
- * Thinking orchestration:
- * - Stage 1 (thinking): brief private reasoning in plain language (not the user reply).
- * - Stage 2 (final): user-facing answer (Ollama + optional API two-stage).
- * - Combined: one stream for cloud/arena (thinking tags + answer).
+ * Thinking orchestration (thinking mode ON):
+ * - Stage 1: model outputs plain-text notes; we wrap them in <thinking> for the UI.
+ * - Stage 2: normal user-facing answer (no tags); prior notes are injected as context.
+ * - Thinking mode OFF: single request, no stage addons.
+ * - Combined: legacy single-stream (tags in one message); prefer two-stage in the client.
  */
 
 export type ThinkingStage = "thinking" | "final" | "combined";
@@ -62,9 +63,9 @@ export function buildThinkingSystemAddon(stage: ThinkingStage): string {
 
   if (stage === "thinking") {
     return [
-      `Output only ${THINKING_OPEN_TAG}...${THINKING_CLOSE_TAG}.`,
-      "Inside: 1–2 sentences on what they asked (topic only).",
-      "No self-description, no 'the user wants', no greeting, no answer text.",
+      "Plain text only — 1–3 short sentences (private notes on what they asked).",
+      "Do not use XML/markdown headings, Task/Plan labels, or the user-facing reply.",
+      "No meta talk ('the user wants', 'I need to understand', 'reasoning module').",
     ].join("\n");
   }
 
@@ -249,10 +250,17 @@ export function repairSwappedThinkingAnswer(parts: {
   return { thinkingContent, mainResponse };
 }
 
-export function normalizeThinkingStage1Output(raw: string): string {
+export function normalizeThinkingStage1Output(
+  raw: string,
+  options?: { userMessageHint?: string },
+): string {
   const text = stripPromptLeakage(raw.trim());
   if (!text) {
-    return `${THINKING_OPEN_TAG}\n(No reasoning returned.)\n${THINKING_CLOSE_TAG}`;
+    const hint = options?.userMessageHint?.trim();
+    const fallback = hint
+      ? `About: ${hint.length > 72 ? `${hint.slice(0, 69)}…` : hint}`
+      : "Considering the question.";
+    return `${THINKING_OPEN_TAG}\n${fallback}\n${THINKING_CLOSE_TAG}`;
   }
 
   const openMatch = text.match(
@@ -273,8 +281,28 @@ export function normalizeThinkingStage1Output(raw: string): string {
       : afterOpen;
   }
 
-  inner = polishThinkingDisplayContent(inner.trim());
+  inner = polishThinkingDisplayContent(inner.trim(), {
+    userMessageHint: options?.userMessageHint,
+  });
+  if (!inner.trim()) {
+    const hint = options?.userMessageHint?.trim();
+    inner = hint
+      ? `About: ${hint.length > 72 ? `${hint.slice(0, 69)}…` : hint}`
+      : "Considering the question.";
+  }
   return `${THINKING_OPEN_TAG}\n${inner}\n${THINKING_CLOSE_TAG}`;
+}
+
+/** Stored assistant message: thinking block + streamed answer. */
+export function assembleThinkingAndAnswer(
+  thinkingWrapped: string,
+  answer: string,
+): string {
+  const think = thinkingWrapped.trim();
+  const body = answer.trim();
+  if (!think) return body;
+  if (!body) return `${think}\n\n`;
+  return `${think}\n\n${body}`;
 }
 
 export type ParsedThinkingContent = {

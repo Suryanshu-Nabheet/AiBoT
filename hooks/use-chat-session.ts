@@ -20,8 +20,10 @@ import { ExecutionType } from "@/hooks/useExecution";
 import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import {
+  assembleThinkingAndAnswer,
   buildChatMessagesForThinkingStage,
   composeSystemPromptForThinkingStage,
+  normalizeThinkingStage1Output,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -419,6 +421,65 @@ export function useChatSession({
     const newAgentMessageId = () =>
       `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
+    const pushAgentHttpError = (status: number, errorText: string) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `error-${Date.now()}`,
+          role: Role.Agent,
+          content: httpErrorMessage(locale, status, errorText),
+          isError: true,
+        },
+      ]);
+      setIsLoading(false);
+    };
+
+    const runTwoStageThinking = async (
+      tempId: string,
+      isOllama: boolean,
+      requestStage: (
+        stage: ThinkingStage,
+        priorReasoning?: string,
+      ) => Promise<Response>,
+    ) => {
+      const res1 = await requestStage("thinking");
+      if (!res1.ok) {
+        const errorText = await res1.text();
+        pushAgentHttpError(res1.status, errorText);
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        return;
+      }
+
+      const stage1Raw = await processStream(res1, true, isOllama, {
+        finalize: false,
+        tempId,
+      });
+      const stage1Wrapped = normalizeThinkingStage1Output(stage1Raw, {
+        userMessageHint: currentQuery,
+      });
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, content: stage1Wrapped, isThinkingRequested: true }
+            : m,
+        ),
+      );
+
+      const res2 = await requestStage("final", stage1Wrapped);
+      if (!res2.ok) {
+        const errorText = await res2.text();
+        pushAgentHttpError(res2.status, errorText);
+        return;
+      }
+
+      await processStream(res2, true, isOllama, {
+        finalize: true,
+        tempId,
+        contentPrefix: assembleThinkingAndAnswer(stage1Wrapped, ""),
+      });
+    };
+
     try {
       const isOllama = model.startsWith("ollama/");
       const historyForThinking = messages.map((m) => ({
@@ -455,10 +516,8 @@ export function useChatSession({
           };
         };
 
-        // Same single-stream thinking contract as cloud models (one system prompt, less confusion).
         if (thinkingRequested) {
           const tempId = newAgentMessageId();
-
           setMessages((prev) => [
             ...prev,
             {
@@ -469,33 +528,13 @@ export function useChatSession({
             },
           ]);
 
-          const chatPayload = buildOllamaPayload("combined");
-          const res = await postOllamaChat(
-            ollamaUrl,
-            chatPayload,
-            abortControllerRef.current.signal,
+          await runTwoStageThinking(tempId, true, (stage, prior) =>
+            postOllamaChat(
+              ollamaUrl,
+              buildOllamaPayload(stage, prior),
+              abortControllerRef.current!.signal,
+            ),
           );
-
-          if (!res.ok) {
-            const errorText = await res.text();
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `error-${Date.now()}`,
-                role: Role.Agent,
-                content: httpErrorMessage(locale, res.status, errorText),
-                isError: true,
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-
-          await processStream(res, true, true, {
-            finalize: true,
-            tempId,
-          });
-
           return;
         }
 
@@ -535,9 +574,12 @@ export function useChatSession({
         return;
       }
 
-      // Non-Ollama provider (single OpenAI/OpenRouter proxy)
       if (thinkingRequested) {
         const tempId = newAgentMessageId();
+        const apiHistory = [
+          ...historyForThinking,
+          { role: "user", content: apiContent },
+        ];
 
         setMessages((prev) => [
           ...prev,
@@ -549,45 +591,22 @@ export function useChatSession({
           },
         ]);
 
-        const combinedMessages = buildChatMessagesForThinkingStage({
-          history: historyForThinking,
-          userContent: apiContent,
-          stage: "combined",
-        });
-
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: combinedMessages,
-            model,
-            conversationId: conversationPersistId ?? conversationId,
-            thinkingStage: "combined",
-            customKeys: sanitizeCustomKeysForRequest(apiKeys),
-            locale,
+        await runTwoStageThinking(tempId, false, (stage, prior) =>
+          fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: apiHistory,
+              model,
+              conversationId: conversationPersistId ?? conversationId,
+              thinkingStage: stage,
+              priorReasoning: prior,
+              customKeys: sanitizeCustomKeysForRequest(apiKeys),
+              locale,
+            }),
+            signal: abortControllerRef.current!.signal,
           }),
-          signal: abortControllerRef.current.signal,
-        });
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `error-${Date.now()}`,
-              role: Role.Agent,
-              content: httpErrorMessage(locale, res.status, errorText),
-              isError: true,
-            },
-          ]);
-          setIsLoading(false);
-          return;
-        }
-
-        await processStream(res, true, false, {
-          finalize: true,
-          tempId,
-        });
+        );
         return;
       }
 
