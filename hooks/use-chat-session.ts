@@ -108,6 +108,8 @@ export function useChatSession({
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestStartedAtRef = useRef<number | null>(null);
   const thinkingRequestedRef = useRef(false);
+  /** Avoid re-applying stored messages after every request (was wiping new replies). */
+  const hydratedConversationIdRef = useRef<string | null>(null);
 
   const conversationPersistId = getConversationPersistId(conversationId, {
     sessionId,
@@ -126,16 +128,19 @@ export function useChatSession({
   }, [persistedModelId, model]);
 
   useEffect(() => {
-    if (conversation?.messages && conversationPersistId && !isLoading) {
-      // Mark all restored messages as not needing animation
-      const nonAnimatingMessages = conversation.messages.map((m) => ({
+    if (!conversationPersistId || !conversation?.messages?.length) return;
+    if (conversation.id !== conversationPersistId) return;
+    if (hydratedConversationIdRef.current === conversationPersistId) return;
+
+    hydratedConversationIdRef.current = conversationPersistId;
+    setMessages(
+      conversation.messages.map((m) => ({
         ...m,
         shouldAnimate: false,
-      }));
-      setMessages(nonAnimatingMessages);
-      setShowWelcome(false);
-    }
-  }, [conversation, conversationPersistId, isLoading]);
+      })),
+    );
+    setShowWelcome(false);
+  }, [conversation, conversationPersistId]);
 
   // --- Handlers ---
   const handleModelChange = useCallback(
@@ -183,54 +188,77 @@ export function useChatSession({
     let updateCounter = 0;
     const UPDATE_BATCH_SIZE = 3; // Smaller batch for smoother UI
 
+    const consumeBufferedLines = (flushRemainder: boolean) => {
+      const lines = buffer.split("\n");
+      if (flushRemainder) {
+        buffer = "";
+      } else {
+        buffer = lines.pop() || "";
+      }
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        const delta = isOllama
+          ? deltaFromOllamaLine(trimmedLine)
+          : deltaFromSseLine(trimmedLine);
+        if (delta) accumulated += delta;
+      }
+    };
+
+    const pushContentToUi = () => {
+      const prefix = options?.contentPrefix ?? "";
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? {
+                ...m,
+                content: prefix + accumulated,
+                isThinkingRequested,
+              }
+            : m,
+        ),
+      );
+    };
+
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split("\n");
-        // Keep the last partial line in the buffer
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine) continue;
-
-          const delta = isOllama
-            ? deltaFromOllamaLine(trimmedLine)
-            : deltaFromSseLine(trimmedLine);
-          if (delta) accumulated += delta;
-        }
+        buffer += decoder.decode(value, { stream: !done });
+        consumeBufferedLines(false);
 
         updateCounter++;
-        if (updateCounter >= UPDATE_BATCH_SIZE || done) {
+        if (updateCounter >= UPDATE_BATCH_SIZE) {
           updateCounter = 0;
-          const prefix = options?.contentPrefix ?? "";
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId
-                ? {
-                    ...m,
-                    content: prefix + accumulated,
-                    isThinkingRequested,
-                  }
-                : m,
-            ),
-          );
+          pushContentToUi();
+        }
+
+        if (done) {
+          consumeBufferedLines(true);
+          break;
         }
       }
 
+      const prefix = options?.contentPrefix ?? "";
+      const finalContent = prefix + accumulated;
+      const hasText = accumulated.trim().length > 0;
+
       setMessages((prev) => {
-        const prefix = options?.contentPrefix ?? "";
         const updatedMessages = prev.map((m) =>
           m.id === tempId
-            ? { ...m, content: prefix + accumulated, isThinkingRequested }
+            ? {
+                ...m,
+                content: hasText
+                  ? finalContent
+                  : translate(locale, "errors.connectionInterrupted"),
+                isThinkingRequested,
+                isError: hasText ? m.isError : true,
+              }
             : m,
         );
 
-        if (finalize && conversationPersistId) {
+        if (finalize && conversationPersistId && hasText) {
           saveConversation({
             id: conversationPersistId,
             title:
