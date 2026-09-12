@@ -7,9 +7,9 @@
 
 "use client";
 
-import Link from "next/link";
 import { useTranslation } from "@/hooks/use-translation";
 import type { ChatErrorCode } from "@/lib/chat/chat-error";
+import { useSettingsModal } from "@/contexts/settings-modal-context";
 import { cn } from "@/lib/utils";
 
 type ChatErrorBannerProps = {
@@ -24,6 +24,7 @@ export function ChatErrorBanner({
   className,
 }: ChatErrorBannerProps) {
   const { t } = useTranslation();
+  const { openSettings } = useSettingsModal();
   const showSettings =
     code === "byok_key_required" || code === "byok_invalid_key";
 
@@ -37,12 +38,13 @@ export function ChatErrorBanner({
     >
       <p>{body}</p>
       {showSettings && (
-        <Link
-          href="/settings"
+        <button
+          type="button"
+          onClick={() => openSettings("api-keys")}
           className="mt-1.5 inline-block text-xs font-medium text-foreground underline-offset-2 hover:underline"
         >
           {t("errors.chat.action.settings")}
-        </Link>
+        </button>
       )}
     </div>
   );

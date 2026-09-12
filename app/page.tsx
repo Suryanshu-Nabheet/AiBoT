@@ -9,7 +9,6 @@
 
 import ChatInterface from "@/components/chat/chat-interface";
 import ArenaInterface from "@/components/chat/arena-interface";
-import { SettingsPanel } from "@/components/settings/settings-panel";
 import { AnimatePresence, motion } from "framer-motion";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
@@ -19,13 +18,6 @@ const viewMotion = {
   animate: { opacity: 1, scale: 1 },
   exit: { opacity: 0, scale: 0.98 },
   transition: { duration: 0.2 },
-};
-
-const settingsMotion = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 10 },
-  transition: { duration: 0.3, ease: "easeOut" as const },
 };
 
 export default function HomePage() {
@@ -54,17 +46,6 @@ export default function HomePage() {
             >
               <PageViewSlot>
                 <ArenaInterface />
-              </PageViewSlot>
-            </motion.div>
-          )}
-          {viewMode === "settings" && (
-            <motion.div
-              key="settings"
-              {...settingsMotion}
-              className="absolute inset-0"
-            >
-              <PageViewSlot>
-                <SettingsPanel />
               </PageViewSlot>
             </motion.div>
           )}

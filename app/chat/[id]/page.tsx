@@ -12,7 +12,6 @@ import ChatInterface from "@/components/chat/chat-interface";
 import ArenaInterface from "@/components/chat/arena-interface";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { AnimatePresence, motion } from "framer-motion";
-import { SettingsPanel } from "@/components/settings/settings-panel";
 import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
 
 const viewMotion = {
@@ -20,13 +19,6 @@ const viewMotion = {
   animate: { opacity: 1 },
   exit: { opacity: 0 },
   transition: { duration: 0.15 },
-};
-
-const settingsMotion = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 10 },
-  transition: { duration: 0.3, ease: "easeOut" as const },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,18 +50,6 @@ const ChatPage = ({ params }: { params: any }) => {
             >
               <PageViewSlot>
                 <ArenaInterface conversationId={id} />
-              </PageViewSlot>
-            </motion.div>
-          )}
-
-          {viewMode === "settings" && (
-            <motion.div
-              key="settings"
-              {...settingsMotion}
-              className="absolute inset-0"
-            >
-              <PageViewSlot>
-                <SettingsPanel />
               </PageViewSlot>
             </motion.div>
           )}

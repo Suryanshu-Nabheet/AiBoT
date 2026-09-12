@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { useViewMode } from "@/contexts/view-mode-context";
 import { useSettings, ApiKeys } from "@/contexts/settings-context";
 import { MODELS } from "@/lib/types";
 import { getModelsForProvider } from "@/lib/provider-models";
@@ -47,13 +46,17 @@ import { getNotificationPermission } from "@/lib/desktop-notifications";
 import packageJson from "@/package.json";
 import { BrandIcon } from "@/components/ui/brand-icon";
 import { normalizeOllamaUrl, probeOllamaTags } from "@/lib/chat/ollama-url";
+import type { SettingsSection } from "@/lib/settings-sections";
 
-type SettingsSection =
-  | "general"
-  | "models"
-  | "api-keys"
-  | "local-llm"
-  | "about";
+export type { SettingsSection };
+
+export type SettingsPanelProps = {
+  onClose: () => void;
+  initialSection?: SettingsSection;
+  onSectionChange?: (section: SettingsSection) => void;
+  /** Modal fills a fixed dialog; page fills the main column. */
+  variant?: "modal" | "page";
+};
 
 interface SectionItem {
   id: SettingsSection;
@@ -109,8 +112,12 @@ const PROVIDERS = [
   },
 ];
 
-export function SettingsPanel() {
-  const { setViewMode } = useViewMode();
+export function SettingsPanel({
+  onClose,
+  initialSection = "general",
+  onSectionChange,
+  variant = "modal",
+}: SettingsPanelProps) {
   const { t } = useTranslation();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const {
@@ -135,7 +142,19 @@ export function SettingsPanel() {
   } = useSettings();
 
   const [activeSection, setActiveSection] =
-    useState<SettingsSection>("general");
+    useState<SettingsSection>(initialSection);
+
+  useEffect(() => {
+    setActiveSection(initialSection);
+  }, [initialSection]);
+
+  const selectSection = useCallback(
+    (section: SettingsSection) => {
+      setActiveSection(section);
+      onSectionChange?.(section);
+    },
+    [onSectionChange],
+  );
   const [verifyingProvider, setVerifyingProvider] = useState<string | null>(
     null,
   );
@@ -529,7 +548,7 @@ export function SettingsPanel() {
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                       {t("models.unlock.desc")}{" "}
                       <button
-                        onClick={() => setActiveSection("api-keys")}
+                        onClick={() => selectSection("api-keys")}
                         className="text-primary font-bold hover:underline"
                       >
                         {t("models.unlock.link")}
@@ -1171,9 +1190,19 @@ Environment="OLLAMA_ORIGINS=*"`}
   };
 
   return (
-    <div className="relative flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden border-t border-border/50 bg-background xl:flex-row">
-      {/* Settings Sidebar - AGENT MODE INSPIRED SIZING */}
-      <div className="relative z-20 flex w-full shrink-0 flex-col border-b border-border/50 bg-muted/[0.02] xl:w-[260px] xl:border-r xl:border-b-0">
+    <div
+      className={cn(
+        "relative flex min-h-0 w-full max-w-full flex-col overflow-hidden bg-background xl:flex-row",
+        variant === "modal" ? "h-full" : "h-full border-t border-border/50",
+      )}
+    >
+      {/* Settings Sidebar */}
+      <div
+        className={cn(
+          "relative z-20 flex w-full shrink-0 flex-col border-b border-border/50 bg-muted/[0.02] xl:border-r xl:border-b-0",
+          variant === "modal" ? "xl:w-[240px]" : "xl:w-[260px]",
+        )}
+      >
         <div className="px-4 pt-4 pb-2 sm:px-6 xl:p-7 xl:pb-10">
           <div className="flex items-center gap-2 mb-2">
             <div className="size-2 rounded-full bg-primary/80" />
@@ -1194,7 +1223,7 @@ Environment="OLLAMA_ORIGINS=*"`}
             id="settings-section"
             value={activeSection}
             onChange={(event) =>
-              setActiveSection(event.target.value as SettingsSection)
+              selectSection(event.target.value as SettingsSection)
             }
             className="h-11 w-full cursor-pointer rounded-xl border border-border/50 bg-background px-3 text-sm font-bold text-foreground outline-none transition-colors focus:ring-2 focus:ring-primary/30"
           >
@@ -1210,7 +1239,7 @@ Environment="OLLAMA_ORIGINS=*"`}
           {SECTIONS.map((section) => (
             <button
               key={section.id}
-              onClick={() => setActiveSection(section.id)}
+              onClick={() => selectSection(section.id)}
               className={cn(
                 "inline-flex h-10 shrink-0 cursor-pointer items-center justify-start gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-bold tracking-tight outline-none transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 xl:w-full xl:gap-3 xl:px-4",
                 activeSection === section.id
@@ -1243,7 +1272,7 @@ Environment="OLLAMA_ORIGINS=*"`}
       {/* Main Content Area */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
         {/* Navigation Header */}
-        <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b border-border/30 px-4 backdrop-blur-sm sm:px-6 xl:h-16 xl:px-10">
+        <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b border-border/30 px-4 backdrop-blur-sm sm:px-6 xl:h-14 xl:px-8">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-30">
               {t("settings.breadcrumb")}
@@ -1253,15 +1282,22 @@ Environment="OLLAMA_ORIGINS=*"`}
             </span>
           </div>
           <button
-            onClick={() => setViewMode("direct")}
-            className="group p-2.5 rounded-2xl bg-muted/20 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
+            type="button"
+            aria-label="Close settings"
+            onClick={onClose}
+            className="group rounded-full border border-border/50 bg-muted/30 p-2 text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground"
           >
-            <X className="size-4.5 group-hover:rotate-90 transition-transform duration-300" />
+            <X className="size-4 transition-transform duration-300 group-hover:rotate-90" />
           </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-border/50 scrollbar-track-transparent">
-          <div className="mx-auto w-full max-w-4xl px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-10 xl:px-14 xl:py-16">
+          <div
+            className={cn(
+              "mx-auto w-full max-w-3xl px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8",
+              variant === "modal" ? "xl:px-8 xl:py-8" : "xl:px-14 xl:py-16",
+            )}
+          >
             {renderSection()}
           </div>
         </div>

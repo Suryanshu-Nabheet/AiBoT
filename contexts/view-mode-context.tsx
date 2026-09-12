@@ -32,12 +32,12 @@ function readStoredViewMode(): ViewMode {
   if (typeof window === "undefined") return "direct";
   try {
     const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    if (
-      stored === "direct" ||
-      stored === "side-by-side" ||
-      stored === "settings"
-    ) {
+    if (stored === "direct" || stored === "side-by-side") {
       return stored;
+    }
+    // Legacy: settings used to be a full-page view mode.
+    if (stored === "settings") {
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, "direct");
     }
   } catch {
     /* ignore */
@@ -46,7 +46,6 @@ function readStoredViewMode(): ViewMode {
 }
 
 export function ViewModeProvider({ children }: { children: ReactNode }) {
-  // Always match SSR first paint ("direct"); restore preference after hydration.
   const [viewMode, setViewModeState] = useState<ViewMode>("direct");
 
   useEffect(() => {

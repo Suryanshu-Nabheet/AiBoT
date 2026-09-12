@@ -19,12 +19,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export type ViewMode = "direct" | "side-by-side" | "settings";
+export type ViewMode = "direct" | "side-by-side";
 
 interface SettingsToggleProps {
   mode: ViewMode;
   onChange: (mode: ViewMode) => void;
+  onOpenSettings: () => void;
   className?: string;
 }
 
@@ -75,15 +81,10 @@ const ArenaLayoutIcon = ({ active }: { active: boolean }) => (
   </div>
 );
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
 export function SettingsToggle({
   mode,
   onChange,
+  onOpenSettings,
   className,
 }: SettingsToggleProps) {
   const { t } = useTranslation();
@@ -158,15 +159,10 @@ export function SettingsToggle({
         </div>
         <DropdownMenuSeparator className="my-1.5 bg-sidebar-border/50" />
         <DropdownMenuItem
-          onClick={() => onChange("settings")}
-          className={cn(
-            "flex items-center gap-2.5 p-2 rounded-lg transition-all duration-200 cursor-pointer mx-0.5",
-            mode === "settings"
-              ? "bg-primary/[0.04] text-primary"
-              : "hover:bg-muted/50 text-muted-foreground",
-          )}
+          onClick={onOpenSettings}
+          className="mx-0.5 flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-muted-foreground transition-all duration-200 hover:bg-muted/50"
         >
-          <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted/50 text-muted-foreground group-hover:text-primary transition-colors">
+          <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted/50 text-muted-foreground transition-colors group-hover:text-primary">
             <Gear className="size-3.5" weight="bold" />
           </div>
           <span className="text-[11px] font-bold tracking-tight">

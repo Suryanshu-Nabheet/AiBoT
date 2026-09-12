@@ -10,7 +10,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Columns2, MessageSquare, Moon, Plus, Sun } from "lucide-react";
+import {
+  Columns2,
+  MessageSquare,
+  Moon,
+  Plus,
+  Settings,
+  Sun,
+} from "lucide-react";
 import {
   Command,
   CommandDialog,
@@ -24,6 +31,7 @@ import {
 } from "@/components/ui/command";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { useViewMode } from "@/contexts/view-mode-context";
+import { useSettingsModal } from "@/contexts/settings-modal-context";
 import { useTranslation } from "@/hooks/use-translation";
 import type { ViewMode } from "@/components/home/settings-toggle";
 
@@ -36,6 +44,7 @@ export function CommandPalette() {
   const { t } = useTranslation();
   const { executions } = useExecutionContext();
   const { viewMode, setViewMode } = useViewMode();
+  const { openSettings } = useSettingsModal();
   const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -149,6 +158,16 @@ export function CommandPalette() {
           <CommandSeparator />
 
           <CommandGroup heading={t("command.group.system")}>
+            <CommandItem
+              onSelect={() =>
+                run(() => {
+                  openSettings();
+                })
+              }
+            >
+              <Settings />
+              <span>{t("header.appSettings")}</span>
+            </CommandItem>
             <CommandItem onSelect={toggleTheme}>
               {resolvedTheme === "dark" ? <Sun /> : <Moon />}
               <span>

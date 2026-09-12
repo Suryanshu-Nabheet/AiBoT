@@ -7,17 +7,22 @@
 
 "use client";
 
-import { SettingsPanel } from "@/components/settings/settings-panel";
-import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSettingsModal } from "@/contexts/settings-modal-context";
 
+/**
+ * Legacy /settings route — opens the modal over the previous experience
+ * and returns home so chat state is never wiped by a full-page settings view.
+ */
 export default function SettingsPage() {
-  return (
-    <PageShell>
-      <div className="relative min-h-0 flex-1">
-        <PageViewSlot>
-          <SettingsPanel />
-        </PageViewSlot>
-      </div>
-    </PageShell>
-  );
+  const router = useRouter();
+  const { openSettings } = useSettingsModal();
+
+  useEffect(() => {
+    openSettings();
+    router.replace("/");
+  }, [openSettings, router]);
+
+  return null;
 }

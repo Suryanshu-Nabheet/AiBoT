@@ -14,6 +14,7 @@ import { Providers } from "./providers";
 import { AppFrame } from "@/components/layout/app-frame";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { SettingsProvider } from "@/contexts/settings-context";
+import { SettingsModalProvider } from "@/contexts/settings-modal-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = siteConfig;
@@ -53,9 +54,11 @@ export default function RootLayout({
         <Providers>
           <ViewModeProvider>
             <SettingsProvider>
-              <TooltipProvider delayDuration={0}>
-                <AppFrame>{children}</AppFrame>
-              </TooltipProvider>
+              <SettingsModalProvider>
+                <TooltipProvider delayDuration={0}>
+                  <AppFrame>{children}</AppFrame>
+                </TooltipProvider>
+              </SettingsModalProvider>
             </SettingsProvider>
           </ViewModeProvider>
         </Providers>
