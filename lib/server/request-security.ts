@@ -57,7 +57,10 @@ export function protectApiRequest(
   if (current.count >= limit) {
     const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
     return NextResponse.json(
-      { message: "Too many requests. Please try again shortly." },
+      {
+        code: "rate_limit",
+        message: "Too many requests. Please try again shortly.",
+      },
       { status: 429, headers: { "Retry-After": String(retryAfter) } },
     );
   }

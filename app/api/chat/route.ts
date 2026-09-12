@@ -12,6 +12,7 @@ import {
   isPlatformModel,
 } from "@/lib/chat/resolve-provider";
 import { isLocale, type Locale } from "@/lib/i18n";
+import { chatErrorResponseBody } from "@/lib/chat/chat-error";
 import { openChatUpstreamStream } from "@/lib/server/chat-completion";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { chatRequestSchema } from "@/lib/server/request-schemas";
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
     !customKeys?.openrouter
   ) {
     return NextResponse.json(
-      { message: "The selected model requires its provider API key." },
+      chatErrorResponseBody(400, undefined, "missing_api_key"),
       { status: 400 },
     );
   }
@@ -103,10 +104,10 @@ export async function POST(req: NextRequest) {
 
     const errorText = await response.text();
     return NextResponse.json(
-      { message: errorText, code: response.status },
+      chatErrorResponseBody(response.status, errorText),
       { status: response.status },
     );
-  } catch (error) {
-    return NextResponse.json({ message: String(error) }, { status: 500 });
+  } catch {
+    return NextResponse.json(chatErrorResponseBody(500), { status: 500 });
   }
 }

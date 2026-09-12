@@ -23,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChatErrorBanner } from "@/components/chat/chat-error-banner";
 import { ThinkingPanel } from "@/components/chat/thinking-panel";
 import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
@@ -101,6 +102,7 @@ export const ChatMessage = memo(
     });
 
     const isUser = message.role === Role.User;
+    const isAgentError = !isUser && Boolean(message.isError);
     const isStreaming = Boolean(isGenerating);
     const displayedContent = useSmoothTyping(
       message.content,
@@ -172,7 +174,8 @@ export const ChatMessage = memo(
       Boolean(message.isThinkingRequested) &&
       (isSubstantiveThinkingContent(thinkingContent) ||
         (isStreaming && !mainResponse?.trim()));
-    const showAnswer = !isUser && Boolean(mainResponse?.trim());
+    const showAnswer =
+      isAgentError || (!isUser && Boolean(mainResponse?.trim()));
     const compactAgentContentClass =
       "bg-transparent text-foreground px-0 shadow-none border-none";
 
@@ -239,19 +242,29 @@ export const ChatMessage = memo(
                       "w-full max-w-full overflow-hidden break-words",
                       isUser
                         ? "px-0 py-1.5 text-sm text-foreground md:py-2"
-                        : cn(
-                            compactAgentContentClass,
-                            chatMessageBodyClass,
-                            hasThinkingPanel && showAnswer
-                              ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
-                              : "py-1.5",
-                          ),
+                        : isAgentError
+                          ? "py-1"
+                          : cn(
+                              compactAgentContentClass,
+                              chatMessageBodyClass,
+                              hasThinkingPanel && showAnswer
+                                ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
+                                : "py-1.5",
+                            ),
                     )}
                   >
                     {isUser ? (
                       <div className="overflow-wrap-anywhere whitespace-pre-wrap break-words text-right text-[15px] font-medium leading-relaxed">
                         {mainResponse}
                       </div>
+                    ) : isAgentError ? (
+                      <ChatErrorBanner
+                        title={
+                          message.errorTitle ?? t("errors.chat.title.generic")
+                        }
+                        body={message.content}
+                        code={message.errorType}
+                      />
                     ) : (
                       <AssistantMarkdown
                         content={mainResponse}
@@ -266,6 +279,7 @@ export const ChatMessage = memo(
                 )}
 
                 {!isUser &&
+                  !isAgentError &&
                   showAnswer &&
                   mainResponse.trim() &&
                   !isGenerating &&
@@ -342,7 +356,7 @@ export const ChatMessage = memo(
               <div className={innerWidth[layout]}>
                 <div className="flex flex-col gap-2">
                   <p className="ml-1 text-xs font-medium text-muted-foreground">
-                    Recommended alternatives:
+                    {t("errors.chat.alternatives")}
                   </p>
                   <div className="flex max-h-[300px] flex-wrap gap-2 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
                     {MODELS.map((m) => (

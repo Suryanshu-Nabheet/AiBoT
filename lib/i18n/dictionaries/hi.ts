@@ -201,6 +201,31 @@ export const hi = {
   "errors.http": "**त्रुटि {status}**: {detail}",
   "errors.noApiKey":
     "कोई API कुंजी उपलब्ध नहीं। सेटिंग्स में प्रोवाइडर कुंजी जोड़ें या OPENROUTER_API_KEY कॉन्फ़िगर करें।",
+  "errors.chat.title.rateLimit": "थोड़ा रुकें",
+  "errors.chat.title.missingApiKey": "API कुंजी चाहिए",
+  "errors.chat.title.auth": "प्रमाणीकरण विफल",
+  "errors.chat.title.validation": "अनुरोध नहीं भेजा जा सका",
+  "errors.chat.title.upstream": "मॉडल प्रोवाइडर समस्या",
+  "errors.chat.title.ollama": "Ollama उपलब्ध नहीं",
+  "errors.chat.title.network": "कनेक्शन समस्या",
+  "errors.chat.title.generic": "कुछ गलत हो गया",
+  "errors.chat.body.rateLimit":
+    "रेट लिमिट लग गई है। एक मिनट बाद फिर कोशिश करें या दूसरा मॉडल चुनें।",
+  "errors.chat.body.missingApiKey":
+    "इस मॉडल के लिए API कुंजी ज़रूरी है। सेटिंग्स → API Keys में कुंजी जोड़ें और फिर कोशिश करें।",
+  "errors.chat.body.auth":
+    "API कुंजी अस्वीकार हुई। सेटिंग्स में कुंजी जाँचें और फिर कोशिश करें।",
+  "errors.chat.body.validation":
+    "यह संदेश नहीं भेजा जा सका। दूसरा मॉडल आज़माएँ या नई चैट शुरू करें।",
+  "errors.chat.body.upstream":
+    "प्रोवाइडर से त्रुटि आई। थोड़ी देर बाद फिर कोशिश करें या दूसरा मॉडल चुनें।",
+  "errors.chat.body.ollama":
+    "Ollama तक पहुँच नहीं बनी। सुनिश्चित करें कि वह चल रहा है और सेटिंग्स में URL सही है।",
+  "errors.chat.body.network":
+    "जवाब पूरा होने से पहले कनेक्शन टूट गया। नेटवर्क जाँचें और फिर भेजें।",
+  "errors.chat.body.generic": "अप्रत्याशित त्रुटि। कृपया फिर कोशिश करें।",
+  "errors.chat.action.settings": "API Keys खोलें",
+  "errors.chat.alternatives": "दूसरा मॉडल आज़माएँ",
   "voice.clickToSpeak": "बोलने के लिए क्लिक करें",
   "voice.listening": "सुन रहा है...",
   "voice.speaking": "बोल रहा है...",

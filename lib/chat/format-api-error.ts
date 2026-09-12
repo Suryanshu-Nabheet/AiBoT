@@ -5,25 +5,10 @@
  * See LICENSE file for details
  */
 
-/** Turn raw HTTP / JSON error bodies into user-facing chat text. */
-export function formatChatApiErrorMessage(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "Something went wrong. Please try again.";
+import { resolveChatError } from "@/lib/chat/chat-error";
 
-  try {
-    const parsed = JSON.parse(trimmed) as {
-      message?: string;
-      issues?: { fieldErrors?: Record<string, string[]> };
-    };
-    if (parsed.message && parsed.message !== "Invalid arena request") {
-      return parsed.message;
-    }
-    if (parsed.message === "Invalid arena request" || parsed.issues) {
-      return "Could not start arena chat. Check model selection and API keys in Settings.";
-    }
-  } catch {
-    // not JSON
-  }
-
-  return trimmed.length > 400 ? `${trimmed.slice(0, 400)}…` : trimmed;
+/** @deprecated Prefer resolveChatError — kept for callers that need a plain string. */
+export function formatChatApiErrorMessage(raw: string, status = 500): string {
+  const { title, body } = resolveChatError("en", status, raw);
+  return `${title} ${body}`;
 }

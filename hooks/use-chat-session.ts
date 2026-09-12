@@ -37,17 +37,21 @@ import {
   playCompletionChime,
   showDesktopNotification,
 } from "@/lib/desktop-notifications";
-import { translate, localeReplyDirective } from "@/lib/i18n";
+import { translate, localeReplyDirective, type Locale } from "@/lib/i18n";
+import { resolveChatError, type ChatErrorCode } from "@/lib/chat/chat-error";
 
-function httpErrorMessage(
-  locale: Parameters<typeof translate>[0],
+function agentErrorFields(
+  locale: Locale,
   status: number,
-  detail: string,
+  rawBody?: string,
+  explicitCode?: ChatErrorCode,
 ) {
-  return translate(locale, "errors.http", {
-    status,
-    detail: detail.substring(0, 200),
-  });
+  const resolved = resolveChatError(locale, status, rawBody, explicitCode);
+  return {
+    content: resolved.body,
+    errorTitle: resolved.title,
+    errorType: resolved.code,
+  };
 }
 
 export interface UseChatSessionOptions {
@@ -267,9 +271,12 @@ export function useChatSession({
             streamField === "content" &&
             !options?.allowEmptyContent
           ) {
+            const err = agentErrorFields(locale, 0, undefined, "network");
             return {
               ...m,
-              content: translate(locale, "errors.connectionInterrupted"),
+              content: err.content,
+              errorTitle: err.errorTitle,
+              errorType: err.errorType,
               isThinkingRequested,
               isError: true,
             };
@@ -312,12 +319,19 @@ export function useChatSession({
         return partial;
       }
       console.error("Stream error", e);
-      const errorContent = translate(locale, "errors.connectionInterrupted");
+      const streamErr = agentErrorFields(locale, 0, undefined, "network");
       if (options?.tempId) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === tempId
-              ? { ...m, content: errorContent, isThinkingRequested }
+              ? {
+                  ...m,
+                  content: streamErr.content,
+                  errorTitle: streamErr.errorTitle,
+                  errorType: streamErr.errorType,
+                  isThinkingRequested,
+                  isError: true,
+                }
               : m,
           ),
         );
@@ -327,7 +341,10 @@ export function useChatSession({
           {
             id: `error-stream-${Date.now()}`,
             role: Role.Agent,
-            content: errorContent,
+            content: streamErr.content,
+            errorTitle: streamErr.errorTitle,
+            errorType: streamErr.errorType,
+            isError: true,
           },
         ]);
       }
@@ -446,12 +463,15 @@ export function useChatSession({
       `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     const pushAgentHttpError = (status: number, errorText: string) => {
+      const err = agentErrorFields(locale, status, errorText);
       setMessages((prev) => [
         ...prev,
         {
           id: `error-${Date.now()}`,
           role: Role.Agent,
-          content: httpErrorMessage(locale, status, errorText),
+          content: err.content,
+          errorTitle: err.errorTitle,
+          errorType: err.errorType,
           isError: true,
         },
       ]);
@@ -514,10 +534,13 @@ export function useChatSession({
         const updatedMessages = prev.map((m) => {
           if (m.id !== tempId) return m;
           if (!reconciled.content.trim()) {
+            const err = agentErrorFields(locale, 0, undefined, "network");
             return {
               ...m,
               thinkingText: reconciled.thinkingText,
-              content: translate(locale, "errors.connectionInterrupted"),
+              content: err.content,
+              errorTitle: err.errorTitle,
+              errorType: err.errorType,
               isThinkingRequested: true,
               isError: true,
             };
@@ -646,12 +669,15 @@ export function useChatSession({
 
         if (!res.ok) {
           const errorText = await res.text();
+          const err = agentErrorFields(locale, res.status, errorText, "ollama");
           setMessages((prev) => [
             ...prev,
             {
               id: `error-${Date.now()}`,
               role: Role.Agent,
-              content: httpErrorMessage(locale, res.status, errorText),
+              content: err.content,
+              errorTitle: err.errorTitle,
+              errorType: err.errorType,
               isError: true,
             },
           ]);
@@ -716,12 +742,15 @@ export function useChatSession({
 
       if (!res.ok) {
         const errorText = await res.text();
+        const err = agentErrorFields(locale, res.status, errorText);
         setMessages((prev) => [
           ...prev,
           {
             id: `error-${Date.now()}`,
             role: Role.Agent,
-            content: httpErrorMessage(locale, res.status, errorText),
+            content: err.content,
+            errorTitle: err.errorTitle,
+            errorType: err.errorType,
             isError: true,
           },
         ]);
@@ -734,12 +763,16 @@ export function useChatSession({
       const isAbort = error instanceof Error && error.name === "AbortError";
       if (!isAbort) {
         const message = error instanceof Error ? error.message : String(error);
+        const err = agentErrorFields(locale, 0, message, "network");
         setMessages((prev) => [
           ...prev,
           {
             id: `error-fetch-${Date.now()}`,
             role: Role.Agent,
-            content: translate(locale, "errors.network", { message }),
+            content: err.content,
+            errorTitle: err.errorTitle,
+            errorType: err.errorType,
+            isError: true,
           },
         ]);
       }

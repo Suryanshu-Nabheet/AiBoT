@@ -231,6 +231,31 @@ export const en = {
   "errors.http": "**Error {status}**: {detail}",
   "errors.noApiKey":
     "No API key available. Add a provider key in Settings or configure OPENROUTER_API_KEY.",
+  "errors.chat.title.rateLimit": "Slow down a moment",
+  "errors.chat.title.missingApiKey": "API key needed",
+  "errors.chat.title.auth": "Couldn’t authorize",
+  "errors.chat.title.validation": "Request couldn’t be sent",
+  "errors.chat.title.upstream": "Model provider issue",
+  "errors.chat.title.ollama": "Ollama isn’t reachable",
+  "errors.chat.title.network": "Connection problem",
+  "errors.chat.title.generic": "Something went wrong",
+  "errors.chat.body.rateLimit":
+    "You’ve hit a rate limit. Wait a minute and try again, or switch to another model.",
+  "errors.chat.body.missingApiKey":
+    "This model needs an API key. Open Settings → API Keys, add your provider key, then try again.",
+  "errors.chat.body.auth":
+    "Your API key was rejected. Check that it’s correct in Settings and try again.",
+  "errors.chat.body.validation":
+    "We couldn’t send this message. Try a different model or start a new chat.",
+  "errors.chat.body.upstream":
+    "The model provider returned an error. Try again in a moment or pick another model.",
+  "errors.chat.body.ollama":
+    "AiBoT couldn’t reach Ollama. Make sure it’s running locally and the URL in Settings is correct.",
+  "errors.chat.body.network":
+    "The connection dropped before a reply finished. Check your network and send again.",
+  "errors.chat.body.generic": "An unexpected error occurred. Please try again.",
+  "errors.chat.action.settings": "Open API Keys",
+  "errors.chat.alternatives": "Try another model",
 
   // Voice
   "voice.clickToSpeak": "Click to speak",

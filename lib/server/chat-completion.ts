@@ -20,6 +20,7 @@ import {
   resolveProviderRoute,
 } from "@/lib/chat/resolve-provider";
 import { normalizeOllamaUrl } from "@/lib/chat/ollama-url";
+import { chatErrorResponseBody } from "@/lib/chat/chat-error";
 import { localeReplyDirective, type Locale } from "@/lib/i18n";
 
 export type ChatMessageInput = {
@@ -203,9 +204,9 @@ export async function openChatUpstreamStream(
   ) {
     return {
       response: new Response(
-        JSON.stringify({
-          message: "The selected model requires its provider API key.",
-        }),
+        JSON.stringify(
+          chatErrorResponseBody(400, undefined, "missing_api_key"),
+        ),
         { status: 400 },
       ),
       streamKind: "sse",
@@ -221,10 +222,9 @@ export async function openChatUpstreamStream(
   if (!route.authHeader) {
     return {
       response: new Response(
-        JSON.stringify({
-          message:
-            "No API key available. Add a provider key in Settings or configure OPENROUTER_API_KEY.",
-        }),
+        JSON.stringify(
+          chatErrorResponseBody(401, undefined, "missing_api_key"),
+        ),
         { status: 401 },
       ),
       streamKind: "sse",

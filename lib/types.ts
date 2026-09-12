@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import type { ChatErrorCode } from "@/lib/chat/chat-error";
 
 export const MODELS: ModelFull[] = [
   {
@@ -201,7 +202,9 @@ export type Message = {
   thinkingText?: string;
   isError?: boolean;
   isThinkingRequested?: boolean;
-  errorType?: string;
+  errorType?: ChatErrorCode;
+  /** Localized error heading when `isError` is set. */
+  errorTitle?: string;
   attachments?: { name: string; content: string; type: string }[];
   shouldAnimate?: boolean;
 };
