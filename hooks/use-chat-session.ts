@@ -276,7 +276,14 @@ export function useChatSession({
       return (options?.contentPrefix ?? "") + accumulated;
     } catch (e) {
       if ((e as Error).name === "AbortError") {
-        return (options?.contentPrefix ?? "") + accumulated;
+        const prefix = options?.contentPrefix ?? "";
+        const partial = prefix + accumulated;
+        if (!accumulated.trim() && options?.tempId) {
+          setMessages((prev) =>
+            prev.filter((m) => m.id !== tempId || m.content.trim().length > 0),
+          );
+        }
+        return partial;
       }
       console.error("Stream error", e);
       const errorContent = translate(locale, "errors.connectionInterrupted");

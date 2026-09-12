@@ -40,8 +40,9 @@ describe("parseAssistantThinkingContent", () => {
     expect(parsed.mainResponse).toContain("What Is Artificial Intelligence?");
   });
 
-  it("hides answer panel during thinking-only stream", () => {
-    const parsed = parseAssistantThinkingContent(STAGE1_ONLY, {
+  it("hides answer panel during in-progress thinking stream", () => {
+    const inProgress = `${THINKING_OPEN_TAG}\nStill reasoning…`;
+    const parsed = parseAssistantThinkingContent(inProgress, {
       isThinkingRequested: true,
     });
     expect(parsed.hideAnswerPanel).toBe(true);
@@ -54,6 +55,15 @@ describe("parseAssistantThinkingContent", () => {
     });
     expect(parsed.hideAnswerPanel).toBe(false);
     expect(parsed.mainResponse.length).toBeGreaterThan(20);
+  });
+
+  it("shows plain reply when model ignores thinking tags", () => {
+    const parsed = parseAssistantThinkingContent(
+      "Hello! How can I help you today?",
+      { isThinkingRequested: true },
+    );
+    expect(parsed.hideAnswerPanel).toBe(false);
+    expect(parsed.mainResponse).toContain("Hello");
   });
 
   it("repairs misplaced greeting in thinking block", () => {

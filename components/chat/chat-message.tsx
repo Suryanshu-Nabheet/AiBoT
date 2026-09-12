@@ -155,9 +155,10 @@ export const ChatMessage = memo(
 
     const hasThinkingPanel =
       !isUser &&
-      (hasThinkingTag ||
-        isSubstantiveThinkingContent(thinkingContent) ||
-        (message.isThinkingRequested && !hasClosingThinkingTag));
+      (isSubstantiveThinkingContent(thinkingContent) ||
+        (isStreaming &&
+          Boolean(message.isThinkingRequested) &&
+          !hasClosingThinkingTag));
     const showAnswer =
       !isUser && !hideAnswerPanel && Boolean(mainResponse?.trim());
     const compactAgentContentClass =
@@ -256,7 +257,7 @@ export const ChatMessage = memo(
                   showAnswer &&
                   mainResponse.trim() &&
                   !isGenerating &&
-                  (!message.isThinkingRequested || hasClosingThinkingTag) && (
+                  (hasClosingThinkingTag || !message.isThinkingRequested) && (
                     <div className="mt-3 flex items-center gap-1.5 self-start transition-opacity duration-200">
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>

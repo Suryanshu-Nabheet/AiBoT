@@ -358,9 +358,24 @@ export function parseAssistantThinkingContent(
   });
   mainResponse = repaired.mainResponse;
 
+  // Small models often skip </thinking> or ignore tags — still show the reply.
+  if (
+    options?.isThinkingRequested &&
+    hasThinkingTag &&
+    !hasClosingThinkingTag &&
+    !mainResponse.trim() &&
+    looksLikeUserFacingProse(thinkingContent)
+  ) {
+    mainResponse = thinkingContent;
+    thinkingContent = "";
+    hasThinkingTag = false;
+  }
+
   const hideAnswerPanel =
     !!options?.isThinkingRequested &&
-    (!hasClosingThinkingTag || !mainResponse.trim());
+    !mainResponse.trim() &&
+    hasThinkingTag &&
+    !hasClosingThinkingTag;
 
   return {
     thinkingContent,
