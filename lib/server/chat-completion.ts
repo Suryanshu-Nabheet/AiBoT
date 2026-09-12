@@ -70,7 +70,7 @@ export function buildSystemPrompt(stage?: ThinkingStage, locale?: Locale) {
     dynamicSystemPrompt += localeReplyDirective(locale);
   }
 
-  if (stage === "thinking" || stage === "final" || stage === "combined") {
+  if (stage === "thinking" || stage === "final") {
     return composeSystemPromptForThinkingStage(dynamicSystemPrompt, stage);
   }
 

@@ -19,10 +19,11 @@ import { useExecutionContext } from "@/contexts/execution-context";
 import { ExecutionType } from "@/hooks/useExecution";
 import { Message, Role } from "@/lib/types";
 import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
+import { mapMessagesForModelHistory } from "@/lib/chat/message-history";
 import {
-  assembleThinkingAndAnswer,
   buildChatMessagesForThinkingStage,
   composeSystemPromptForThinkingStage,
+  extractThinkingInner,
   normalizeThinkingStage1Output,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
@@ -160,7 +161,8 @@ export function useChatSession({
     options?: {
       finalize?: boolean;
       tempId?: string;
-      contentPrefix?: string;
+      /** Which message field streaming deltas update (default: content). */
+      streamField?: "content" | "thinkingText";
     },
   ) => {
     const finalize = options?.finalize ?? true;
@@ -209,14 +211,15 @@ export function useChatSession({
       }
     };
 
+    const streamField = options?.streamField ?? "content";
+
     const pushContentToUi = () => {
-      const prefix = options?.contentPrefix ?? "";
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
             ? {
                 ...m,
-                content: prefix + accumulated,
+                [streamField]: accumulated,
                 isThinkingRequested,
               }
             : m,
@@ -242,23 +245,29 @@ export function useChatSession({
         }
       }
 
-      const prefix = options?.contentPrefix ?? "";
-      const finalContent = prefix + accumulated;
       const hasText = accumulated.trim().length > 0;
 
       setMessages((prev) => {
-        const updatedMessages = prev.map((m) =>
-          m.id === tempId
-            ? {
-                ...m,
-                content: hasText
-                  ? finalContent
-                  : translate(locale, "errors.connectionInterrupted"),
-                isThinkingRequested,
-                isError: hasText ? m.isError : true,
-              }
-            : m,
-        );
+        const updatedMessages = prev.map((m) => {
+          if (m.id !== tempId) return m;
+          if (!hasText && streamField === "content") {
+            return {
+              ...m,
+              content: translate(locale, "errors.connectionInterrupted"),
+              isThinkingRequested,
+              isError: true,
+            };
+          }
+          return {
+            ...m,
+            [streamField]: hasText
+              ? accumulated
+              : streamField === "thinkingText"
+                ? (m.thinkingText ?? "")
+                : m.content,
+            isThinkingRequested,
+          };
+        });
 
         if (finalize && conversationPersistId && hasText) {
           saveConversation({
@@ -275,11 +284,10 @@ export function useChatSession({
         }
         return updatedMessages;
       });
-      return (options?.contentPrefix ?? "") + accumulated;
+      return accumulated;
     } catch (e) {
       if ((e as Error).name === "AbortError") {
-        const prefix = options?.contentPrefix ?? "";
-        const partial = prefix + accumulated;
+        const partial = accumulated;
         if (!accumulated.trim() && options?.tempId) {
           setMessages((prev) =>
             prev.filter((m) => m.id !== tempId || m.content.trim().length > 0),
@@ -453,15 +461,22 @@ export function useChatSession({
       const stage1Raw = await processStream(res1, true, isOllama, {
         finalize: false,
         tempId,
+        streamField: "thinkingText",
       });
       const stage1Wrapped = normalizeThinkingStage1Output(stage1Raw, {
         userMessageHint: currentQuery,
       });
+      const thinkingInner = extractThinkingInner(stage1Wrapped);
 
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
-            ? { ...m, content: stage1Wrapped, isThinkingRequested: true }
+            ? {
+                ...m,
+                thinkingText: thinkingInner,
+                content: "",
+                isThinkingRequested: true,
+              }
             : m,
         ),
       );
@@ -476,16 +491,13 @@ export function useChatSession({
       await processStream(res2, true, isOllama, {
         finalize: true,
         tempId,
-        contentPrefix: assembleThinkingAndAnswer(stage1Wrapped, ""),
+        streamField: "content",
       });
     };
 
     try {
       const isOllama = model.startsWith("ollama/");
-      const historyForThinking = messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      const historyForModel = mapMessagesForModelHistory(messages);
 
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
@@ -501,7 +513,7 @@ export function useChatSession({
             stage,
           );
           const chatMessages = buildChatMessagesForThinkingStage({
-            history: historyForThinking,
+            history: historyForModel,
             userContent: apiContent,
             stage,
             priorReasoning,
@@ -543,9 +555,9 @@ export function useChatSession({
           model: ollamaModelName,
           messages: [
             { role: "system", content: baseSystemPrompt },
-            ...messages,
-            { ...userMessage, content: apiContent },
-          ].map((m) => ({ role: m.role, content: m.content })),
+            ...historyForModel,
+            { role: "user", content: apiContent },
+          ],
           stream: true,
         };
 
@@ -577,7 +589,7 @@ export function useChatSession({
       if (thinkingRequested) {
         const tempId = newAgentMessageId();
         const apiHistory = [
-          ...historyForThinking,
+          ...historyForModel,
           { role: "user", content: apiContent },
         ];
 
@@ -615,9 +627,7 @@ export function useChatSession({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, { ...userMessage, content: apiContent }].map(
-            (m) => ({ role: m.role, content: m.content }),
-          ),
+          messages: [...historyForModel, { role: "user", content: apiContent }],
           model,
           conversationId: conversationPersistId ?? conversationId,
           isThinking: false,

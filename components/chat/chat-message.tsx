@@ -32,7 +32,7 @@ import { Message, MODELS, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   isSubstantiveThinkingContent,
-  parseAssistantThinkingContent,
+  parseLegacyThinkingContent,
 } from "@/lib/chat/thinking-mode";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
@@ -105,7 +105,9 @@ export const ChatMessage = memo(
     const displayedContent = useSmoothTyping(
       message.content,
       5,
-      Boolean(message.shouldAnimate && !isStreaming),
+      Boolean(
+        message.shouldAnimate && !isStreaming && !message.isThinkingRequested,
+      ),
     );
     const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
     const userToggledThinkingRef = useRef(false);
@@ -117,22 +119,32 @@ export const ChatMessage = memo(
       setIsThinkingExpanded(true);
     }, [message.id]);
 
-    const contentToShow = isUser
-      ? message.content
-      : isStreaming
-        ? message.content
-        : displayedContent;
+    const usesStructuredThinking =
+      !isUser &&
+      Boolean(
+        message.thinkingText?.trim() ||
+        (message.isThinkingRequested && isStreaming),
+      );
 
-    const {
-      thinkingContent,
-      mainResponse,
-      hasClosingThinkingTag,
-      hideAnswerPanel,
-    } = parseAssistantThinkingContent(contentToShow, {
-      isUser,
-      isThinkingRequested: message.isThinkingRequested,
-      userMessageHint,
-    });
+    const legacyParsed =
+      !isUser && !usesStructuredThinking
+        ? parseLegacyThinkingContent(
+            isStreaming ? message.content : displayedContent,
+            { userMessageHint },
+          )
+        : null;
+
+    const thinkingContent = usesStructuredThinking
+      ? (message.thinkingText ?? "")
+      : (legacyParsed?.thinkingContent ?? "");
+
+    const mainResponse = isUser
+      ? message.content
+      : usesStructuredThinking
+        ? isStreaming
+          ? message.content
+          : displayedContent
+        : (legacyParsed?.mainResponse ?? message.content);
 
     useEffect(() => {
       if (
@@ -141,11 +153,11 @@ export const ChatMessage = memo(
       ) {
         return;
       }
-      if (hasClosingThinkingTag && mainResponse?.trim()) {
+      if (thinkingContent.trim() && mainResponse?.trim()) {
         didAutoCollapseThinkingRef.current = true;
         setIsThinkingExpanded(false);
       }
-    }, [hasClosingThinkingTag, mainResponse]);
+    }, [thinkingContent, mainResponse]);
 
     const handleThinkingToggle = useCallback(() => {
       userToggledThinkingRef.current = true;
@@ -154,12 +166,10 @@ export const ChatMessage = memo(
 
     const hasThinkingPanel =
       !isUser &&
+      Boolean(message.isThinkingRequested) &&
       (isSubstantiveThinkingContent(thinkingContent) ||
-        (isStreaming &&
-          Boolean(message.isThinkingRequested) &&
-          !hasClosingThinkingTag));
-    const showAnswer =
-      !isUser && !hideAnswerPanel && Boolean(mainResponse?.trim());
+        (isStreaming && !mainResponse?.trim()));
+    const showAnswer = !isUser && Boolean(mainResponse?.trim());
     const compactAgentContentClass =
       "bg-transparent text-foreground px-0 shadow-none border-none";
 
@@ -256,7 +266,7 @@ export const ChatMessage = memo(
                   showAnswer &&
                   mainResponse.trim() &&
                   !isGenerating &&
-                  (hasClosingThinkingTag || !message.isThinkingRequested) && (
+                  (!message.isThinkingRequested || mainResponse.trim()) && (
                     <div className="mt-3 flex items-center gap-1.5 self-start transition-opacity duration-200">
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>

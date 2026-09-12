@@ -100,26 +100,35 @@ function ModelListItem({
 
 function ThinkingMenuRow({
   label,
+  description,
   checked,
   onCheckedChange,
 }: {
   label: string;
+  description?: string;
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
   return (
     <div
-      className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5"
+      className="flex items-start justify-between gap-3 border-b border-border/60 px-3 py-2.5"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <span
-        className={cn(
-          "text-sm font-medium",
-          checked ? thinkingAccentTextClass : "text-muted-foreground",
-        )}
-      >
-        {label}
-      </span>
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <span
+          className={cn(
+            "text-sm font-medium",
+            checked ? thinkingAccentTextClass : "text-foreground",
+          )}
+        >
+          {label}
+        </span>
+        {description ? (
+          <p className="text-xs leading-snug text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </div>
       <ThinkingModeSwitch
         checked={checked}
         onCheckedChange={onCheckedChange}
@@ -246,6 +255,7 @@ export function ModelSelector({
             {showThinking && onThinkingChange && (
               <ThinkingMenuRow
                 label={t("model.thinkingPower")}
+                description={t("model.thinkingDescription")}
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
               />
@@ -301,6 +311,7 @@ export function ModelSelector({
             <div className="p-1">
               <ThinkingMenuRow
                 label={t("model.thinkingPower")}
+                description={t("model.thinkingDescription")}
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
               />

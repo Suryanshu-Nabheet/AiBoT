@@ -197,6 +197,8 @@ export type Message = {
   id?: string;
   content: string;
   role: Role;
+  /** Private reasoning (thinking mode); answer lives in `content`. */
+  thinkingText?: string;
   isError?: boolean;
   isThinkingRequested?: boolean;
   errorType?: string;

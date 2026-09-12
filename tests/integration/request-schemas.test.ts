@@ -29,7 +29,7 @@ describe("chatRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts arena combined thinking stage", () => {
+  it("accepts combined thinking stage in schema (client uses two-stage)", () => {
     const result = chatRequestSchema.safeParse(
       createChatRequestBody({
         isThinking: true,

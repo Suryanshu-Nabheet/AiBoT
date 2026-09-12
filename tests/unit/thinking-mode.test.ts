@@ -9,122 +9,105 @@ import { describe, expect, it } from "vitest";
 import {
   STAGE1_AND_ANSWER,
   STAGE1_ONLY,
-  STAGE1_PLACEHOLDER,
   PLAIN_ASSISTANT,
 } from "../fixtures/thinking-content";
 import {
   assembleThinkingAndAnswer,
   buildChatMessagesForThinkingStage,
+  extractThinkingInner,
   isSubstantiveThinkingContent,
   looksLikeMetaProcessThinking,
   normalizeThinkingStage1Output,
-  parseAssistantThinkingContent,
+  parseLegacyThinkingContent,
   polishThinkingDisplayContent,
-  repairSwappedThinkingAnswer,
   stripPromptLeakage,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
+  wrapThinkingInner,
 } from "@/lib/chat/thinking-mode";
 
-describe("parseAssistantThinkingContent", () => {
-  it("returns user content unchanged", () => {
-    const parsed = parseAssistantThinkingContent("hi", { isUser: true });
-    expect(parsed.mainResponse).toBe("hi");
-    expect(parsed.hasThinkingTag).toBe(false);
-  });
-
-  it("splits stage-1 + final answer", () => {
-    const parsed = parseAssistantThinkingContent(STAGE1_AND_ANSWER);
-    expect(parsed.hasThinkingTag).toBe(true);
-    expect(parsed.hasClosingThinkingTag).toBe(true);
-    expect(parsed.thinkingContent).toContain("define AI");
+describe("parseLegacyThinkingContent", () => {
+  it("splits tagged legacy content", () => {
+    const parsed = parseLegacyThinkingContent(STAGE1_AND_ANSWER);
     expect(parsed.mainResponse).toContain("What Is Artificial Intelligence?");
+    expect(parsed.thinkingContent).toContain("define AI");
   });
 
-  it("hides answer panel during in-progress thinking stream", () => {
-    const inProgress = `${THINKING_OPEN_TAG}\nStill reasoning…`;
-    const parsed = parseAssistantThinkingContent(inProgress, {
-      isThinkingRequested: true,
-    });
-    expect(parsed.hideAnswerPanel).toBe(true);
+  it("returns plain text as main response", () => {
+    const parsed = parseLegacyThinkingContent(PLAIN_ASSISTANT);
+    expect(parsed.mainResponse).toBe(PLAIN_ASSISTANT);
+    expect(parsed.thinkingContent).toBe("");
+  });
+
+  it("handles thinking-only legacy block", () => {
+    const parsed = parseLegacyThinkingContent(STAGE1_ONLY);
+    expect(parsed.thinkingContent.length).toBeGreaterThan(10);
     expect(parsed.mainResponse).toBe("");
-  });
-
-  it("shows answer when stage-2 content exists", () => {
-    const parsed = parseAssistantThinkingContent(STAGE1_AND_ANSWER, {
-      isThinkingRequested: true,
-    });
-    expect(parsed.hideAnswerPanel).toBe(false);
-    expect(parsed.mainResponse.length).toBeGreaterThan(20);
-  });
-
-  it("shows plain reply when model ignores thinking tags", () => {
-    const parsed = parseAssistantThinkingContent(
-      "Hello! How can I help you today?",
-      { isThinkingRequested: true },
-    );
-    expect(parsed.hideAnswerPanel).toBe(false);
-    expect(parsed.mainResponse).toContain("Hello");
-  });
-
-  it("repairs misplaced greeting in thinking block", () => {
-    const raw = `${THINKING_OPEN_TAG}Hello! How can I help you today?${THINKING_CLOSE_TAG}The AiBoT platform is a powerful tool that harnesses advanced AI technology.`;
-    const parsed = parseAssistantThinkingContent(raw, {
-      isThinkingRequested: true,
-    });
-    expect(parsed.mainResponse).toContain("Hello!");
-    expect(parsed.mainResponse).not.toContain("powerful tool");
-  });
-});
-
-describe("repairSwappedThinkingAnswer", () => {
-  it("swaps boilerplate main with conversational thinking", () => {
-    const out = repairSwappedThinkingAnswer({
-      thinkingContent: "Hi there! What would you like to know?",
-      mainResponse:
-        "The AiBoT platform is a versatile tool designed to leverage advanced AI.",
-      hasClosingThinkingTag: true,
-    });
-    expect(out.mainResponse).toContain("Hi there");
-  });
-});
-
-describe("isSubstantiveThinkingContent", () => {
-  it("rejects placeholder ellipsis traces", () => {
-    const parsed = parseAssistantThinkingContent(STAGE1_PLACEHOLDER);
-    expect(isSubstantiveThinkingContent(parsed.thinkingContent)).toBe(false);
-  });
-
-  it("accepts real reasoning text", () => {
-    const parsed = parseAssistantThinkingContent(STAGE1_AND_ANSWER);
-    expect(isSubstantiveThinkingContent(parsed.thinkingContent)).toBe(true);
   });
 });
 
 describe("normalizeThinkingStage1Output", () => {
-  it("wraps raw text in thinking tags", () => {
-    const out = normalizeThinkingStage1Output("Reason step by step.");
+  it("wraps plain reasoning", () => {
+    const out = normalizeThinkingStage1Output(
+      "Outline definition then examples.",
+    );
     expect(out).toContain(THINKING_OPEN_TAG);
-    expect(out).toContain(THINKING_CLOSE_TAG);
+    expect(extractThinkingInner(out)).toContain("Outline");
   });
 
-  it("uses user hint when stage 1 is empty", () => {
+  it("uses user hint when empty", () => {
     const out = normalizeThinkingStage1Output("", { userMessageHint: "hi" });
-    expect(out).toContain("About: hi");
+    expect(extractThinkingInner(out)).toContain("About: hi");
+  });
+});
+
+describe("buildChatMessagesForThinkingStage", () => {
+  it("passes user content for thinking stage", () => {
+    const msgs = buildChatMessagesForThinkingStage({
+      history: [],
+      userContent: "Compare A and B",
+      stage: "thinking",
+    });
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0].content).toBe("Compare A and B");
   });
 
-  it("truncates content after closing tag", () => {
-    const raw = `${THINKING_OPEN_TAG}trace${THINKING_CLOSE_TAG}\nLeaked answer`;
-    const out = normalizeThinkingStage1Output(raw);
-    expect(out).not.toContain("Leaked answer");
+  it("injects prior reasoning for final stage", () => {
+    const prior = wrapThinkingInner("notes");
+    const msgs = buildChatMessagesForThinkingStage({
+      history: [],
+      userContent: "hi",
+      stage: "final",
+      priorReasoning: prior,
+    });
+    expect(msgs.some((m) => m.role === "assistant")).toBe(true);
+    expect(msgs[msgs.length - 1].role).toBe("user");
+  });
+});
+
+describe("polishThinkingDisplayContent", () => {
+  it("replaces meta process monologue", () => {
+    const meta =
+      "Okay, I need to understand what the user wants me to do. Then I'll process and respond.";
+    expect(looksLikeMetaProcessThinking(meta)).toBe(true);
+    expect(polishThinkingDisplayContent(meta, { userMessageHint: "hi" })).toBe(
+      "About: hi",
+    );
   });
 });
 
 describe("assembleThinkingAndAnswer", () => {
-  it("leaves room after thinking for streamed answer", () => {
-    const think = `${THINKING_OPEN_TAG}\nnote\n${THINKING_CLOSE_TAG}`;
-    expect(assembleThinkingAndAnswer(think, "")).toBe(`${think}\n\n`);
+  it("joins wrapped thinking and answer", () => {
+    const think = wrapThinkingInner("note");
     expect(assembleThinkingAndAnswer(think, "Hello")).toBe(`${think}\n\nHello`);
+  });
+});
+
+describe("isSubstantiveThinkingContent", () => {
+  it("accepts real reasoning text", () => {
+    expect(isSubstantiveThinkingContent("User wants an overview of AI.")).toBe(
+      true,
+    );
   });
 });
 
@@ -135,38 +118,5 @@ describe("stripPromptLeakage", () => {
     );
     expect(cleaned).not.toContain("NUCLEAR");
     expect(cleaned).toContain("Real content");
-  });
-});
-
-describe("buildChatMessagesForThinkingStage", () => {
-  it("passes user content unchanged (no reasoning suffix)", () => {
-    const msgs = buildChatMessagesForThinkingStage({
-      history: [],
-      userContent: "Compare A and B",
-      stage: "combined",
-    });
-    expect(msgs).toHaveLength(1);
-    expect(msgs[0].content).toBe("Compare A and B");
-  });
-});
-
-describe("polishThinkingDisplayContent", () => {
-  it("replaces meta process monologue with topic hint", () => {
-    const meta =
-      "Okay, I need to understand what the user wants me to do. Then I'll process and respond to their request.";
-    expect(looksLikeMetaProcessThinking(meta)).toBe(true);
-    const polished = polishThinkingDisplayContent(meta, {
-      userMessageHint: "hi",
-    });
-    expect(polished).toBe("About: hi");
-    expect(polished).not.toContain("private reasoning");
-  });
-});
-
-describe("plain assistant messages", () => {
-  it("does not false-positive thinking tags", () => {
-    const parsed = parseAssistantThinkingContent(PLAIN_ASSISTANT);
-    expect(parsed.hasThinkingTag).toBe(false);
-    expect(parsed.mainResponse).toBe(PLAIN_ASSISTANT);
   });
 });

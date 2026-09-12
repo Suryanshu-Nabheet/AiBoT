@@ -76,9 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   const stage: ThinkingStage | undefined =
-    thinkingStage === "thinking" ||
-    thinkingStage === "final" ||
-    thinkingStage === "combined"
+    thinkingStage === "thinking" || thinkingStage === "final"
       ? thinkingStage
       : undefined;
 

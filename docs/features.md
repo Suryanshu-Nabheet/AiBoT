@@ -11,6 +11,7 @@ The Chat Agent provides a unified interface for interacting with frontier Large 
 - **Vision Integration**: Analyze images and perform OCR by uploading image attachments.
 - **Context Management**: Handles long-context conversations with automatic summarization logic.
 - **Optimized Rendering**: Uses a smooth typing animation for real-time streaming output.
+- **Thinking mode**: Optional deep reasoning — the model analyzes and structures its answer in a private step, then streams the final reply (separate from the visible answer).
 
 ---
 

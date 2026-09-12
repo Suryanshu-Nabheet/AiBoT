@@ -188,6 +188,8 @@ export const en = {
   "composer.attach": "Attach files",
   "composer.voice": "Voice input",
   "composer.thinking": "Thinking mode",
+  "model.thinkingDescription":
+    "Deep reasoning: the AI takes extra time to analyze and structure its answer before replying.",
   "composer.enhance": "Enhance prompt",
   "composer.send": "Send message",
   "composer.stop": "Stop generating",
