@@ -933,41 +933,54 @@ export function SettingsPanel({
     }
   };
 
+  const renderCloseButton = () => (
+    <button
+      type="button"
+      aria-label="Close settings"
+      onClick={onClose}
+      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+    >
+      <X className="size-4" weight="bold" />
+    </button>
+  );
+
+  const isModal = variant === "modal";
+
   return (
     <div
       className={cn(
         "relative flex min-h-0 w-full max-w-full overflow-hidden bg-background",
-        variant === "modal"
+        isModal
           ? "h-full flex-col sm:flex-row"
           : "h-full flex-col border-t border-border/50 xl:flex-row",
       )}
     >
-      {/* Settings Sidebar */}
+      {/* Settings Sidebar / mobile chrome */}
       <div
         className={cn(
           "relative z-20 flex w-full shrink-0 flex-col border-border/40 bg-muted/30",
-          variant === "modal"
+          isModal
             ? "border-b sm:w-[220px] sm:border-b-0 sm:border-r"
             : "border-b xl:w-[240px] xl:border-r xl:border-b-0",
         )}
       >
         <div
+          data-testid="settings-chrome-header"
           className={cn(
-            "px-4 pt-5 pb-3",
-            variant === "modal" ? "sm:px-3 sm:pt-5" : "sm:px-6 xl:px-4 xl:pt-6",
+            "flex items-center justify-between gap-3 px-4 pt-4 pb-3",
+            isModal ? "sm:px-3 sm:pt-5" : "sm:px-6 xl:px-4 xl:pt-6",
           )}
         >
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {t("settings.title")}
-          </h2>
+          </p>
+          {/* Close belongs with Settings on narrow layouts — not the section chrome. */}
+          <div className={cn(isModal ? "sm:hidden" : "xl:hidden")}>
+            {renderCloseButton()}
+          </div>
         </div>
 
-        <div
-          className={cn(
-            "px-4 pb-3",
-            variant === "modal" ? "sm:hidden" : "xl:hidden",
-          )}
-        >
+        <div className={cn("px-4 pb-3", isModal ? "sm:hidden" : "xl:hidden")}>
           <label className="sr-only" htmlFor="settings-section">
             {t("settings.title")}
           </label>
@@ -991,7 +1004,7 @@ export function SettingsPanel({
           aria-label={t("settings.title")}
           className={cn(
             "hidden flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-3",
-            variant === "modal" ? "sm:flex" : "xl:flex",
+            isModal ? "sm:flex" : "xl:flex",
           )}
         >
           {SECTIONS.map((section) => {
@@ -1025,7 +1038,7 @@ export function SettingsPanel({
         <div
           className={cn(
             "mt-auto hidden px-3 pb-4",
-            variant === "modal" ? "sm:block" : "xl:block",
+            isModal ? "sm:block" : "xl:block",
           )}
         >
           <p className="rounded-xl px-2.5 py-2 text-[10px] font-medium tracking-wide text-muted-foreground/50">
@@ -1036,7 +1049,13 @@ export function SettingsPanel({
 
       {/* Main Content Area */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
-        <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 px-4 sm:px-6">
+        <div
+          className={cn(
+            "h-11 shrink-0 items-center justify-between border-b border-border/40 px-4 sm:px-6",
+            // Mobile already shows section via the select — skip this bar there.
+            isModal ? "hidden sm:flex" : "hidden xl:flex",
+          )}
+        >
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             <span className="text-muted-foreground/50">
               {t("settings.title")}
@@ -1049,14 +1068,7 @@ export function SettingsPanel({
               )}
             </span>
           </p>
-          <button
-            type="button"
-            aria-label="Close settings"
-            onClick={onClose}
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <X className="size-3.5" weight="bold" />
-          </button>
+          {renderCloseButton()}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

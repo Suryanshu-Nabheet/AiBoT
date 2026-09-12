@@ -45,4 +45,38 @@ test.describe("Settings modal", () => {
       page.getByRole("dialog").getByRole("heading", { name: /^general$/i }),
     ).toBeVisible();
   });
+
+  test("mobile close control sits with the Settings title", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chrome", "mobile layout only");
+
+    await page.goto("/");
+    await page
+      .locator("header")
+      .getByRole("button", { name: /^settings$/i })
+      .click();
+    await page.getByRole("menuitem", { name: /app settings/i }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    const chrome = dialog.getByTestId("settings-chrome-header");
+    const title = chrome.getByText(/^settings$/i);
+    const close = chrome.getByRole("button", { name: /close settings/i });
+    await expect(title).toBeVisible();
+    await expect(close).toBeVisible();
+
+    const titleBox = await title.boundingBox();
+    const closeBox = await close.boundingBox();
+    expect(titleBox && closeBox).toBeTruthy();
+    if (titleBox && closeBox) {
+      // Same header row: close aligns with Settings, not a section chrome bar.
+      expect(Math.abs(titleBox.y - closeBox.y)).toBeLessThan(16);
+      expect(closeBox.x).toBeGreaterThan(titleBox.x);
+    }
+
+    await dialog.getByRole("button", { name: /close settings/i }).click();
+    await expect(dialog).toBeHidden();
+  });
 });
