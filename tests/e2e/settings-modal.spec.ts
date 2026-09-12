@@ -24,7 +24,9 @@ test.describe("Settings modal", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("heading", { name: /^general$/i })).toBeVisible();
+    await expect(
+      dialog.getByRole("heading", { name: /^general$/i }),
+    ).toBeVisible();
     await expect(
       dialog.getByText(/language, appearance, and notifications/i),
     ).toBeVisible();
