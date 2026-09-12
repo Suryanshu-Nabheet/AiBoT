@@ -22,9 +22,10 @@ import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
 import { mapMessagesForModelHistory } from "@/lib/chat/message-history";
 import {
   buildChatMessagesForThinkingStage,
+  cleanThinkingText,
+  reconcileTwoStageThinking,
+  sanitizeAssistantStreamField,
   composeSystemPromptForThinkingStage,
-  extractThinkingInner,
-  normalizeThinkingStage1Output,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -163,6 +164,8 @@ export function useChatSession({
       tempId?: string;
       /** Which message field streaming deltas update (default: content). */
       streamField?: "content" | "thinkingText";
+      /** Thinking stage 2 may be empty; reconcile instead of showing a stream error. */
+      allowEmptyContent?: boolean;
     },
   ) => {
     const finalize = options?.finalize ?? true;
@@ -214,12 +217,17 @@ export function useChatSession({
     const streamField = options?.streamField ?? "content";
 
     const pushContentToUi = () => {
+      const live = sanitizeAssistantStreamField(
+        streamField,
+        accumulated,
+        false,
+      );
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
             ? {
                 ...m,
-                [streamField]: accumulated,
+                [streamField]: live,
                 isThinkingRequested,
               }
             : m,
@@ -245,12 +253,20 @@ export function useChatSession({
         }
       }
 
-      const hasText = accumulated.trim().length > 0;
+      const hasRawText = accumulated.trim().length > 0;
+      const sanitized = hasRawText
+        ? sanitizeAssistantStreamField(streamField, accumulated, true)
+        : "";
+      const hasText = sanitized.trim().length > 0;
 
       setMessages((prev) => {
         const updatedMessages = prev.map((m) => {
           if (m.id !== tempId) return m;
-          if (!hasText && streamField === "content") {
+          if (
+            !hasText &&
+            streamField === "content" &&
+            !options?.allowEmptyContent
+          ) {
             return {
               ...m,
               content: translate(locale, "errors.connectionInterrupted"),
@@ -261,7 +277,7 @@ export function useChatSession({
           return {
             ...m,
             [streamField]: hasText
-              ? accumulated
+              ? sanitized
               : streamField === "thinkingText"
                 ? (m.thinkingText ?? "")
                 : m.content,
@@ -284,7 +300,7 @@ export function useChatSession({
         }
         return updatedMessages;
       });
-      return accumulated;
+      return sanitized;
     } catch (e) {
       if ((e as Error).name === "AbortError") {
         const partial = accumulated;
@@ -463,10 +479,7 @@ export function useChatSession({
         tempId,
         streamField: "thinkingText",
       });
-      const stage1Wrapped = normalizeThinkingStage1Output(stage1Raw, {
-        userMessageHint: currentQuery,
-      });
-      const thinkingInner = extractThinkingInner(stage1Wrapped);
+      const thinkingInner = cleanThinkingText(stage1Raw);
 
       setMessages((prev) =>
         prev.map((m) =>
@@ -481,18 +494,82 @@ export function useChatSession({
         ),
       );
 
-      const res2 = await requestStage("final", stage1Wrapped);
+      const res2 = await requestStage("final", thinkingInner);
       if (!res2.ok) {
         const errorText = await res2.text();
         pushAgentHttpError(res2.status, errorText);
         return;
       }
 
-      await processStream(res2, true, isOllama, {
-        finalize: true,
+      const stage2Raw = await processStream(res2, true, isOllama, {
+        finalize: false,
         tempId,
         streamField: "content",
+        allowEmptyContent: true,
       });
+
+      const reconciled = reconcileTwoStageThinking(thinkingInner, stage2Raw);
+
+      setMessages((prev) => {
+        const updatedMessages = prev.map((m) => {
+          if (m.id !== tempId) return m;
+          if (!reconciled.content.trim()) {
+            return {
+              ...m,
+              thinkingText: reconciled.thinkingText,
+              content: translate(locale, "errors.connectionInterrupted"),
+              isThinkingRequested: true,
+              isError: true,
+            };
+          }
+          return {
+            ...m,
+            thinkingText: reconciled.thinkingText,
+            content: reconciled.content,
+            isThinkingRequested: true,
+            isError: false,
+          };
+        });
+
+        if (conversationPersistId && reconciled.content.trim()) {
+          saveConversation({
+            id: conversationPersistId,
+            title:
+              updatedMessages
+                .find((msg) => msg.role === Role.User)
+                ?.content.substring(0, 50) ||
+              translate(locale, "chat.defaultTitle"),
+            createdAt: new Date().toISOString(),
+            messages: updatedMessages,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        return updatedMessages;
+      });
+
+      setIsLoading(false);
+      refreshExecutions();
+
+      const wasAborted = abortControllerRef.current?.signal.aborted;
+      const startedAt = requestStartedAtRef.current;
+      const elapsed = startedAt ? Date.now() - startedAt : 0;
+      const wasLong = thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
+
+      if (!wasAborted && wasLong) {
+        if (desktopNotifications) {
+          showDesktopNotification({
+            title: translate(locale, "notify.thinking.title"),
+            body: translate(locale, "notify.thinking.body"),
+            tag: `aibot-${conversationId || "chat"}`,
+          });
+        }
+        if (completionSound) {
+          playCompletionChime();
+        }
+      }
+
+      requestStartedAtRef.current = null;
+      thinkingRequestedRef.current = false;
     };
 
     try {

@@ -6,23 +6,22 @@
  */
 
 import {
-  assembleThinkingAndAnswer,
-  wrapThinkingInner,
+  mergeThinkingAndAnswerForHistory,
+  normalizeAssistantMessageContent,
 } from "@/lib/chat/thinking-mode";
 import type { Message } from "@/lib/types";
 import { Role } from "@/lib/types";
 
-/** API / model context: merge structured thinking + answer when needed. */
 export function messageContentForModelHistory(message: Message): string {
   if (message.role !== Role.Agent) {
     return message.content;
   }
-  const answer = message.content?.trim() ?? "";
   const thinking = message.thinkingText?.trim() ?? "";
+  const answer = normalizeAssistantMessageContent(message.content ?? "");
   if (thinking && answer) {
-    return assembleThinkingAndAnswer(wrapThinkingInner(thinking), answer);
+    return mergeThinkingAndAnswerForHistory(thinking, answer);
   }
-  return message.content;
+  return answer;
 }
 
 export function mapMessagesForModelHistory(

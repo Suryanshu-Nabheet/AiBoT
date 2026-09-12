@@ -175,7 +175,9 @@ export const hi = {
   "model.empty": "कोई मॉडल नहीं मिला।",
   "model.platform": "प्लेटफ़ॉर्म मॉडल",
   "model.external": "बाहरी मॉडल",
-  "model.thinkingPower": "थिंकिंग",
+  "model.thinkingPower": "थिंकिंग मोड",
+  "model.thinkingHint":
+    "जवाब देने से पहले सोचने और जवाब तैयार करने के लिए अतिरिक्त समय।",
   "model.thinkingMenu": "विकल्प",
   "model.thinkingShort": "सोच",
   "model.thinkingOffShort": "तेज़",

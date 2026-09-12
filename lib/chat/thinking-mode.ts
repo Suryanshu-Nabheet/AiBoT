@@ -6,247 +6,115 @@
  */
 
 /**
- * Thinking mode ON (two-stage, client-driven):
- * 1. Reasoning — plain-text notes from the model; app stores them in `Message.thinkingText`.
- * 2. Answer — normal reply in `Message.content`.
- *
- * Thinking mode OFF: single request, answer only in `content`.
- *
- * Legacy chats may still store one string with <thinking> tags; use parseLegacyThinkingContent.
+ * Thinking mode ON: two calls — (1) private notes in Message.thinkingText,
+ * (2) normal answer in Message.content. Thinking mode OFF: one call, answer only.
  */
 
+import {
+  cleanAssistantContent,
+  stripModelOutputArtifacts,
+} from "@/lib/chat/assistant-output";
+
 export type ThinkingStage = "thinking" | "final";
+
+export { cleanAssistantContent, stripModelOutputArtifacts } from "@/lib/chat/assistant-output";
 
 export const THINKING_OPEN_TAG = "<thinking>";
 export const THINKING_CLOSE_TAG = "</thinking>";
 
-const PROMPT_LEAKAGE_PATTERNS: RegExp[] = [
-  /\[CRITICAL SYSTEM OVERRIDE.*?\]/gi,
-  /NUCLEAR REASONING LOCK/gi,
-  /STAGE \d+ \(thinking-only\)/gi,
-  /STAGE \d+ \(final-only\)/gi,
-  /When you respond, your first characters MUST be <thinking>\.?/gi,
-];
+const OPEN_TAG = /<thinking>/i;
+const CLOSE_TAG = /<\/thinking>/i;
 
-const META_THINKING_PATTERNS: RegExp[] = [
-  /\bprivate reasoning\b/i,
-  /\bprivate reasoning module\b/i,
-  /\buser-facing reply\b/i,
-  /\bnot shown to the user\b/i,
-  /\bthe question asks\b/i,
-  /\bposing as a question\b/i,
-  /\breasoning step\b/i,
-  /\bdoes not require\b/i,
-  /\bwhat the user wants\b/i,
-  /\bprocess and respond\b/i,
-  /\bneed to understand what the user\b/i,
-  /\bfigure out how to process\b/i,
-  /\bthese instructions\b/i,
-  /\bthis is (a|an) (instruction|meta)/i,
-];
+const REASONING_SYSTEM = [
+  "Thinking mode: take extra time to process, analyze, and structure your reply.",
+  "Output only a few sentences of private notes about the user's message.",
+  "Do not write the final answer they will read.",
+  "Do not output safety ratings, metadata labels, or a different model identity.",
+].join(" ");
 
-const RIGID_THINKING_LABEL = /^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:/im;
-
-const CLOSING_THINKING_REGEX =
-  /<\/thinking>|<\/thought>|<\/reasoning>|<\/\|thinking\|>/i;
-const OPEN_THINKING_REGEX =
-  /<thinking>|<thought>|<reasoning>|<begin_of_thinking>|<\|thinking\|>|\[THOUGHT\]/i;
+const ANSWER_HINT =
+  "Provide the final answer for the user. Do not repeat your notes verbatim.";
 
 export function composeSystemPromptForThinkingStage(
   fullAssistantSystemPrompt: string,
   stage: ThinkingStage,
 ): string {
   if (stage === "thinking") {
-    return buildThinkingSystemAddon("thinking");
+    return REASONING_SYSTEM;
   }
-  return `${fullAssistantSystemPrompt}\n\n${buildThinkingSystemAddon("final")}`;
+  return `${fullAssistantSystemPrompt}\n\n${ANSWER_HINT}`;
 }
 
-export function briefThinkingNoteFromUserMessage(userMessage: string): string {
-  const q = userMessage.trim().toLowerCase();
-  if (!q) return "Analyzing the question.";
-  if (/^(hi|hey|hello|yo)\b/.test(q))
-    return "Casual greeting — keep the reply brief.";
-  if (/who are you|what are you|your name/.test(q)) {
-    return "They want to know who I am — answer plainly.";
+/** Strip optional <thinking> wrappers; store plain notes in the UI. */
+export function cleanThinkingText(raw: string): string {
+  let text = raw.trim();
+  if (!text) return "";
+  if (OPEN_TAG.test(text)) {
+    const afterOpen = text.split(OPEN_TAG)[1] ?? "";
+    text = CLOSE_TAG.test(afterOpen)
+      ? (afterOpen.split(CLOSE_TAG)[0] ?? afterOpen)
+      : afterOpen;
   }
-  if (q.length <= 48) return `Topic: ${userMessage.trim()}`;
-  return `Topic: ${userMessage.trim().slice(0, 45)}…`;
+  text = text.replace(/<\/?[^>]+>/g, "").trim();
+  return stripModelOutputArtifacts(text);
 }
 
-export function buildThinkingSystemAddon(stage: ThinkingStage): string {
-  if (stage === "thinking") {
-    return [
-      "Write 2–4 short sentences of notes about the user's message (topic, facts to use, how you'll answer).",
-      "Write like margin notes about the subject — never about prompts, steps, hidden text, or 'the question asks…'.",
-      "No greeting, no final answer, no XML/tags.",
-      'Example for "what is AI": AI = systems that learn from data; I\'ll define it simply then give examples.',
-    ].join("\n");
-  }
+/**
+ * Full cleanup for stored/displayed assistant replies (normal + thinking stage 2).
+ * Unwraps accidental <thinking> blocks when models leak them into a single shot.
+ */
+export function normalizeAssistantMessageContent(raw: string): string {
+  const stripped = cleanAssistantContent(raw);
+  if (!OPEN_TAG.test(stripped)) return stripped;
 
-  return [
-    "Write the final answer for the user.",
-    "Do not repeat your notes verbatim.",
-    "Match depth to the question; keep greetings short.",
-    "Mention AiBoT or Suryanshu Nabheet only when they ask about identity or the platform.",
-  ].join("\n");
+  const parsed = parseLegacyThinkingContent(stripped);
+  if (parsed.mainResponse.trim()) {
+    return cleanAssistantContent(parsed.mainResponse);
+  }
+  const notesOnly = cleanThinkingText(parsed.thinkingContent);
+  return notesOnly || stripped;
+}
+
+/** Live stream updates: artifact strip only; full normalize on stream end. */
+export function sanitizeAssistantStreamField(
+  field: "content" | "thinkingText",
+  raw: string,
+  finalize: boolean,
+): string {
+  if (field === "thinkingText") {
+    return finalize ? cleanThinkingText(raw) : stripModelOutputArtifacts(raw.trim());
+  }
+  if (!finalize) return stripModelOutputArtifacts(raw);
+  return normalizeAssistantMessageContent(raw);
+}
+
+/**
+ * Small models sometimes skip stage 2 or only answer in stage 1.
+ * Prefer a real stage-2 answer; otherwise show stage-1 text as the reply.
+ */
+export function reconcileTwoStageThinking(
+  thinkingNotes: string,
+  answerRaw: string,
+): { thinkingText: string; content: string } {
+  const thinking = cleanThinkingText(thinkingNotes);
+  const content = normalizeAssistantMessageContent(answerRaw);
+  if (content) {
+    return { thinkingText: thinking, content };
+  }
+  if (thinking) {
+    return { thinkingText: "", content: thinking };
+  }
+  return { thinkingText: "", content: "" };
+}
+
+export function wrapThinkingForContext(notes: string): string {
+  const inner = cleanThinkingText(notes);
+  if (!inner) return "";
+  return `${THINKING_OPEN_TAG}\n${inner}\n${THINKING_CLOSE_TAG}`;
 }
 
 export function getStage2ContinuationUserPrompt(): string {
-  return "Provide your final answer to the user now.";
-}
-
-export function stripPromptLeakage(text: string): string {
-  let out = text;
-  for (const pattern of PROMPT_LEAKAGE_PATTERNS) {
-    out = out.replace(pattern, "").trim();
-  }
-  return out;
-}
-
-export function looksLikeMetaProcessThinking(text: string): boolean {
-  const t = text.trim();
-  if (!t) return false;
-  return META_THINKING_PATTERNS.some((p) => p.test(t));
-}
-
-export function polishThinkingDisplayContent(
-  raw: string,
-  options?: { userMessageHint?: string },
-): string {
-  let t = stripPromptLeakage(raw.trim());
-  if (!t) return t;
-
-  if (looksLikeMetaProcessThinking(t)) {
-    const hint = options?.userMessageHint?.trim();
-    return hint
-      ? briefThinkingNoteFromUserMessage(hint)
-      : "Analyzing the question.";
-  }
-
-  if (RIGID_THINKING_LABEL.test(t)) {
-    t = t
-      .replace(/^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:\s*/gim, "")
-      .replace(/\n{2,}/g, " ")
-      .trim();
-    if (t.length > 480) t = `${t.slice(0, 477).trim()}…`;
-  }
-
-  return t;
-}
-
-export function wrapThinkingInner(inner: string): string {
-  const body = inner.trim();
-  return `${THINKING_OPEN_TAG}\n${body}\n${THINKING_CLOSE_TAG}`;
-}
-
-export function extractThinkingInner(wrappedOrPlain: string): string {
-  const text = wrappedOrPlain.trim();
-  const match = text.match(
-    new RegExp(
-      `${THINKING_OPEN_TAG}\\s*([\\s\\S]*?)\\s*${THINKING_CLOSE_TAG}`,
-      "i",
-    ),
-  );
-  if (match?.[1]) return match[1].trim();
-  return text
-    .replace(OPEN_THINKING_REGEX, "")
-    .replace(CLOSING_THINKING_REGEX, "")
-    .trim();
-}
-
-export function normalizeThinkingStage1Output(
-  raw: string,
-  options?: { userMessageHint?: string },
-): string {
-  const stripped = stripPromptLeakage(raw.trim());
-  let inner = stripped ? extractThinkingInner(stripped) : "";
-
-  inner = polishThinkingDisplayContent(inner, {
-    userMessageHint: options?.userMessageHint,
-  });
-
-  if (!inner.trim()) {
-    const hint = options?.userMessageHint?.trim();
-    inner = hint
-      ? briefThinkingNoteFromUserMessage(hint)
-      : "Analyzing the question.";
-  }
-
-  return wrapThinkingInner(inner);
-}
-
-export function assembleThinkingAndAnswer(
-  thinkingWrapped: string,
-  answer: string,
-): string {
-  const think = thinkingWrapped.trim();
-  const body = answer.trim();
-  if (!think) return body;
-  if (!body) return `${think}\n\n`;
-  return `${think}\n\n${body}`;
-}
-
-export function isSubstantiveThinkingContent(text: string): boolean {
-  const cleaned = text
-    .replace(OPEN_THINKING_REGEX, "")
-    .replace(/<\/?[^>]+(>|$)/g, "")
-    .trim();
-  if (!cleaned) return false;
-  if (/^\.{1,8}$/.test(cleaned)) return false;
-  return cleaned.length >= 8;
-}
-
-export type ParsedThinkingContent = {
-  thinkingContent: string;
-  mainResponse: string;
-  hasClosingThinkingTag: boolean;
-};
-
-/** Legacy single-string messages that embed <thinking> tags in content. */
-export function parseLegacyThinkingContent(
-  rawContent: string,
-  options?: { userMessageHint?: string },
-): ParsedThinkingContent {
-  const hasClosingThinkingTag = CLOSING_THINKING_REGEX.test(rawContent);
-  const hasOpen = OPEN_THINKING_REGEX.test(rawContent);
-
-  if (!hasOpen) {
-    return {
-      thinkingContent: "",
-      mainResponse: stripPromptLeakage(rawContent),
-      hasClosingThinkingTag: false,
-    };
-  }
-
-  const closeMatch = rawContent.match(CLOSING_THINKING_REGEX);
-  if (!closeMatch) {
-    const inner = rawContent.split(OPEN_THINKING_REGEX)[1]?.trim() ?? "";
-    return {
-      thinkingContent: polishThinkingDisplayContent(inner, options),
-      mainResponse: "",
-      hasClosingThinkingTag: false,
-    };
-  }
-
-  const parts = rawContent.split(closeMatch[0]);
-  const thinkingContent = polishThinkingDisplayContent(
-    (parts[0] ?? "").replace(OPEN_THINKING_REGEX, "").trim(),
-    options,
-  );
-  const mainResponse = stripPromptLeakage(
-    parts
-      .slice(1)
-      .join(closeMatch[0])
-      .replace(/<\/?[^>]+(>|$)/g, "")
-      .trim(),
-  );
-
-  return {
-    thinkingContent,
-    mainResponse,
-    hasClosingThinkingTag,
-  };
+  return "Write your final answer now.";
 }
 
 export function buildChatMessagesForThinkingStage(params: {
@@ -256,23 +124,53 @@ export function buildChatMessagesForThinkingStage(params: {
   priorReasoning?: string;
 }): { role: string; content: string }[] {
   const { history, userContent, stage, priorReasoning } = params;
-  const prior = priorReasoning?.trim();
 
   if (stage === "thinking") {
     return [...history, { role: "user", content: userContent }];
   }
 
+  const prior = wrapThinkingForContext(priorReasoning ?? "");
   if (prior) {
-    const wrapped = prior.includes(THINKING_OPEN_TAG)
-      ? prior
-      : normalizeThinkingStage1Output(prior);
     return [
       ...history,
       { role: "user", content: userContent },
-      { role: "assistant", content: wrapped },
+      { role: "assistant", content: prior },
       { role: "user", content: getStage2ContinuationUserPrompt() },
     ];
   }
 
   return [...history, { role: "user", content: userContent }];
+}
+
+export function isSubstantiveThinkingContent(text: string): boolean {
+  return cleanThinkingText(text).length >= 8;
+}
+
+/** Old messages that stored thinking + answer in one string. */
+export function parseLegacyThinkingContent(rawContent: string): {
+  thinkingContent: string;
+  mainResponse: string;
+} {
+  if (!OPEN_TAG.test(rawContent)) {
+    return { thinkingContent: "", mainResponse: rawContent.trim() };
+  }
+
+  const parts = rawContent.split(/<\/thinking>/i);
+  const thinkingContent = cleanThinkingText(parts[0] ?? "");
+  const mainResponse = cleanAssistantContent(
+    (parts.slice(1).join("</thinking>") ?? "").replace(/<\/?[^>]+>/g, ""),
+  );
+
+  return { thinkingContent, mainResponse };
+}
+
+export function mergeThinkingAndAnswerForHistory(
+  thinking: string,
+  answer: string,
+): string {
+  const notes = cleanThinkingText(thinking);
+  const body = cleanAssistantContent(answer);
+  if (!notes) return body;
+  if (!body) return wrapThinkingForContext(notes);
+  return `${wrapThinkingForContext(notes)}\n\n${body}`;
 }

@@ -7,10 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 import { messageContentForModelHistory } from "@/lib/chat/message-history";
-import {
-  THINKING_CLOSE_TAG,
-  THINKING_OPEN_TAG,
-} from "@/lib/chat/thinking-mode";
+import { THINKING_CLOSE_TAG, THINKING_OPEN_TAG } from "@/lib/chat/thinking-mode";
 import { Role } from "@/lib/types";
 
 describe("messageContentForModelHistory", () => {

@@ -102,10 +102,12 @@ function ModelListItem({
 
 function ThinkingMenuRow({
   label,
+  hint,
   checked,
   onCheckedChange,
 }: {
   label: string;
+  hint?: string;
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
@@ -117,8 +119,9 @@ function ThinkingMenuRow({
       <span
         className={cn(
           "text-sm font-medium",
-          checked ? thinkingAccentTextClass : "text-muted-foreground",
+          checked ? thinkingAccentTextClass : "text-foreground",
         )}
+        title={hint ?? label}
       >
         {label}
       </span>
@@ -284,6 +287,7 @@ export function ModelSelector({
             {showThinking && onThinkingChange && (
               <ThinkingMenuRow
                 label={t("model.thinkingPower")}
+                hint={t("model.thinkingHint")}
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
               />
@@ -339,6 +343,7 @@ export function ModelSelector({
             <div className="p-1">
               <ThinkingMenuRow
                 label={t("model.thinkingPower")}
+                hint={t("model.thinkingHint")}
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
               />

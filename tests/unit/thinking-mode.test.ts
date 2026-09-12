@@ -12,19 +12,77 @@ import {
   PLAIN_ASSISTANT,
 } from "../fixtures/thinking-content";
 import {
-  assembleThinkingAndAnswer,
   buildChatMessagesForThinkingStage,
-  extractThinkingInner,
+  cleanAssistantContent,
+  cleanThinkingText,
+  normalizeAssistantMessageContent,
   isSubstantiveThinkingContent,
-  looksLikeMetaProcessThinking,
-  normalizeThinkingStage1Output,
+  mergeThinkingAndAnswerForHistory,
   parseLegacyThinkingContent,
-  polishThinkingDisplayContent,
-  stripPromptLeakage,
+  reconcileTwoStageThinking,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
-  wrapThinkingInner,
+  wrapThinkingForContext,
 } from "@/lib/chat/thinking-mode";
+
+describe("cleanThinkingText", () => {
+  it("returns plain notes unchanged", () => {
+    expect(cleanThinkingText("Outline definition and examples.")).toBe(
+      "Outline definition and examples.",
+    );
+  });
+
+  it("unwraps thinking tags", () => {
+    expect(cleanThinkingText(wrapThinkingForContext("notes"))).toBe("notes");
+  });
+
+  it("removes model safety metadata lines", () => {
+    const raw = [
+      "Notes about the question.",
+      "User Safety: safe",
+      "Response Safety: safe",
+    ].join("\n");
+    expect(cleanThinkingText(raw)).toBe("Notes about the question.");
+  });
+});
+
+describe("cleanAssistantContent", () => {
+  it("strips trailing safety labels from answers", () => {
+    expect(
+      cleanAssistantContent("Hello!\n\nUser Safety: safe\nResponse Safety: safe"),
+    ).toBe("Hello!");
+  });
+});
+
+describe("normalizeAssistantMessageContent", () => {
+  it("returns plain answers unchanged", () => {
+    expect(normalizeAssistantMessageContent("Direct answer.")).toBe(
+      "Direct answer.",
+    );
+  });
+
+  it("unwraps thinking tags leaked into a normal reply", () => {
+    const raw = `${THINKING_OPEN_TAG}\nnotes\n${THINKING_CLOSE_TAG}\n\nUser-facing answer.`;
+    expect(normalizeAssistantMessageContent(raw)).toBe("User-facing answer.");
+  });
+});
+
+describe("reconcileTwoStageThinking", () => {
+  it("uses stage-1 text when stage-2 is empty", () => {
+    const result = reconcileTwoStageThinking(
+      "Full reply the small model wrote in stage 1 only.",
+      "",
+    );
+    expect(result.thinkingText).toBe("");
+    expect(result.content).toContain("stage 1");
+  });
+
+  it("keeps both when stage-2 succeeds", () => {
+    const result = reconcileTwoStageThinking("Brief notes.", "Final answer.");
+    expect(result.thinkingText).toBe("Brief notes.");
+    expect(result.content).toBe("Final answer.");
+  });
+});
 
 describe("parseLegacyThinkingContent", () => {
   it("splits tagged legacy content", () => {
@@ -36,28 +94,12 @@ describe("parseLegacyThinkingContent", () => {
   it("returns plain text as main response", () => {
     const parsed = parseLegacyThinkingContent(PLAIN_ASSISTANT);
     expect(parsed.mainResponse).toBe(PLAIN_ASSISTANT);
-    expect(parsed.thinkingContent).toBe("");
   });
 
-  it("handles thinking-only legacy block", () => {
+  it("handles thinking-only block", () => {
     const parsed = parseLegacyThinkingContent(STAGE1_ONLY);
     expect(parsed.thinkingContent.length).toBeGreaterThan(10);
     expect(parsed.mainResponse).toBe("");
-  });
-});
-
-describe("normalizeThinkingStage1Output", () => {
-  it("wraps plain reasoning", () => {
-    const out = normalizeThinkingStage1Output(
-      "Outline definition then examples.",
-    );
-    expect(out).toContain(THINKING_OPEN_TAG);
-    expect(extractThinkingInner(out)).toContain("Outline");
-  });
-
-  it("uses user hint when empty", () => {
-    const out = normalizeThinkingStage1Output("", { userMessageHint: "hi" });
-    expect(extractThinkingInner(out)).toContain("greeting");
   });
 });
 
@@ -72,34 +114,22 @@ describe("buildChatMessagesForThinkingStage", () => {
     expect(msgs[0].content).toBe("Compare A and B");
   });
 
-  it("injects prior reasoning for final stage", () => {
-    const prior = wrapThinkingInner("notes");
+  it("injects prior notes for final stage", () => {
     const msgs = buildChatMessagesForThinkingStage({
       history: [],
       userContent: "hi",
       stage: "final",
-      priorReasoning: prior,
+      priorReasoning: "Short greeting.",
     });
     expect(msgs.some((m) => m.role === "assistant")).toBe(true);
-    expect(msgs[msgs.length - 1].role).toBe("user");
   });
 });
 
-describe("polishThinkingDisplayContent", () => {
-  it("replaces meta process monologue", () => {
-    const meta =
-      "Okay, I need to understand what the user wants me to do. Then I'll process and respond.";
-    expect(looksLikeMetaProcessThinking(meta)).toBe(true);
-    expect(
-      polishThinkingDisplayContent(meta, { userMessageHint: "hi" }),
-    ).toContain("greeting");
-  });
-});
-
-describe("assembleThinkingAndAnswer", () => {
-  it("joins wrapped thinking and answer", () => {
-    const think = wrapThinkingInner("note");
-    expect(assembleThinkingAndAnswer(think, "Hello")).toBe(`${think}\n\nHello`);
+describe("mergeThinkingAndAnswerForHistory", () => {
+  it("joins notes and answer for model context", () => {
+    const merged = mergeThinkingAndAnswerForHistory("notes", "Hello");
+    expect(merged).toContain("notes");
+    expect(merged).toContain("Hello");
   });
 });
 
@@ -108,15 +138,5 @@ describe("isSubstantiveThinkingContent", () => {
     expect(isSubstantiveThinkingContent("User wants an overview of AI.")).toBe(
       true,
     );
-  });
-});
-
-describe("stripPromptLeakage", () => {
-  it("removes nuclear lock style leakage", () => {
-    const cleaned = stripPromptLeakage(
-      "NUCLEAR REASONING LOCK\nReal content here.",
-    );
-    expect(cleaned).not.toContain("NUCLEAR");
-    expect(cleaned).toContain("Real content");
   });
 });

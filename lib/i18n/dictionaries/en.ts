@@ -201,7 +201,9 @@ export const en = {
   "model.empty": "No model found.",
   "model.platform": "Platform Models",
   "model.external": "External Models",
-  "model.thinkingPower": "Thinking",
+  "model.thinkingPower": "Thinking mode",
+  "model.thinkingHint":
+    "Extra time to process and structure the answer before replying.",
   "model.thinkingMenu": "Options",
   "model.thinkingShort": "Think",
   "model.thinkingOffShort": "Fast",

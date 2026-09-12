@@ -31,9 +31,10 @@ import { useTranslation } from "@/hooks/use-translation";
 import { Message, MODELS, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
+  cleanThinkingText,
+  normalizeAssistantMessageContent,
   isSubstantiveThinkingContent,
   parseLegacyThinkingContent,
-  polishThinkingDisplayContent,
 } from "@/lib/chat/thinking-mode";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
@@ -63,7 +64,6 @@ export const ChatMessage = memo(
     layout = "thread",
     pdfFileName = "ai-response.pdf",
     pdfTitle = "AI Response",
-    userMessageHint,
   }: {
     message: Message;
     onCopy: (content: string) => void;
@@ -72,7 +72,6 @@ export const ChatMessage = memo(
     layout?: ChatMessageLayout;
     pdfFileName?: string;
     pdfTitle?: string;
-    userMessageHint?: string;
   }) => {
     const { t } = useTranslation();
     const [isCopied, setIsCopied] = useState(false);
@@ -131,23 +130,24 @@ export const ChatMessage = memo(
       !isUser && !usesStructuredThinking
         ? parseLegacyThinkingContent(
             isStreaming ? message.content : displayedContent,
-            { userMessageHint },
           )
         : null;
 
     const thinkingContent = usesStructuredThinking
-      ? polishThinkingDisplayContent(message.thinkingText ?? "", {
-          userMessageHint,
-        })
+      ? cleanThinkingText(message.thinkingText ?? "")
       : (legacyParsed?.thinkingContent ?? "");
 
-    const mainResponse = isUser
+    const rawMainResponse = isUser
       ? message.content
       : usesStructuredThinking
         ? isStreaming
           ? message.content
           : displayedContent
         : (legacyParsed?.mainResponse ?? message.content);
+
+    const mainResponse = isUser
+      ? rawMainResponse
+      : normalizeAssistantMessageContent(rawMainResponse);
 
     useEffect(() => {
       if (

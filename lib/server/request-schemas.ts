@@ -40,7 +40,7 @@ export const chatRequestSchema = z.object({
     .max(MAX_HISTORY_MESSAGES),
   model: z.string().trim().min(1).max(200),
   isThinking: z.boolean().optional(),
-  thinkingStage: z.enum(["thinking", "final", "combined"]).optional(),
+  thinkingStage: z.enum(["thinking", "final"]).optional(),
   /** Normalized stage-1 reasoning block; required for grounded stage-2 answers. */
   priorReasoning: z.string().max(48_000).optional(),
   locale: z.string().max(10).optional(),

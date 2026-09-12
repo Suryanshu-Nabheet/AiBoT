@@ -29,14 +29,14 @@ describe("chatRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts combined thinking stage in schema (client uses two-stage)", () => {
+  it("rejects legacy combined thinking stage", () => {
     const result = chatRequestSchema.safeParse(
       createChatRequestBody({
         isThinking: true,
         thinkingStage: "combined",
       }),
     );
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("rejects empty messages", () => {
