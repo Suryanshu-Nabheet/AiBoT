@@ -29,6 +29,11 @@ import { ThinkingOverlay } from "@/components/ui/thinking-overlay";
 import { PageShell } from "@/components/layout/page-shell";
 import { ATTACH_ACCEPT, type ChatAttachment } from "@/lib/chat/attachments";
 import { processFilesForChat } from "@/lib/chat/process-files";
+import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
+import { ModelSelector } from "@/components/ui/model-selector";
+import { useModel } from "@/hooks/use-model";
+import { useSettings } from "@/contexts/settings-context";
+import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 
 const EMPTY_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -84,6 +89,10 @@ export default function CoderAgentPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [code, setCode] = useState(EMPTY_HTML);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { apiKeys } = useSettings();
+  const { modelId, setModelId } = useModel({
+    storageKey: AGENT_MODEL_STORAGE.coder,
+  });
 
   useEffect(() => {
     // Load persisted state from Session Storage
@@ -199,11 +208,23 @@ Then provide the COMPLETE HTML code.`;
         body: JSON.stringify({
           prompt: aiPrompt,
           attachments: currentAttachments,
+          model: modelId,
+          customKeys: sanitizeCustomKeysForRequest(apiKeys),
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to generate code");
+        let detail = "Failed to generate code";
+        try {
+          const err = await res.json();
+          detail =
+            (typeof err?.message === "string" && err.message) ||
+            (typeof err?.body === "string" && err.body) ||
+            detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
       }
 
       const data = await res.json();
@@ -251,14 +272,16 @@ Then provide the COMPLETE HTML code.`;
       ]);
     } catch (error) {
       console.error("Generation error:", error);
-      toast.error("Failed to generate code. Please try again.");
+      const message =
+        error instanceof Error ? error.message : "Failed to generate code.";
+      toast.error(message);
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: Role.Agent,
-          content: "Sorry, I encountered an error. Please try again.",
+          content: `Sorry — ${message}`,
         },
       ]);
     } finally {
@@ -290,8 +313,8 @@ Then provide the COMPLETE HTML code.`;
       {/* Left: Chat Interface - 50% on desktop */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col border-b bg-background basis-0 xl:h-full xl:w-1/2 xl:flex-none xl:border-b-0 xl:border-r">
         {/* Header */}
-        <div className="p-3 sm:p-4 border-b flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b p-3 sm:p-4">
+          <div className="flex min-w-0 items-center gap-3">
             <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               <Code className="size-6 text-blue-600" weight="bold" />
               <span>
@@ -299,9 +322,14 @@ Then provide the COMPLETE HTML code.`;
               </span>
             </h1>
           </div>
-          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-            HTML/CSS/JS
-          </span>
+          <ModelSelector
+            value={modelId}
+            onValueChange={setModelId}
+            modelStorageKey={AGENT_MODEL_STORAGE.coder}
+            triggerVariant="compact"
+            triggerClassName="h-8 max-w-[min(48vw,200px)]"
+            enablePickerShortcut
+          />
         </div>
 
         {/* Chat Messages */}

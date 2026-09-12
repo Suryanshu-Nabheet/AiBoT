@@ -22,6 +22,11 @@ import { AIVoiceInput } from "@/components/ui/ai-voice-input";
 import AITextLoading from "@/components/ui/ai-text-loading";
 import AIVoiceOutput from "@/components/ui/ai-voice-output";
 import { PageShell } from "@/components/layout/page-shell";
+import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
+import { ModelSelector } from "@/components/ui/model-selector";
+import { useModel } from "@/hooks/use-model";
+import { useSettings } from "@/contexts/settings-context";
+import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 
 export default function CoachAgentPage() {
   // State
@@ -29,6 +34,10 @@ export default function CoachAgentPage() {
   const [showTranscript, setShowTranscript] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const { apiKeys } = useSettings();
+  const { modelId, setModelId } = useModel({
+    storageKey: AGENT_MODEL_STORAGE.coach,
+  });
 
   // Session Storage Persistence
   useEffect(() => {
@@ -129,10 +138,21 @@ export default function CoachAgentPage() {
             role: m.role,
             content: m.content,
           })),
+          model: modelId,
+          customKeys: sanitizeCustomKeysForRequest(apiKeys),
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to get response");
+      if (!res.ok) {
+        let detail = "Failed to get response";
+        try {
+          const err = await res.json();
+          detail = (typeof err?.message === "string" && err.message) || detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
 
       const data = await res.json();
       const aiResponse = data.content;
@@ -147,7 +167,9 @@ export default function CoachAgentPage() {
       speakResponse(aiResponse);
     } catch (error) {
       console.error("Coach error:", error);
-      toast.error("Failed to get response.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to get response.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -195,8 +217,8 @@ export default function CoachAgentPage() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/50 via-background to-background opacity-70 pointer-events-none" />
 
       {/* Top Bar - Minimalist */}
-      <div className="relative z-50 flex w-full shrink-0 items-start justify-between p-4 sm:p-6">
-        <div className="flex flex-col gap-1">
+      <div className="relative z-50 flex w-full shrink-0 items-start justify-between gap-3 p-4 sm:p-6">
+        <div className="flex min-w-0 flex-col gap-1">
           <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             <SpeakerHigh className="size-6 text-blue-600" weight="bold" />
             <span>
@@ -204,8 +226,15 @@ export default function CoachAgentPage() {
             </span>
           </h1>
         </div>
-
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <ModelSelector
+            value={modelId}
+            onValueChange={setModelId}
+            modelStorageKey={AGENT_MODEL_STORAGE.coach}
+            triggerVariant="compact"
+            triggerClassName="h-8 max-w-[min(42vw,180px)]"
+            enablePickerShortcut
+          />
           <Button
             variant="ghost"
             size="icon"

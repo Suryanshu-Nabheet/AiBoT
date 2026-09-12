@@ -24,6 +24,16 @@ const contentPartSchema = z.object({
   image_url: z.object({ url: z.string().max(MAX_IMAGE_URL_LENGTH) }).optional(),
 });
 
+const customKeysSchema = z
+  .object({
+    openai: apiKey,
+    anthropic: apiKey,
+    google: apiKey,
+    deepseek: apiKey,
+    openrouter: apiKey,
+  })
+  .optional();
+
 export const chatRequestSchema = z.object({
   messages: z
     .array(
@@ -43,15 +53,7 @@ export const chatRequestSchema = z.object({
   /** Normalized stage-1 reasoning block; required for grounded stage-2 answers. */
   priorReasoning: z.string().max(48_000).optional(),
   locale: z.string().max(10).optional(),
-  customKeys: z
-    .object({
-      openai: apiKey,
-      anthropic: apiKey,
-      google: apiKey,
-      deepseek: apiKey,
-      openrouter: apiKey,
-    })
-    .optional(),
+  customKeys: customKeysSchema,
 });
 
 export const enhanceRequestSchema = z.object({
@@ -67,6 +69,11 @@ const agentAttachmentSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const agentModelFields = {
+  model: z.string().trim().min(1).max(200).default("openrouter/free"),
+  customKeys: customKeysSchema,
+};
+
 export const coachRequestSchema = z.object({
   messages: z
     .array(
@@ -81,11 +88,13 @@ export const coachRequestSchema = z.object({
     .min(1)
     .max(30),
   attachments: z.array(agentAttachmentSchema).max(8).optional(),
+  ...agentModelFields,
 });
 
 export const coderRequestSchema = z.object({
   prompt: z.string().trim().min(1).max(20_000),
   attachments: z.array(agentAttachmentSchema).max(8).optional(),
+  ...agentModelFields,
 });
 
 export const summarizeRequestSchema = z
@@ -102,6 +111,7 @@ export const summarizeRequestSchema = z
       .optional()
       .default([]),
     attachments: z.array(agentAttachmentSchema).max(12).optional(),
+    ...agentModelFields,
   })
   .superRefine(({ filesData, attachments }, ctx) => {
     const textBytes = filesData.reduce(

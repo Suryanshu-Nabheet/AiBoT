@@ -7,17 +7,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { CODER_AGENT_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
-import { MODELS } from "@/lib/types";
 import {
   buildMultimodalUserContent,
   normalizeLegacyAttachment,
 } from "@/lib/chat/attachments";
+import { completeAgentChat } from "@/lib/server/agent-completion";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { coderRequestSchema } from "@/lib/server/request-schemas";
-
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-const SITE_NAME = "AiBoT";
 
 export async function POST(req: NextRequest) {
   const blocked = protectApiRequest(req, {
@@ -27,13 +23,6 @@ export async function POST(req: NextRequest) {
   });
   if (blocked) return blocked;
 
-  if (!OPENROUTER_KEY) {
-    return NextResponse.json(
-      { message: "OpenRouter API Key not configured" },
-      { status: 500 },
-    );
-  }
-
   try {
     const parsed = coderRequestSchema.safeParse(await req.json());
     if (!parsed.success)
@@ -41,72 +30,31 @@ export async function POST(req: NextRequest) {
         { message: "Invalid code request" },
         { status: 400 },
       );
-    const { prompt, attachments } = parsed.data;
+    const { prompt, attachments, model, customKeys } = parsed.data;
     const userContent = buildMultimodalUserContent(
       prompt,
       (attachments ?? []).map((a) => normalizeLegacyAttachment(a)),
     );
 
-    let lastError = null;
+    const systemPrompt = composeAgentSystemPrompt(CODER_AGENT_ROLE, {
+      id: model,
+      name: model,
+    });
 
-    for (const model of MODELS) {
-      try {
-        const systemPrompt = composeAgentSystemPrompt(CODER_AGENT_ROLE, {
-          id: model.id,
-          name: model.name,
-        });
+    const result = await completeAgentChat({
+      model,
+      systemPrompt,
+      userContent,
+      customKeys,
+      temperature: 0.4,
+      maxTokens: 8000,
+    });
 
-        const response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${OPENROUTER_KEY}`,
-              "HTTP-Referer": SITE_URL,
-              "X-Title": SITE_NAME,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: model.id,
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userContent },
-              ],
-              temperature: 0.4,
-              max_tokens: 8000,
-            }),
-            signal: AbortSignal.timeout(120_000),
-          },
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const content = data.choices[0]?.message?.content || "";
-
-          if (content) {
-            return NextResponse.json({ code: content });
-          }
-        }
-
-        const errorText = response.bodyUsed
-          ? "Empty completion"
-          : await response.text();
-        lastError = errorText;
-      } catch (modelError) {
-        console.error(`Coder: Error with model ${model.id}:`, modelError);
-        lastError = modelError;
-        continue;
-      }
+    if (!result.ok) {
+      return NextResponse.json(result.body, { status: result.status });
     }
 
-    console.error("Coder: All models failed. Last error:", lastError);
-    return NextResponse.json(
-      {
-        message:
-          "All AI models are currently unavailable. Please try again in a moment.",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ code: result.content, model: result.model });
   } catch (error) {
     console.error("API Error:", error);
     return NextResponse.json(

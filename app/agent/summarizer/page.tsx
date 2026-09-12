@@ -24,6 +24,11 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { ATTACH_ACCEPT } from "@/lib/chat/attachments";
 import { processFilesForChat } from "@/lib/chat/process-files";
+import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
+import { ModelSelector } from "@/components/ui/model-selector";
+import { useModel } from "@/hooks/use-model";
+import { useSettings } from "@/contexts/settings-context";
+import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import ReactMarkdown from "react-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { Geist_Mono } from "next/font/google";
@@ -44,6 +49,10 @@ export default function AssignmentSummarizerPage() {
   const [result, setResult] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { apiKeys } = useSettings();
+  const { modelId, setModelId } = useModel({
+    storageKey: AGENT_MODEL_STORAGE.summarizer,
+  });
 
   // Session Storage Persistence
   useEffect(() => {
@@ -145,18 +154,29 @@ export default function AssignmentSummarizerPage() {
         body: JSON.stringify({
           task,
           attachments,
+          model: modelId,
+          customKeys: sanitizeCustomKeysForRequest(apiKeys),
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to process request");
+        let detail = "Failed to process request";
+        try {
+          const err = await response.json();
+          detail = (typeof err?.message === "string" && err.message) || detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
       }
 
       const data = await response.json();
       setResult(data.summary);
       toast.success("Processing complete!");
     } catch (error) {
-      toast.error("Error processing request");
+      const message =
+        error instanceof Error ? error.message : "Error processing request";
+      toast.error(message);
       console.error(error);
     } finally {
       setIsProcessing(false);
@@ -171,12 +191,22 @@ export default function AssignmentSummarizerPage() {
 
       <PageScrollRegion className="mx-auto w-full max-w-5xl p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 lg:p-8">
         <div className="mb-6 text-center sm:mb-10">
-          <h1 className="mb-2 flex items-center justify-center gap-2 text-xl font-bold tracking-tight text-foreground sm:mb-3 sm:text-2xl">
-            <FileText className="size-6 text-blue-600" weight="bold" />
-            <span>
-              Ai <span className="text-blue-600">Summarizer</span>
-            </span>
-          </h1>
+          <div className="mb-3 flex flex-col items-center gap-3 sm:mb-4">
+            <h1 className="flex items-center justify-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              <FileText className="size-6 text-blue-600" weight="bold" />
+              <span>
+                Ai <span className="text-blue-600">Summarizer</span>
+              </span>
+            </h1>
+            <ModelSelector
+              value={modelId}
+              onValueChange={setModelId}
+              modelStorageKey={AGENT_MODEL_STORAGE.summarizer}
+              triggerVariant="compact"
+              triggerClassName="h-8"
+              enablePickerShortcut
+            />
+          </div>
 
           <p className="mx-auto max-w-2xl text-sm text-muted-foreground sm:text-lg">
             Upload documents, images, or short videos and let AiBoT analyze them

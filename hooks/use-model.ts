@@ -7,9 +7,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 
-import { MODELS } from "@/lib/types";
-
-const DEFAULT_MODEL_ID = "openrouter/free";
+import { DEFAULT_AGENT_MODEL } from "@/lib/chat/agent-models";
 
 interface UseModelOptions {
   initialModel?: string;
@@ -18,7 +16,7 @@ interface UseModelOptions {
 }
 
 export function useModel({
-  initialModel = DEFAULT_MODEL_ID,
+  initialModel = DEFAULT_AGENT_MODEL,
   storageKey = "preferredModel",
   persistToLocalStorage = true,
 }: UseModelOptions = {}) {
@@ -27,19 +25,13 @@ export function useModel({
   useEffect(() => {
     if (persistToLocalStorage && typeof window !== "undefined") {
       const stored = localStorage.getItem(storageKey);
-      if (stored && MODELS.find((m) => m.id === stored)) {
+      if (stored && stored.trim().length > 0) {
         setModelId(stored);
       }
     }
   }, [persistToLocalStorage, storageKey]);
 
-  const [model, setModel] = useState(() =>
-    MODELS.find((m) => m.id === modelId),
-  );
-
   useEffect(() => {
-    setModel(MODELS.find((m) => m.id === modelId));
-
     if (persistToLocalStorage && typeof window !== "undefined") {
       localStorage.setItem(storageKey, modelId);
     }
@@ -51,7 +43,8 @@ export function useModel({
 
   return {
     modelId,
-    model,
+    /** @deprecated Prefer looking up against availableModels in the selector */
+    model: undefined as undefined,
     setModelId: setModelById,
   };
 }

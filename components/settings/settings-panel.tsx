@@ -53,6 +53,8 @@ import {
   SettingsSectionLabel,
   settingsControlClass,
 } from "@/components/settings/settings-ui";
+import { ModelSelector } from "@/components/ui/model-selector";
+import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
 
 export type { SettingsSection };
 
@@ -432,6 +434,47 @@ export function SettingsPanel({
                       />
                     </SettingsRow>
                   ))}
+                </SettingsCard>
+              </section>
+
+              <section>
+                <SettingsSectionLabel>
+                  {t("models.agents")}
+                </SettingsSectionLabel>
+                <p className="-mt-1 mb-3 px-0.5 text-[12px] text-muted-foreground">
+                  {t("models.agents.desc")}
+                </p>
+                <SettingsCard>
+                  <SettingsRow
+                    label={t("models.agents.coder")}
+                    description={t("models.agents.coder.desc")}
+                  >
+                    <ModelSelector
+                      modelStorageKey={AGENT_MODEL_STORAGE.coder}
+                      triggerVariant="compact"
+                      triggerClassName="h-8 max-w-[11rem]"
+                    />
+                  </SettingsRow>
+                  <SettingsRow
+                    label={t("models.agents.summarizer")}
+                    description={t("models.agents.summarizer.desc")}
+                  >
+                    <ModelSelector
+                      modelStorageKey={AGENT_MODEL_STORAGE.summarizer}
+                      triggerVariant="compact"
+                      triggerClassName="h-8 max-w-[11rem]"
+                    />
+                  </SettingsRow>
+                  <SettingsRow
+                    label={t("models.agents.coach")}
+                    description={t("models.agents.coach.desc")}
+                  >
+                    <ModelSelector
+                      modelStorageKey={AGENT_MODEL_STORAGE.coach}
+                      triggerVariant="compact"
+                      triggerClassName="h-8 max-w-[11rem]"
+                    />
+                  </SettingsRow>
                 </SettingsCard>
               </section>
 
