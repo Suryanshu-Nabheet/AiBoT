@@ -164,8 +164,9 @@ export const hi = {
   "composer.attach": "फ़ाइलें संलग्न करें",
   "composer.voice": "वॉइस इनपुट",
   "composer.thinking": "थिंकिंग मोड",
-  "model.thinkingDescription":
-    "गहरी सोच: जवाब देने से पहले AI को सवाल समझने और जवाब तैयार करने के लिए अतिरिक्त समय मिलता है।",
+
+  "shortcut.toggleSidebar": "साइडबार टॉगल (⌘B)",
+  "shortcut.toggleModel": "मॉडल बदलें (⌘/)",
   "composer.enhance": "प्रॉम्प्ट बेहतर बनाएँ",
   "composer.send": "संदेश भेजें",
   "composer.stop": "जनरेशन रोकें",

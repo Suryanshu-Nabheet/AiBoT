@@ -68,6 +68,7 @@ function ArenaPanel({
           thinkingEnabled={thinkingEnabled}
           onThinkingChange={onThinkingChange}
           triggerClassName={triggerClassName}
+          enablePickerShortcut={modelStorageKey === "arena-a"}
         />
       </div>
       <ChatThreadViewport scrollRef={scrollRef} variant="arena">
@@ -249,6 +250,7 @@ export default function ArenaInterface({
                 thinkingEnabled={leftThinking.thinkingEnabled}
                 onThinkingChange={leftThinking.setThinkingEnabled}
                 triggerClassName={arenaModelTriggerClass}
+                enablePickerShortcut
               />
               <ModelSelector
                 value={rightChat.model}

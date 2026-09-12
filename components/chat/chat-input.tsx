@@ -228,6 +228,7 @@ export function ChatInput({
                 onThinkingChange={onThinkingChange}
                 showModelList={showModelSelector}
                 triggerVariant="compact"
+                enablePickerShortcut={Boolean(showComposerModel)}
               />
             )}
 

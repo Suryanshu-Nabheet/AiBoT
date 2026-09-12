@@ -8,6 +8,7 @@
 "use client";
 
 import { useSidebar } from "@/components/ui/sidebar";
+import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 import { SidebarSimple } from "@phosphor-icons/react";
 
@@ -19,6 +20,7 @@ import {
 
 export function SidebarToggle({ className }: { className?: string }) {
   const { toggleSidebar } = useSidebar();
+  const { t } = useTranslation();
 
   return (
     <Tooltip>
@@ -26,7 +28,7 @@ export function SidebarToggle({ className }: { className?: string }) {
         <div
           role="button"
           tabIndex={0}
-          aria-label="Toggle sidebar"
+          aria-label={t("nav.toggleSidebar")}
           className={cn(
             "p-2 rounded-lg bg-background border border-sidebar-border text-sidebar-foreground/80 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200 shadow-sm hover:shadow-md ring-1 ring-black/5",
             className,
@@ -43,7 +45,7 @@ export function SidebarToggle({ className }: { className?: string }) {
         </div>
       </TooltipTrigger>
       <TooltipContent side="right" className="text-[10px] px-2 py-1 font-bold">
-        Toggle Sidebar
+        {t("shortcut.toggleSidebar")}
       </TooltipContent>
     </Tooltip>
   );

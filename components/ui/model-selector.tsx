@@ -44,6 +44,8 @@ interface ModelSelectorProps {
   onThinkingChange?: (enabled: boolean) => void;
   showModelList?: boolean;
   triggerVariant?: "default" | "compact";
+  /** Register ⌘/ (Ctrl+/) to open this picker (only one per screen). */
+  enablePickerShortcut?: boolean;
 }
 
 type SelectorModel = {
@@ -100,35 +102,26 @@ function ModelListItem({
 
 function ThinkingMenuRow({
   label,
-  description,
   checked,
   onCheckedChange,
 }: {
   label: string;
-  description?: string;
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
   return (
     <div
-      className="flex items-start justify-between gap-3 border-b border-border/60 px-3 py-2.5"
+      className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <span
-          className={cn(
-            "text-sm font-medium",
-            checked ? thinkingAccentTextClass : "text-foreground",
-          )}
-        >
-          {label}
-        </span>
-        {description ? (
-          <p className="text-xs leading-snug text-muted-foreground">
-            {description}
-          </p>
-        ) : null}
-      </div>
+      <span
+        className={cn(
+          "text-sm font-medium",
+          checked ? thinkingAccentTextClass : "text-muted-foreground",
+        )}
+      >
+        {label}
+      </span>
       <ThinkingModeSwitch
         checked={checked}
         onCheckedChange={onCheckedChange}
@@ -148,6 +141,7 @@ export function ModelSelector({
   onThinkingChange,
   showModelList = true,
   triggerVariant = "default",
+  enablePickerShortcut = false,
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -178,6 +172,20 @@ export function ModelSelector({
     }
   }, [value, persistedModelId, setModelId]);
 
+  useEffect(() => {
+    if (!enablePickerShortcut || disabled) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key !== "/" && event.code !== "Slash") return;
+      event.preventDefault();
+      setOpen((prev) => !prev);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [enablePickerShortcut, disabled]);
+
   const handleValueChange = (newValue: string) => {
     setModelId(newValue);
     setOpen(false);
@@ -202,9 +210,11 @@ export function ModelSelector({
           aria-expanded={open}
           aria-label={triggerLabel}
           title={
-            showModelList && selectedModelObj
-              ? selectedModelObj.name.replace(" (Free)", "")
-              : undefined
+            enablePickerShortcut
+              ? t("shortcut.toggleModel")
+              : showModelList && selectedModelObj
+                ? selectedModelObj.name.replace(" (Free)", "")
+                : undefined
           }
           disabled={disabled}
           className={cn(
@@ -255,7 +265,6 @@ export function ModelSelector({
             {showThinking && onThinkingChange && (
               <ThinkingMenuRow
                 label={t("model.thinkingPower")}
-                description={t("model.thinkingDescription")}
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
               />
@@ -311,7 +320,6 @@ export function ModelSelector({
             <div className="p-1">
               <ThinkingMenuRow
                 label={t("model.thinkingPower")}
-                description={t("model.thinkingDescription")}
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
               />

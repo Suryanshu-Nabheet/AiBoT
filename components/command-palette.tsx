@@ -179,9 +179,11 @@ export function CommandPalette() {
           )}
         </CommandList>
 
-        <div className="text-muted-foreground flex items-center justify-between border-t px-3 py-2 text-[10px] tracking-wide">
+        <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t px-3 py-2 text-[10px] tracking-wide">
           <span>{t("command.footer.hint")}</span>
-          <span className="font-medium">{modKey}K</span>
+          <span className="font-medium">
+            {modKey}K · {modKey}B · {modKey}/
+          </span>
         </div>
       </Command>
     </CommandDialog>
