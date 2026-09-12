@@ -259,9 +259,6 @@ export const ChatMessage = memo(
                       </div>
                     ) : isAgentError ? (
                       <ChatErrorBanner
-                        title={
-                          message.errorTitle ?? t("errors.chat.title.generic")
-                        }
                         body={message.content}
                         code={message.errorType}
                       />

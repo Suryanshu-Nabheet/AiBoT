@@ -71,7 +71,13 @@ export async function POST(req: NextRequest) {
     !customKeys?.openrouter
   ) {
     return NextResponse.json(
-      chatErrorResponseBody(400, undefined, "missing_api_key"),
+      chatErrorResponseBody(
+        400,
+        undefined,
+        "byok_key_required",
+        targetModel,
+        customKeys,
+      ),
       { status: 400 },
     );
   }
@@ -104,10 +110,19 @@ export async function POST(req: NextRequest) {
 
     const errorText = await response.text();
     return NextResponse.json(
-      chatErrorResponseBody(response.status, errorText),
+      chatErrorResponseBody(
+        response.status,
+        errorText,
+        undefined,
+        targetModel,
+        customKeys,
+      ),
       { status: response.status },
     );
   } catch {
-    return NextResponse.json(chatErrorResponseBody(500), { status: 500 });
+    return NextResponse.json(
+      chatErrorResponseBody(500, undefined, undefined, targetModel, customKeys),
+      { status: 500 },
+    );
   }
 }

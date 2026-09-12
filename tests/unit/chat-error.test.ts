@@ -20,9 +20,12 @@ describe("parseChatErrorPayload", () => {
     expect(parseChatErrorPayload(raw).message).toContain("Rate limit");
   });
 
-  it("reads code field from API", () => {
-    const raw = JSON.stringify({ code: "missing_api_key", message: "ignored" });
-    expect(parseChatErrorPayload(raw).code).toBe("missing_api_key");
+  it("reads keySource from API", () => {
+    const raw = JSON.stringify({
+      code: "platform_unavailable",
+      keySource: "platform",
+    });
+    expect(parseChatErrorPayload(raw).keySource).toBe("platform");
   });
 });
 
@@ -31,32 +34,49 @@ describe("inferChatErrorCode", () => {
     expect(inferChatErrorCode(429, "")).toBe("rate_limit");
   });
 
-  it("maps provider key messages", () => {
+  it("maps missing env key to platform_unavailable for platform models", () => {
+    expect(
+      inferChatErrorCode(
+        401,
+        "No API key available. Add OPENROUTER_API_KEY.",
+        undefined,
+        {
+          modelId: "openrouter/free",
+          customKeys: {},
+        },
+      ),
+    ).toBe("platform_unavailable");
+  });
+
+  it("maps missing key to byok_key_required for BYOK catalog models", () => {
     expect(
       inferChatErrorCode(
         400,
-        JSON.stringify({
-          code: "missing_api_key",
-        }),
+        JSON.stringify({ code: "byok_key_required" }),
+        undefined,
+        { modelId: "gpt-4o", customKeys: {} },
       ),
-    ).toBe("missing_api_key");
+    ).toBe("byok_key_required");
   });
 
-  it("maps missing env key text", () => {
+  it("maps invalid model text", () => {
     expect(
-      inferChatErrorCode(401, "No API key available. Add OPENROUTER_API_KEY."),
-    ).toBe("missing_api_key");
+      inferChatErrorCode(404, "Model not found: foo/bar", undefined, {
+        modelId: "openrouter/free",
+      }),
+    ).toBe("invalid_model");
   });
 });
 
 describe("resolveChatError", () => {
-  it("returns localized title and body without raw upstream", () => {
+  it("returns localized body without raw upstream", () => {
     const raw = JSON.stringify({
       error: { message: '{"type":"internal"}', code: 429 },
     });
-    const resolved = resolveChatError("en", 429, raw);
+    const resolved = resolveChatError("en", 429, raw, undefined, {
+      modelId: "openrouter/free",
+    });
     expect(resolved.code).toBe("rate_limit");
-    expect(resolved.title).toContain("Slow down");
     expect(resolved.body).not.toContain("internal");
   });
 });

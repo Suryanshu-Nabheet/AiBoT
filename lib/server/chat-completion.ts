@@ -21,6 +21,7 @@ import {
 } from "@/lib/chat/resolve-provider";
 import { normalizeOllamaUrl } from "@/lib/chat/ollama-url";
 import { chatErrorResponseBody } from "@/lib/chat/chat-error";
+import { inferChatKeySource } from "@/lib/chat/chat-key-context";
 import { localeReplyDirective, type Locale } from "@/lib/i18n";
 
 export type ChatMessageInput = {
@@ -205,7 +206,13 @@ export async function openChatUpstreamStream(
     return {
       response: new Response(
         JSON.stringify(
-          chatErrorResponseBody(400, undefined, "missing_api_key"),
+          chatErrorResponseBody(
+            400,
+            undefined,
+            "byok_key_required",
+            targetModel,
+            customKeys,
+          ),
         ),
         { status: 400 },
       ),
@@ -220,10 +227,20 @@ export async function openChatUpstreamStream(
   });
 
   if (!route.authHeader) {
+    const missingKeyCode =
+      inferChatKeySource(targetModel, customKeys) === "platform"
+        ? "platform_unavailable"
+        : "byok_key_required";
     return {
       response: new Response(
         JSON.stringify(
-          chatErrorResponseBody(401, undefined, "missing_api_key"),
+          chatErrorResponseBody(
+            401,
+            undefined,
+            missingKeyCode,
+            targetModel,
+            customKeys,
+          ),
         ),
         { status: 401 },
       ),

@@ -231,29 +231,35 @@ export const en = {
   "errors.http": "**Error {status}**: {detail}",
   "errors.noApiKey":
     "No API key available. Add a provider key in Settings or configure OPENROUTER_API_KEY.",
-  "errors.chat.title.rateLimit": "Slow down a moment",
-  "errors.chat.title.missingApiKey": "API key needed",
-  "errors.chat.title.auth": "Couldn’t authorize",
-  "errors.chat.title.validation": "Request couldn’t be sent",
-  "errors.chat.title.upstream": "Model provider issue",
-  "errors.chat.title.ollama": "Ollama isn’t reachable",
-  "errors.chat.title.network": "Connection problem",
+  "errors.chat.title.rateLimit": "Rate limit",
+  "errors.chat.title.byokKeyRequired": "API key required",
+  "errors.chat.title.byokInvalidKey": "Invalid API key",
+  "errors.chat.title.invalidModel": "Model unavailable",
+  "errors.chat.title.platformUnavailable": "Temporarily unavailable",
+  "errors.chat.title.validation": "Couldn't send",
+  "errors.chat.title.upstream": "Provider error",
+  "errors.chat.title.ollama": "Ollama unreachable",
+  "errors.chat.title.network": "Connection lost",
   "errors.chat.title.generic": "Something went wrong",
   "errors.chat.body.rateLimit":
-    "You’ve hit a rate limit. Wait a minute and try again, or switch to another model.",
-  "errors.chat.body.missingApiKey":
-    "This model needs an API key. Open Settings → API Keys, add your provider key, then try again.",
-  "errors.chat.body.auth":
-    "Your API key was rejected. Check that it’s correct in Settings and try again.",
+    "Too many requests—wait a moment, then try again or switch models.",
+  "errors.chat.body.byokKeyRequired":
+    "Add your provider API key in Settings to use this model.",
+  "errors.chat.body.byokInvalidKey":
+    "Your API key was rejected. Update it in Settings and try again.",
+  "errors.chat.body.invalidModel":
+    "This model isn't available on your provider. Choose another model.",
+  "errors.chat.body.platformUnavailable":
+    "This hosted model isn't available right now. Try another model or check back later.",
   "errors.chat.body.validation":
-    "We couldn’t send this message. Try a different model or start a new chat.",
+    "This message couldn't be sent. Try a different model or a new chat.",
   "errors.chat.body.upstream":
-    "The model provider returned an error. Try again in a moment or pick another model.",
+    "The model provider had an issue. Try again shortly or switch models.",
   "errors.chat.body.ollama":
-    "AiBoT couldn’t reach Ollama. Make sure it’s running locally and the URL in Settings is correct.",
+    "Couldn't reach Ollama—confirm it's running and your URL in Settings is correct.",
   "errors.chat.body.network":
-    "The connection dropped before a reply finished. Check your network and send again.",
-  "errors.chat.body.generic": "An unexpected error occurred. Please try again.",
+    "The connection dropped before the reply finished. Send again when you're back online.",
+  "errors.chat.body.generic": "Something went wrong. Please try again.",
   "errors.chat.action.settings": "Open API Keys",
   "errors.chat.alternatives": "Try another model",
 

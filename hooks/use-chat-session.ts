@@ -39,14 +39,20 @@ import {
 } from "@/lib/desktop-notifications";
 import { translate, localeReplyDirective, type Locale } from "@/lib/i18n";
 import { resolveChatError, type ChatErrorCode } from "@/lib/chat/chat-error";
+import type { CustomKeys } from "@/lib/chat/resolve-provider";
 
 function agentErrorFields(
   locale: Locale,
   status: number,
+  modelId: string,
+  customKeys: CustomKeys,
   rawBody?: string,
   explicitCode?: ChatErrorCode,
 ) {
-  const resolved = resolveChatError(locale, status, rawBody, explicitCode);
+  const resolved = resolveChatError(locale, status, rawBody, explicitCode, {
+    modelId,
+    customKeys,
+  });
   return {
     content: resolved.body,
     errorTitle: resolved.title,
@@ -271,7 +277,14 @@ export function useChatSession({
             streamField === "content" &&
             !options?.allowEmptyContent
           ) {
-            const err = agentErrorFields(locale, 0, undefined, "network");
+            const err = agentErrorFields(
+              locale,
+              0,
+              model,
+              apiKeys,
+              undefined,
+              "network",
+            );
             return {
               ...m,
               content: err.content,
@@ -319,7 +332,14 @@ export function useChatSession({
         return partial;
       }
       console.error("Stream error", e);
-      const streamErr = agentErrorFields(locale, 0, undefined, "network");
+      const streamErr = agentErrorFields(
+        locale,
+        0,
+        model,
+        apiKeys,
+        undefined,
+        "network",
+      );
       if (options?.tempId) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -463,7 +483,7 @@ export function useChatSession({
       `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     const pushAgentHttpError = (status: number, errorText: string) => {
-      const err = agentErrorFields(locale, status, errorText);
+      const err = agentErrorFields(locale, status, model, apiKeys, errorText);
       setMessages((prev) => [
         ...prev,
         {
@@ -534,7 +554,14 @@ export function useChatSession({
         const updatedMessages = prev.map((m) => {
           if (m.id !== tempId) return m;
           if (!reconciled.content.trim()) {
-            const err = agentErrorFields(locale, 0, undefined, "network");
+            const err = agentErrorFields(
+              locale,
+              0,
+              model,
+              apiKeys,
+              undefined,
+              "network",
+            );
             return {
               ...m,
               thinkingText: reconciled.thinkingText,
@@ -669,7 +696,14 @@ export function useChatSession({
 
         if (!res.ok) {
           const errorText = await res.text();
-          const err = agentErrorFields(locale, res.status, errorText, "ollama");
+          const err = agentErrorFields(
+            locale,
+            res.status,
+            model,
+            apiKeys,
+            errorText,
+            "ollama",
+          );
           setMessages((prev) => [
             ...prev,
             {
@@ -742,7 +776,13 @@ export function useChatSession({
 
       if (!res.ok) {
         const errorText = await res.text();
-        const err = agentErrorFields(locale, res.status, errorText);
+        const err = agentErrorFields(
+          locale,
+          res.status,
+          model,
+          apiKeys,
+          errorText,
+        );
         setMessages((prev) => [
           ...prev,
           {
@@ -763,7 +803,14 @@ export function useChatSession({
       const isAbort = error instanceof Error && error.name === "AbortError";
       if (!isAbort) {
         const message = error instanceof Error ? error.message : String(error);
-        const err = agentErrorFields(locale, 0, message, "network");
+        const err = agentErrorFields(
+          locale,
+          0,
+          model,
+          apiKeys,
+          message,
+          "network",
+        );
         setMessages((prev) => [
           ...prev,
           {

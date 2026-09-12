@@ -5,13 +5,20 @@
  * See LICENSE file for details
  */
 
+import {
+  inferChatKeySource,
+  type ChatKeySource,
+} from "@/lib/chat/chat-key-context";
+import type { CustomKeys } from "@/lib/chat/resolve-provider";
 import { translate, type Locale } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 
 export type ChatErrorCode =
   | "rate_limit"
-  | "missing_api_key"
-  | "auth"
+  | "byok_key_required"
+  | "byok_invalid_key"
+  | "invalid_model"
+  | "platform_unavailable"
   | "validation"
   | "upstream"
   | "ollama"
@@ -20,8 +27,10 @@ export type ChatErrorCode =
 
 const TITLE_KEYS: Record<ChatErrorCode, TranslationKey> = {
   rate_limit: "errors.chat.title.rateLimit",
-  missing_api_key: "errors.chat.title.missingApiKey",
-  auth: "errors.chat.title.auth",
+  byok_key_required: "errors.chat.title.byokKeyRequired",
+  byok_invalid_key: "errors.chat.title.byokInvalidKey",
+  invalid_model: "errors.chat.title.invalidModel",
+  platform_unavailable: "errors.chat.title.platformUnavailable",
   validation: "errors.chat.title.validation",
   upstream: "errors.chat.title.upstream",
   ollama: "errors.chat.title.ollama",
@@ -31,8 +40,10 @@ const TITLE_KEYS: Record<ChatErrorCode, TranslationKey> = {
 
 const BODY_KEYS: Record<ChatErrorCode, TranslationKey> = {
   rate_limit: "errors.chat.body.rateLimit",
-  missing_api_key: "errors.chat.body.missingApiKey",
-  auth: "errors.chat.body.auth",
+  byok_key_required: "errors.chat.body.byokKeyRequired",
+  byok_invalid_key: "errors.chat.body.byokInvalidKey",
+  invalid_model: "errors.chat.body.invalidModel",
+  platform_unavailable: "errors.chat.body.platformUnavailable",
   validation: "errors.chat.body.validation",
   upstream: "errors.chat.body.upstream",
   ollama: "errors.chat.body.ollama",
@@ -43,7 +54,20 @@ const BODY_KEYS: Record<ChatErrorCode, TranslationKey> = {
 export type ParsedChatErrorPayload = {
   code?: string;
   message?: string;
+  keySource?: ChatKeySource;
 };
+
+export type ChatErrorResolveContext = {
+  modelId?: string;
+  customKeys?: CustomKeys;
+  keySource?: ChatKeySource;
+};
+
+function resolveKeySource(ctx?: ChatErrorResolveContext): ChatKeySource {
+  if (ctx?.keySource) return ctx.keySource;
+  if (ctx?.modelId) return inferChatKeySource(ctx.modelId, ctx.customKeys);
+  return "byok";
+}
 
 /** Extract message/code from JSON or plain-text provider bodies. */
 export function parseChatErrorPayload(raw: string): ParsedChatErrorPayload {
@@ -58,6 +82,10 @@ export function parseChatErrorPayload(raw: string): ParsedChatErrorPayload {
       return {
         code: err.code != null ? String(err.code) : undefined,
         message: err.message ? String(err.message) : undefined,
+        keySource:
+          parsed.keySource === "platform" || parsed.keySource === "byok"
+            ? parsed.keySource
+            : undefined,
       };
     }
     return {
@@ -68,6 +96,10 @@ export function parseChatErrorPayload(raw: string): ParsedChatErrorPayload {
           : typeof parsed.error === "string"
             ? parsed.error
             : undefined,
+      keySource:
+        parsed.keySource === "platform" || parsed.keySource === "byok"
+          ? parsed.keySource
+          : undefined,
     };
   } catch {
     return { message: trimmed };
@@ -78,11 +110,64 @@ function isKnownCode(value: string): value is ChatErrorCode {
   return value in TITLE_KEYS;
 }
 
+function isInvalidModelMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("model not found") ||
+    lower.includes("does not exist") ||
+    lower.includes("invalid model") ||
+    lower.includes("unknown model") ||
+    lower.includes("no endpoints found") ||
+    lower.includes("not a valid model")
+  );
+}
+
+function mapLegacyCode(code: string): ChatErrorCode | undefined {
+  if (code === "missing_api_key") return "byok_key_required";
+  if (code === "auth") return "byok_invalid_key";
+  return undefined;
+}
+
+function applyKeySource(
+  code: ChatErrorCode,
+  status: number,
+  message: string,
+  ctx?: ChatErrorResolveContext,
+): ChatErrorCode {
+  if (isInvalidModelMessage(message)) return "invalid_model";
+
+  const platform = resolveKeySource(ctx) === "platform";
+
+  if (code === "byok_key_required") {
+    return platform ? "platform_unavailable" : "byok_key_required";
+  }
+  if (code === "byok_invalid_key") {
+    return platform ? "platform_unavailable" : "byok_invalid_key";
+  }
+  if (code === "platform_unavailable") return "platform_unavailable";
+
+  if (status === 401 || status === 403) {
+    const lower = message.toLowerCase();
+    if (
+      lower.includes("api key") ||
+      lower.includes("unauthorized") ||
+      lower.includes("authentication") ||
+      lower.includes("invalid bearer")
+    ) {
+      return platform ? "platform_unavailable" : "byok_invalid_key";
+    }
+  }
+
+  return code;
+}
+
 function classifyFromStatusAndText(
   status: number,
   message: string,
 ): ChatErrorCode {
   const lower = message.toLowerCase();
+
+  if (isInvalidModelMessage(message)) return "invalid_model";
 
   if (
     status === 429 ||
@@ -100,7 +185,7 @@ function classifyFromStatusAndText(
     lower.includes("requires its provider api key") ||
     lower.includes("add a provider key")
   ) {
-    return "missing_api_key";
+    return "byok_key_required";
   }
 
   if (status === 401 || status === 403) {
@@ -109,9 +194,9 @@ function classifyFromStatusAndText(
       lower.includes("unauthorized") ||
       lower.includes("authentication")
     ) {
-      return "missing_api_key";
+      return "byok_invalid_key";
     }
-    return "auth";
+    return "byok_invalid_key";
   }
 
   if (
@@ -144,22 +229,55 @@ export function inferChatErrorCode(
   status: number,
   rawBody?: string,
   explicitCode?: string,
+  ctx?: ChatErrorResolveContext,
 ): ChatErrorCode {
+  const payload = parseChatErrorPayload(rawBody ?? "");
+  const mergedCtx: ChatErrorResolveContext = {
+    ...ctx,
+    keySource: payload.keySource ?? ctx?.keySource,
+  };
+
   if (explicitCode && isKnownCode(explicitCode)) {
-    return explicitCode;
+    return applyKeySource(
+      explicitCode,
+      status,
+      payload.message ?? rawBody ?? "",
+      mergedCtx,
+    );
   }
 
-  const payload = parseChatErrorPayload(rawBody ?? "");
   if (payload.code) {
-    if (isKnownCode(payload.code)) return payload.code;
+    if (isKnownCode(payload.code)) {
+      return applyKeySource(
+        payload.code,
+        status,
+        payload.message ?? rawBody ?? "",
+        mergedCtx,
+      );
+    }
+    const legacy = mapLegacyCode(payload.code);
+    if (legacy) {
+      return applyKeySource(
+        legacy,
+        status,
+        payload.message ?? rawBody ?? "",
+        mergedCtx,
+      );
+    }
     if (payload.code === "429") return "rate_limit";
     if (payload.code === "401" || payload.code === "403") {
-      return "missing_api_key";
+      return applyKeySource(
+        "byok_invalid_key",
+        status,
+        payload.message ?? rawBody ?? "",
+        mergedCtx,
+      );
     }
   }
 
   const text = payload.message ?? rawBody ?? "";
-  return classifyFromStatusAndText(status, text);
+  const base = classifyFromStatusAndText(status, text);
+  return applyKeySource(base, status, text, mergedCtx);
 }
 
 export function resolveChatError(
@@ -167,8 +285,9 @@ export function resolveChatError(
   status: number,
   rawBody?: string,
   explicitCode?: ChatErrorCode,
+  ctx?: ChatErrorResolveContext,
 ): { code: ChatErrorCode; title: string; body: string } {
-  const code = explicitCode ?? inferChatErrorCode(status, rawBody);
+  const code = inferChatErrorCode(status, rawBody, explicitCode, ctx);
   return {
     code,
     title: translate(locale, TITLE_KEYS[code]),
@@ -176,15 +295,20 @@ export function resolveChatError(
   };
 }
 
-/** JSON body for API routes — client maps `code` to localized UI. */
+/** JSON body for API routes — client maps `code` + `keySource` to localized UI. */
 export function chatErrorResponseBody(
   status: number,
   rawUpstream?: string,
   explicitCode?: ChatErrorCode,
-): { code: ChatErrorCode; message: string } {
-  const code = explicitCode ?? inferChatErrorCode(status, rawUpstream);
+  modelId?: string,
+  customKeys?: CustomKeys,
+): { code: ChatErrorCode; message: string; keySource: ChatKeySource } {
+  const keySource = inferChatKeySource(modelId ?? "", customKeys);
+  const ctx: ChatErrorResolveContext = { modelId, customKeys, keySource };
+  const code = inferChatErrorCode(status, rawUpstream, explicitCode, ctx);
   return {
     code,
     message: translate("en", BODY_KEYS[code]),
+    keySource,
   };
 }

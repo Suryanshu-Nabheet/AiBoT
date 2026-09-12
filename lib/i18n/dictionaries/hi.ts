@@ -201,29 +201,35 @@ export const hi = {
   "errors.http": "**त्रुटि {status}**: {detail}",
   "errors.noApiKey":
     "कोई API कुंजी उपलब्ध नहीं। सेटिंग्स में प्रोवाइडर कुंजी जोड़ें या OPENROUTER_API_KEY कॉन्फ़िगर करें।",
-  "errors.chat.title.rateLimit": "थोड़ा रुकें",
-  "errors.chat.title.missingApiKey": "API कुंजी चाहिए",
-  "errors.chat.title.auth": "प्रमाणीकरण विफल",
-  "errors.chat.title.validation": "अनुरोध नहीं भेजा जा सका",
-  "errors.chat.title.upstream": "मॉडल प्रोवाइडर समस्या",
-  "errors.chat.title.ollama": "Ollama उपलब्ध नहीं",
-  "errors.chat.title.network": "कनेक्शन समस्या",
+  "errors.chat.title.rateLimit": "रेट लिमिट",
+  "errors.chat.title.byokKeyRequired": "API कुंजी ज़रूरी",
+  "errors.chat.title.byokInvalidKey": "अमान्य API कुंजी",
+  "errors.chat.title.invalidModel": "मॉडल उपलब्ध नहीं",
+  "errors.chat.title.platformUnavailable": "अस्थायी रूप से अनुपलब्ध",
+  "errors.chat.title.validation": "नहीं भेजा जा सका",
+  "errors.chat.title.upstream": "प्रोवाइडर त्रुटि",
+  "errors.chat.title.ollama": "Ollama नहीं मिला",
+  "errors.chat.title.network": "कनेक्शन टूटा",
   "errors.chat.title.generic": "कुछ गलत हो गया",
   "errors.chat.body.rateLimit":
-    "रेट लिमिट लग गई है। एक मिनट बाद फिर कोशिश करें या दूसरा मॉडल चुनें।",
-  "errors.chat.body.missingApiKey":
-    "इस मॉडल के लिए API कुंजी ज़रूरी है। सेटिंग्स → API Keys में कुंजी जोड़ें और फिर कोशिश करें।",
-  "errors.chat.body.auth":
-    "API कुंजी अस्वीकार हुई। सेटिंग्स में कुंजी जाँचें और फिर कोशिश करें।",
+    "बहुत अनुरोध—थोड़ा रुकें, फिर कोशिश करें या मॉडल बदलें।",
+  "errors.chat.body.byokKeyRequired":
+    "इस मॉडल के लिए सेटिंग्स में अपनी प्रोवाइडर API कुंजी जोड़ें।",
+  "errors.chat.body.byokInvalidKey":
+    "API कुंजी अस्वीकार हुई। सेटिंग्स में अपडेट करें और फिर कोशिश करें।",
+  "errors.chat.body.invalidModel":
+    "यह मॉडल आपके प्रोवाइडर पर उपलब्ध नहीं है। दूसरा मॉडल चुनें।",
+  "errors.chat.body.platformUnavailable":
+    "यह होस्टेड मॉडल अभी उपलब्ध नहीं है। दूसरा मॉडल आज़माएँ या बाद में लौटें।",
   "errors.chat.body.validation":
-    "यह संदेश नहीं भेजा जा सका। दूसरा मॉडल आज़माएँ या नई चैट शुरू करें।",
+    "संदेश नहीं भेजा जा सका। दूसरा मॉडल या नई चैट आज़माएँ।",
   "errors.chat.body.upstream":
-    "प्रोवाइडर से त्रुटि आई। थोड़ी देर बाद फिर कोशिश करें या दूसरा मॉडल चुनें।",
+    "प्रोवाइडर समस्या। थोड़ी देर बाद फिर कोशिश करें या मॉडल बदलें।",
   "errors.chat.body.ollama":
-    "Ollama तक पहुँच नहीं बनी। सुनिश्चित करें कि वह चल रहा है और सेटिंग्स में URL सही है।",
+    "Ollama तक नहीं पहुँचे—चल रहा है और सेटिंग्स में URL सही है, यह जाँचें।",
   "errors.chat.body.network":
-    "जवाब पूरा होने से पहले कनेक्शन टूट गया। नेटवर्क जाँचें और फिर भेजें।",
-  "errors.chat.body.generic": "अप्रत्याशित त्रुटि। कृपया फिर कोशिश करें।",
+    "जवाब पूरा होने से पहले कनेक्शन टूट गया। ऑनलाइन होने पर फिर भेजें।",
+  "errors.chat.body.generic": "कुछ गलत हो गया। फिर कोशिश करें।",
   "errors.chat.action.settings": "API Keys खोलें",
   "errors.chat.alternatives": "दूसरा मॉडल आज़माएँ",
   "voice.clickToSpeak": "बोलने के लिए क्लिक करें",
