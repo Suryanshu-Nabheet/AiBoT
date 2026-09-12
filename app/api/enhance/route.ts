@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   PROMPT_ENHANCE_ROLE,
-  composeSystemPromptWithIdentity,
+  composeAgentSystemPrompt,
   resolveModelLabel,
 } from "@/lib/prompts";
 import { isLocale, localeReplyDirective } from "@/lib/i18n";
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const locale = isLocale(rawLocale) ? rawLocale : undefined;
 
     const enhanceModel = MODELS.find((m) => m.id === ENHANCE_MODEL_ID);
-    const systemPrompt = composeSystemPromptWithIdentity(
+    const systemPrompt = composeAgentSystemPrompt(
       PROMPT_ENHANCE_ROLE,
       {
         id: ENHANCE_MODEL_ID,

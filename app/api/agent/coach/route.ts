@@ -6,10 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  COACH_VOICE_ROLE,
-  composeSystemPromptWithIdentity,
-} from "@/lib/prompts";
+import { COACH_VOICE_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { coachRequestSchema } from "@/lib/server/request-schemas";
@@ -46,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     for (const model of MODELS) {
       try {
-        const systemPrompt = composeSystemPromptWithIdentity(COACH_VOICE_ROLE, {
+        const systemPrompt = composeAgentSystemPrompt(COACH_VOICE_ROLE, {
           id: model.id,
           name: model.name,
         });

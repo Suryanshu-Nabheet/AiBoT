@@ -51,23 +51,27 @@ export function resolveProviderLabel(modelId: string): string {
 }
 
 /**
- * Per-request identity (model name and provider are injected from the active model).
+ * Per-request model routing — vendor/creator credit stays on the model; not the AiBoT author.
  */
 export function formatModelIdentityLine(model: ModelRef): string {
   const modelName = resolveModelLabel(model);
   const provider = resolveProviderLabel(model.id);
   return (
-    `You are **${modelName}**, assisting the user on **AiBoT** (routed via ${provider}). ` +
-    `Respond in character as this assistant on AiBoT; do not invent a different product name unless the user asks about the underlying model.`
+    `## Active model\n` +
+    `This reply uses **${modelName}** supplied by **${provider}**, routed through AiBoT. ` +
+    `Answer with that model's strengths; when asked who made the model, name ${provider} (or the model's vendor)—not AiBoT. ` +
+    `The user is talking to you via AiBoT; do not pretend to be a different consumer product.`
   );
 }
 
 export function composeSystemPromptWithIdentity(
+  platformPrompt: string,
   rolePrompt: string,
   model: ModelRef,
   extraBlocks?: string[],
 ): string {
   const blocks = [
+    platformPrompt.trim(),
     formatModelIdentityLine(model),
     rolePrompt.trim(),
     ...(extraBlocks ?? []).filter(Boolean),

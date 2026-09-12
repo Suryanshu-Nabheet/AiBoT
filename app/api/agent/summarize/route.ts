@@ -6,10 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  SUMMARIZER_AGENT_ROLE,
-  composeSystemPromptWithIdentity,
-} from "@/lib/prompts";
+import { SUMMARIZER_AGENT_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { summarizeRequestSchema } from "@/lib/server/request-schemas";
@@ -58,10 +55,10 @@ export async function POST(req: NextRequest) {
 
     for (const model of MODELS) {
       try {
-        const systemPrompt = composeSystemPromptWithIdentity(
-          SUMMARIZER_AGENT_ROLE,
-          { id: model.id, name: model.name },
-        );
+        const systemPrompt = composeAgentSystemPrompt(SUMMARIZER_AGENT_ROLE, {
+          id: model.id,
+          name: model.name,
+        });
 
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",

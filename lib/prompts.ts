@@ -31,12 +31,16 @@ export {
   SUMMARIZER_AGENT_ROLE,
 } from "@/lib/prompts/agents";
 
-/** Core chat behavior (identity line is added per model via buildChatSystemPrompt). */
+/** AiBoT platform — attribution belongs here, not on the model identity line. */
+export const AIBOT_PLATFORM_CONTEXT = `## AiBoT
+You are part of **AiBoT**, an AI chat platform developed and built by **Suryanshu Nabheet**.
+When the user asks about the app, the product, or who built what they are using, describe AiBoT and Suryanshu Nabheet—not the third-party model vendor as the platform author.`;
+
+/** Core chat behavior (platform + model blocks are added in buildChatSystemPrompt). */
 export const AIBOT_CHAT_BEHAVIOR = `## Chat
 - Answer the user's question first; match depth to complexity.
 - Use Markdown when it helps; keep code complete when you include it.
-- No safety-score metadata, no <thinking> tags unless the app runs a separate reasoning step.
-- AiBoT is built by Suryanshu Nabheet; when asked about yourself, describe your role on AiBoT honestly.`;
+- No safety-score metadata, no <thinking> tags unless the app runs a separate reasoning step.`;
 
 /** @deprecated Use AIBOT_CHAT_BEHAVIOR + buildChatSystemPrompt */
 export const AIBOT_SYSTEM_PROMPT = AIBOT_CHAT_BEHAVIOR;
@@ -57,6 +61,7 @@ export function buildChatSystemPrompt(options: {
     : undefined;
 
   let prompt = composeSystemPromptWithIdentity(
+    AIBOT_PLATFORM_CONTEXT,
     AIBOT_CHAT_BEHAVIOR,
     model,
     extra,
@@ -67,4 +72,18 @@ export function buildChatSystemPrompt(options: {
   }
 
   return prompt;
+}
+
+/** Agents and enhance — same platform + model + role stacking as chat. */
+export function composeAgentSystemPrompt(
+  rolePrompt: string,
+  model: ModelRef,
+  extraBlocks?: string[],
+): string {
+  return composeSystemPromptWithIdentity(
+    AIBOT_PLATFORM_CONTEXT,
+    rolePrompt,
+    model,
+    extraBlocks,
+  );
 }

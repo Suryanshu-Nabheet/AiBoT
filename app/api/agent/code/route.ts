@@ -6,10 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  CODER_AGENT_ROLE,
-  composeSystemPromptWithIdentity,
-} from "@/lib/prompts";
+import { CODER_AGENT_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { coderRequestSchema } from "@/lib/server/request-schemas";
@@ -46,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     for (const model of MODELS) {
       try {
-        const systemPrompt = composeSystemPromptWithIdentity(CODER_AGENT_ROLE, {
+        const systemPrompt = composeAgentSystemPrompt(CODER_AGENT_ROLE, {
           id: model.id,
           name: model.name,
         });

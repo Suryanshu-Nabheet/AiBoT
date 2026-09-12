@@ -6,7 +6,11 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { buildChatSystemPrompt } from "@/lib/prompts";
+import {
+  AIBOT_PLATFORM_CONTEXT,
+  buildChatSystemPrompt,
+  composeAgentSystemPrompt,
+} from "@/lib/prompts";
 import {
   composeSystemPromptWithIdentity,
   resolveModelLabel,
@@ -26,21 +30,36 @@ describe("resolveModelLabel", () => {
 });
 
 describe("composeSystemPromptWithIdentity", () => {
-  it("injects the active model name", () => {
-    const prompt = composeSystemPromptWithIdentity("## Role\nHelp.", {
-      id: "openrouter/free",
-      name: "OpenRouter Free",
-    });
+  it("separates platform attribution from model vendor", () => {
+    const prompt = composeSystemPromptWithIdentity(
+      AIBOT_PLATFORM_CONTEXT,
+      "## Role\nHelp.",
+      { id: "openrouter/free", name: "OpenRouter Free" },
+    );
+    expect(prompt).toContain("Suryanshu Nabheet");
     expect(prompt).toContain("OpenRouter Free");
-    expect(prompt).toContain("OpenRouter");
-    expect(prompt).not.toContain("OpenRouter Free model (provided by");
+    expect(prompt).toContain("supplied by **OpenRouter**");
+    expect(prompt).not.toMatch(
+      /OpenRouter Free.*developed and built by Suryanshu/i,
+    );
   });
 });
 
 describe("buildChatSystemPrompt", () => {
-  it("includes model identity for chat", () => {
-    const prompt = buildChatSystemPrompt({ modelId: "gpt-4o" }); // BYOK catalog id
+  it("includes platform and BYOK model identity", () => {
+    const prompt = buildChatSystemPrompt({ modelId: "gpt-4o" });
     expect(prompt).toContain("GPT-4o");
+    expect(prompt).toContain("AiBoT");
     expect(resolveProviderLabel("openai/gpt-4o")).toBe("OpenAI");
+  });
+});
+
+describe("composeAgentSystemPrompt", () => {
+  it("includes AiBoT platform block for agents", () => {
+    const prompt = composeAgentSystemPrompt("## Agent\nDo work.", {
+      id: "openrouter/auto",
+      name: "OpenRouter Auto",
+    });
+    expect(prompt).toContain("developed and built by **Suryanshu Nabheet**");
   });
 });
