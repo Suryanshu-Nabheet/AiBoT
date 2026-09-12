@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   PaperPlaneRight,
   Code,
@@ -16,6 +16,8 @@ import {
   ArrowsClockwise,
   PencilSimple,
   FloppyDisk,
+  Paperclip,
+  X,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -25,6 +27,8 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ThinkingOverlay } from "@/components/ui/thinking-overlay";
 import { PageShell } from "@/components/layout/page-shell";
+import { ATTACH_ACCEPT, type ChatAttachment } from "@/lib/chat/attachments";
+import { processFilesForChat } from "@/lib/chat/process-files";
 
 const EMPTY_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -75,9 +79,11 @@ export default function CoderAgentPage() {
   const [activeTab, setActiveTab] = useState<"code" | "preview">("preview");
   const [isEditing, setIsEditing] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [code, setCode] = useState(EMPTY_HTML);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Load persisted state from Session Storage
@@ -121,18 +127,21 @@ export default function CoderAgentPage() {
   }, [messages]);
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() && attachments.length === 0) return;
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: Role.User,
-      content: prompt,
+      content: prompt.trim() || "(attachment)",
+      attachments: [...attachments],
     };
     setMessages((prev) => [...prev, userMsg]);
 
     const currentPrompt = prompt;
+    const currentAttachments = [...attachments];
     const currentCode = code;
     setPrompt("");
+    setAttachments([]);
     setIsGenerating(true);
 
     try {
@@ -187,7 +196,10 @@ Then provide the COMPLETE HTML code.`;
       const res = await fetch("/api/agent/code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiPrompt }),
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          attachments: currentAttachments,
+        }),
       });
 
       if (!res.ok) {
@@ -318,9 +330,32 @@ Then provide the COMPLETE HTML code.`;
 
         {/* Input */}
         <div className="shrink-0 border-t bg-muted/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachments.map((att, i) => (
+                <div
+                  key={att.id}
+                  className="flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-[11px]"
+                >
+                  <span className="max-w-[140px] truncate">{att.name}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttachments((prev) =>
+                        prev.filter((_, idx) => idx !== i),
+                      )
+                    }
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="relative">
             <textarea
-              className="w-full min-h-[88px] max-h-[min(30dvh,200px)] resize-none rounded-lg border bg-background p-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 sm:min-h-[100px]"
+              className="w-full min-h-[88px] max-h-[min(30dvh,200px)] resize-none rounded-lg border bg-background p-3 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 sm:min-h-[100px]"
               placeholder="Describe your website (e.g., 'A landing page for a coffee shop with menu and contact form')"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -331,15 +366,43 @@ Then provide the COMPLETE HTML code.`;
                 }
               }}
             />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={ATTACH_ACCEPT}
+              className="hidden"
+              onChange={async (e) => {
+                const list = e.target.files;
+                if (!list?.length) return;
+                const { attachments: next, errors } = await processFilesForChat(
+                  Array.from(list),
+                  attachments.length,
+                );
+                if (next.length) setAttachments((prev) => [...prev, ...next]);
+                for (const err of errors) toast.error(err);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="absolute bottom-2 right-11 h-8 w-8 text-muted-foreground sm:bottom-3 sm:right-12"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach context"
+            >
+              <Paperclip className="size-4" />
+            </Button>
             <Button
               size="icon"
               className={cn(
                 "absolute bottom-2 sm:bottom-3 right-2 sm:right-3 h-8 w-8 transition-all",
-                prompt
+                prompt || attachments.length
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-muted text-muted-foreground hover:bg-muted",
               )}
-              disabled={!prompt || isGenerating}
+              disabled={(!prompt && attachments.length === 0) || isGenerating}
               onClick={handleGenerate}
             >
               {isGenerating ? (
@@ -350,7 +413,7 @@ Then provide the COMPLETE HTML code.`;
             </Button>
           </div>
           <p className="text-[10px] sm:text-[11px] text-center text-muted-foreground mt-2 px-2">
-            AI-generated code • Review before use
+            Attach images/docs for design context • Review code before use
           </p>
         </div>
       </div>

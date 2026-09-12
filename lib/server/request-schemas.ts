@@ -9,13 +9,20 @@ import "server-only";
 
 import { z } from "zod";
 
-const MAX_MESSAGE_LENGTH = 32_000;
+const MAX_MESSAGE_LENGTH = 120_000;
 const MAX_HISTORY_MESSAGES = 50;
+const MAX_IMAGE_URL_LENGTH = 2_500_000;
 const apiKey = z.preprocess((val) => {
   if (val === undefined || val === null) return undefined;
   const s = String(val).trim();
   return s.length === 0 ? undefined : s;
 }, z.string().min(8).max(512).optional());
+
+const contentPartSchema = z.object({
+  type: z.enum(["text", "image_url"]),
+  text: z.string().max(MAX_MESSAGE_LENGTH).optional(),
+  image_url: z.object({ url: z.string().max(MAX_IMAGE_URL_LENGTH) }).optional(),
+});
 
 export const chatRequestSchema = z.object({
   messages: z
@@ -24,15 +31,7 @@ export const chatRequestSchema = z.object({
         role: z.enum(["user", "assistant"]),
         content: z.union([
           z.string().max(MAX_MESSAGE_LENGTH),
-          z
-            .array(
-              z.object({
-                type: z.enum(["text", "image_url"]),
-                text: z.string().max(MAX_MESSAGE_LENGTH).optional(),
-                image_url: z.object({ url: z.string().max(8_000) }).optional(),
-              }),
-            )
-            .max(16),
+          z.array(contentPartSchema).min(1).max(32),
         ]),
       }),
     )
@@ -60,20 +59,33 @@ export const enhanceRequestSchema = z.object({
   locale: z.string().max(10).optional(),
 });
 
+const agentAttachmentSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  type: z.string().trim().min(1).max(120),
+  kind: z.enum(["image", "document", "text", "video_frame"]),
+  content: z.string().min(1).max(MAX_IMAGE_URL_LENGTH),
+  note: z.string().max(500).optional(),
+});
+
 export const coachRequestSchema = z.object({
   messages: z
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
-        content: z.string().trim().min(1).max(12_000),
+        content: z.union([
+          z.string().trim().min(1).max(12_000),
+          z.array(contentPartSchema).min(1).max(16),
+        ]),
       }),
     )
     .min(1)
     .max(30),
+  attachments: z.array(agentAttachmentSchema).max(8).optional(),
 });
 
 export const coderRequestSchema = z.object({
   prompt: z.string().trim().min(1).max(20_000),
+  attachments: z.array(agentAttachmentSchema).max(8).optional(),
 });
 
 export const summarizeRequestSchema = z
@@ -83,22 +95,37 @@ export const summarizeRequestSchema = z
       .array(
         z.object({
           name: z.string().trim().min(1).max(255),
-          content: z.string().max(50_000),
+          content: z.string().max(80_000),
         }),
       )
-      .min(1)
-      .max(5),
+      .max(8)
+      .optional()
+      .default([]),
+    attachments: z.array(agentAttachmentSchema).max(12).optional(),
   })
-  .superRefine(({ filesData }, ctx) => {
-    const totalBytes = filesData.reduce(
+  .superRefine(({ filesData, attachments }, ctx) => {
+    const textBytes = filesData.reduce(
       (total, file) =>
         total + new TextEncoder().encode(file.content).byteLength,
       0,
     );
-    if (totalBytes > 150_000) {
+    const attachmentTextBytes = (attachments ?? [])
+      .filter((a) => a.kind === "document" || a.kind === "text")
+      .reduce(
+        (total, file) =>
+          total + new TextEncoder().encode(file.content).byteLength,
+        0,
+      );
+    if (textBytes + attachmentTextBytes > 200_000) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Combined file content exceeds 150 KB",
+        message: "Combined file content exceeds 200 KB",
+      });
+    }
+    if (filesData.length === 0 && (attachments?.length ?? 0) === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one file or attachment is required",
       });
     }
   });

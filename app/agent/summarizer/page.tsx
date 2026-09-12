@@ -22,7 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { extractTextFromFile } from "@/lib/file-utils";
+import { ATTACH_ACCEPT } from "@/lib/chat/attachments";
+import { processFilesForChat } from "@/lib/chat/process-files";
 import ReactMarkdown from "react-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { Geist_Mono } from "next/font/google";
@@ -129,26 +130,10 @@ export default function AssignmentSummarizerPage() {
     setIsProcessing(true);
 
     try {
-      // Extract text from all files
-      const filesData = await Promise.all(
-        files.map(async (file) => {
-          try {
-            const content = await extractTextFromFile(file);
-            return { name: file.name, content };
-          } catch (err) {
-            console.error(`Error reading file ${file.name}:`, err);
-            toast.error(`Could not read ${file.name}`);
-            return null;
-          }
-        }),
-      );
+      const { attachments, errors } = await processFilesForChat(files);
+      for (const err of errors) toast.error(err);
 
-      // Filter out any failed files
-      const validFiles = filesData.filter(
-        (f): f is { name: string; content: string } => f !== null,
-      );
-
-      if (validFiles.length === 0) {
+      if (attachments.length === 0) {
         toast.error("No valid files to process");
         setIsProcessing(false);
         return;
@@ -159,7 +144,7 @@ export default function AssignmentSummarizerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           task,
-          filesData: validFiles,
+          attachments,
         }),
       });
 
@@ -194,7 +179,7 @@ export default function AssignmentSummarizerPage() {
           </h1>
 
           <p className="mx-auto max-w-2xl text-sm text-muted-foreground sm:text-lg">
-            Upload your documents (PDF, DOCX, TXT) and let AiBoT analyze them
+            Upload documents, images, or short videos and let AiBoT analyze them
             for you. Summarize content, extract key data, or ask specific
             questions.
           </p>
@@ -213,7 +198,7 @@ export default function AssignmentSummarizerPage() {
                 multiple
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.json"
+                accept={ATTACH_ACCEPT}
               />
               <div className="bg-blue-50 rounded-full p-4 group-hover:scale-110 transition-transform duration-300">
                 <Upload className="size-8 text-blue-600" weight="duotone" />
@@ -223,7 +208,7 @@ export default function AssignmentSummarizerPage() {
                   Drop files here or click to upload
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Supports PDF, DOCX, TXT, MD
+                  Supports PDF, DOCX, PPTX, XLSX, images, video, and text
                 </p>
               </div>
             </div>

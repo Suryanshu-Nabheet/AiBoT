@@ -205,7 +205,14 @@ export type Message = {
   errorType?: ChatErrorCode;
   /** Localized error heading when `isError` is set. */
   errorTitle?: string;
-  attachments?: { name: string; content: string; type: string }[];
+  attachments?: {
+    id?: string;
+    name: string;
+    content: string;
+    type: string;
+    kind?: "image" | "document" | "text" | "video_frame";
+    note?: string;
+  }[];
   shouldAnimate?: boolean;
 };
 

@@ -195,7 +195,9 @@ export const hi = {
   "toast.file.extracted": "{name} से टेक्स्ट निकाला गया",
   "toast.file.readFail": "{name} पढ़ने में विफल",
   "toast.file.extractFail":
-    "{name} से टेक्स्ट नहीं निकाला जा सका। सारांशक आज़माएँ।",
+    "{name} से टेक्स्ट नहीं निकाला जा सका। दूसरा प्रारूप आज़माएँ।",
+  "toast.file.attached": "{count} फ़ाइल संलग्न",
+  "toast.file.videoFrames": "{name} से {count} फ़्रेम कैप्चर हुए",
   "toast.clipboard": "क्लिपबोर्ड पर कॉपी हुआ",
   "errors.connectionInterrupted":
     "**कनेक्शन त्रुटि:** स्ट्रीम बाधित हुई। कृपया फिर कोशिश करें।",

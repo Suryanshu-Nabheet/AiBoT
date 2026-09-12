@@ -223,7 +223,9 @@ export const en = {
   "toast.file.extracted": "Extracted text from {name}",
   "toast.file.readFail": "Failed to read {name}",
   "toast.file.extractFail":
-    "Could not extract text from {name}. Try the Summarizer feature.",
+    "Could not extract text from {name}. Try another format.",
+  "toast.file.attached": "Attached {count} file(s)",
+  "toast.file.videoFrames": "Captured {count} frames from {name}",
   "toast.clipboard": "Copied to clipboard",
 
   // Errors

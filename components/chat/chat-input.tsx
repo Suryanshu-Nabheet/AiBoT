@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { toast } from "sonner";
 import { useTranslation } from "@/hooks/use-translation";
+import { ATTACH_ACCEPT, type ChatAttachment } from "@/lib/chat/attachments";
+import { processFilesForChat } from "@/lib/chat/process-files";
 
 interface ChatInputProps {
   query: string;
@@ -30,10 +32,8 @@ interface ChatInputProps {
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   onStop?: () => void;
-  attachments: { name: string; content: string; type: string }[];
-  setAttachments: React.Dispatch<
-    React.SetStateAction<{ name: string; content: string; type: string }[]>
-  >;
+  attachments: ChatAttachment[];
+  setAttachments: React.Dispatch<React.SetStateAction<ChatAttachment[]>>;
   isListening?: boolean;
   onSpeechToggle?: () => void;
   isEnhancing?: boolean;
@@ -84,67 +84,44 @@ export function ChatInput({
   const showComposerModel = showModelSelector && model && onModelChange;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      const newAttachments: { name: string; content: string; type: string }[] =
-        [];
+    const list = e.target.files;
+    if (!list?.length) return;
 
-      const { extractTextFromFile } = await import("@/lib/file-utils");
+    const files = Array.from(list);
+    const { attachments: next, errors } = await processFilesForChat(
+      files,
+      attachments.length,
+    );
 
-      for (const file of files) {
-        try {
-          if (file.type.startsWith("image/")) {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            await new Promise<void>((resolve) => {
-              reader.onload = () => {
-                if (typeof reader.result === "string") {
-                  newAttachments.push({
-                    name: file.name,
-                    content: reader.result,
-                    type: file.type,
-                  });
-                }
-                resolve();
-              };
-            });
-          } else if (
-            file.name.endsWith(".pdf") ||
-            file.name.endsWith(".docx") ||
-            file.name.endsWith(".doc") ||
-            file.name.endsWith(".pptx") ||
-            file.name.endsWith(".xlsx") ||
-            file.name.endsWith(".xls")
-          ) {
-            try {
-              const extractedText = await extractTextFromFile(file);
-              newAttachments.push({
-                name: file.name,
-                content: `[Document: ${file.name}]\n\n${extractedText}\n\n---\n*For detailed analysis of this document, use the Summarizer feature for comprehensive research-grade insights.*`,
-                type: "text/plain",
-              });
-              toast.success(t("toast.file.extracted", { name: file.name }));
-            } catch (extractError) {
-              console.error(`Failed to extract ${file.name}:`, extractError);
-              toast.error(t("toast.file.extractFail", { name: file.name }));
-            }
-          } else {
-            const text = await file.text();
-            newAttachments.push({
-              name: file.name,
-              content: text,
-              type: file.type,
-            });
-          }
-        } catch (err) {
-          console.error(`Error reading ${file.name}:`, err);
-          toast.error(t("toast.file.readFail", { name: file.name }));
-        }
+    if (next.length > 0) {
+      setAttachments((prev) => [...prev, ...next]);
+      const docs = next.filter(
+        (a) => a.kind === "document" || a.kind === "text",
+      );
+      const frames = next.filter((a) => a.kind === "video_frame");
+      if (docs.length > 0) {
+        toast.success(
+          t("toast.file.extracted", {
+            name: docs.map((d) => d.name).join(", "),
+          }),
+        );
+      } else if (frames.length > 0) {
+        toast.success(
+          t("toast.file.videoFrames", {
+            count: frames.length,
+            name: files[0]?.name ?? "video",
+          }),
+        );
+      } else {
+        toast.success(t("toast.file.attached", { count: next.length }));
       }
-
-      setAttachments((prev) => [...prev, ...newAttachments]);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+
+    for (const err of errors) {
+      toast.error(err);
+    }
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeAttachment = (index: number) => {
@@ -178,7 +155,9 @@ export function ChatInput({
                   key={i}
                   className="relative group flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-background/50"
                 >
-                  {att.type.startsWith("image/") ? (
+                  {att.type.startsWith("image/") ||
+                  att.kind === "image" ||
+                  att.kind === "video_frame" ? (
                     <img
                       src={att.content}
                       alt={att.name}
@@ -236,6 +215,7 @@ export function ChatInput({
               <input
                 type="file"
                 multiple
+                accept={ATTACH_ACCEPT}
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleFileSelect}

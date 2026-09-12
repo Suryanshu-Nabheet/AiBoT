@@ -13,6 +13,11 @@ const scriptSource =
     : "'self' 'unsafe-inline'";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "12mb",
+    },
+  },
   /* config options here */
   async headers() {
     return [

@@ -46,6 +46,28 @@ describe("chatRequestSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts multimodal image_url content parts", () => {
+    const result = chatRequestSchema.safeParse(
+      createChatRequestBody({
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Describe this" },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${"a".repeat(100)}`,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(result.success).toBe(true);
+  });
+
   it("rejects missing model", () => {
     const body = createChatRequestBody();
     const { model: _removed, ...rest } = body as { model: string };

@@ -13,6 +13,11 @@ import {
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
+  toAnthropicMultimodalContent,
+  toOllamaMessage,
+  type OpenAIContentPart,
+} from "@/lib/chat/attachments";
+import {
   anthropicToOpenAISSE,
   findProviderForModel,
   isPlatformModel,
@@ -25,18 +30,19 @@ import type { Locale } from "@/lib/i18n";
 
 export type ChatMessageInput = {
   role: "user" | "assistant" | "system";
-  content: string | unknown;
+  content: string | OpenAIContentPart[] | unknown;
 };
 
+/** Convert markdown data-URL images into multimodal parts; pass arrays through. */
 export function formatMessagesForProvider(messages: ChatMessageInput[]) {
   return messages.map((msg) => {
+    if (Array.isArray(msg.content)) return msg;
     if (typeof msg.content !== "string") return msg;
 
     const imageRegex = /!\[.*?\]\((data:image\/.*?;base64,.*?)\)/g;
     if (!msg.content.match(imageRegex)) return msg;
 
-    const contentParts: { type: string; text?: string; image_url?: object }[] =
-      [];
+    const contentParts: OpenAIContentPart[] = [];
     let lastIndex = 0;
     let match;
     imageRegex.lastIndex = 0;
@@ -87,6 +93,21 @@ function messageTextContent(content: unknown): string {
   return "";
 }
 
+function preserveMultimodalForThinking(
+  content: unknown,
+  rewrittenText: string,
+): string | OpenAIContentPart[] {
+  if (!Array.isArray(content)) return rewrittenText;
+  const images = content.filter(
+    (part) =>
+      part &&
+      typeof part === "object" &&
+      (part as OpenAIContentPart).type === "image_url",
+  ) as OpenAIContentPart[];
+  if (images.length === 0) return rewrittenText;
+  return [{ type: "text", text: rewrittenText }, ...images];
+}
+
 export function prepareMessagesForThinking(
   messages: ChatMessageInput[],
   stage?: ThinkingStage,
@@ -100,24 +121,21 @@ export function prepareMessagesForThinking(
   }));
   const last = messages[messages.length - 1];
   const userContent = messageTextContent(last?.content);
-
-  return buildChatMessagesForThinkingStage({
+  const built = buildChatMessagesForThinkingStage({
     history,
     userContent,
     stage,
     priorReasoning,
   });
-}
 
-function toAnthropicContent(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => (part?.type === "text" ? part.text : ""))
-      .filter(Boolean)
-      .join("\n");
-  }
-  return "";
+  // Keep vision parts on the final user turn so thinking models still see images.
+  return built.map((m, index) => {
+    if (index !== built.length - 1 || m.role !== "user") return m;
+    return {
+      ...m,
+      content: preserveMultimodalForThinking(last?.content, String(m.content)),
+    };
+  });
 }
 
 export type OpenUpstreamParams = {
@@ -163,10 +181,14 @@ export async function openChatUpstreamStream(
       model: ollamaModelName,
       messages: [
         { role: "system", content: dynamicSystemPrompt },
-        ...annotated.map((m) => ({
-          role: m.role,
-          content: messageTextContent(m.content),
-        })),
+        ...annotated.map((m) => {
+          const ollama = toOllamaMessage(m.content);
+          return {
+            role: m.role,
+            content: ollama.content,
+            ...(ollama.images ? { images: ollama.images } : {}),
+          };
+        }),
       ],
       stream: true,
     };
@@ -257,7 +279,7 @@ export async function openChatUpstreamStream(
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
-        content: toAnthropicContent(m.content),
+        content: toAnthropicMultimodalContent(m.content),
       }));
 
     const response = await fetch(route.url, {

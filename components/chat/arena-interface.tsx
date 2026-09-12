@@ -117,7 +117,7 @@ export default function ArenaInterface({
   // --- Shared Input State ---
   const [query, setQuery] = useState("");
   const [attachments, setAttachments] = useState<
-    { name: string; content: string; type: string }[]
+    import("@/lib/chat/attachments").ChatAttachment[]
   >([]);
   const leftThinking = useThinkingMode("aibot_arena_a_thinking_enabled");
   const rightThinking = useThinkingMode("aibot_arena_b_thinking_enabled");

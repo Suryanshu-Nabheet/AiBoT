@@ -8,6 +8,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUMMARIZER_AGENT_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
+import {
+  buildMultimodalUserContent,
+  normalizeLegacyAttachment,
+  type ChatAttachment,
+} from "@/lib/chat/attachments";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { summarizeRequestSchema } from "@/lib/server/request-schemas";
 
@@ -37,19 +42,24 @@ export async function POST(req: NextRequest) {
         { message: "Invalid summarization request" },
         { status: 400 },
       );
-    const { task, filesData } = parsed.data;
+    const { task, filesData, attachments: rawAttachments } = parsed.data;
 
-    let filesContentStr = "";
-    filesData.forEach((file: { name: string; content: string }) => {
-      const truncatedContent =
-        file.content.length > 50000
-          ? file.content.substring(0, 50000) + "\n...[Content truncated]..."
-          : file.content;
-
-      filesContentStr += `\n--- START OF FILE: ${file.name} ---\n${truncatedContent}\n--- END OF FILE: ${file.name} ---\n`;
-    });
-
-    const userMessage = `Files to Analyze:\n${filesContentStr}\n\nTask: ${task}`;
+    const fromLegacy: ChatAttachment[] = filesData.map((file, index) =>
+      normalizeLegacyAttachment({
+        id: `sum-doc-${index}`,
+        name: file.name,
+        type: "text/plain",
+        kind: "document",
+        content: file.content,
+      }),
+    );
+    const fromNew = (rawAttachments ?? []).map((a) =>
+      normalizeLegacyAttachment(a),
+    );
+    const userContent = buildMultimodalUserContent(task, [
+      ...fromLegacy,
+      ...fromNew,
+    ]);
 
     let lastError = null;
 
@@ -74,7 +84,7 @@ export async function POST(req: NextRequest) {
               model: model.id,
               messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: userMessage },
+                { role: "user", content: userContent },
               ],
             }),
             signal: AbortSignal.timeout(120_000),

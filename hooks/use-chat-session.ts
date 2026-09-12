@@ -21,6 +21,12 @@ import { Message, Role } from "@/lib/types";
 import { buildChatSystemPrompt } from "@/lib/prompts";
 import { mapMessagesForModelHistory } from "@/lib/chat/message-history";
 import {
+  buildMultimodalUserContent,
+  normalizeLegacyAttachment,
+  toOllamaMessage,
+  type ChatAttachment,
+} from "@/lib/chat/attachments";
+import {
   buildChatMessagesForThinkingStage,
   cleanThinkingText,
   reconcileTwoStageThinking,
@@ -85,9 +91,7 @@ export function useChatSession({
   const [messages, setMessages] = useState<Message[]>([]);
   const [showWelcome, setShowWelcome] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [attachments, setAttachments] = useState<
-    { name: string; content: string; type: string }[]
-  >([]);
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const { apiKeys, ollamaUrl, desktopNotifications, completionSound, locale } =
     useSettings();
   const [executionCreated, setExecutionCreated] = useState(false);
@@ -409,42 +413,41 @@ export function useChatSession({
 
   const handleSend = async (
     manualQuery?: string,
-    manualAttachments?: { name: string; content: string; type: string }[],
+    manualAttachments?: ChatAttachment[],
     systemInstruction?: string,
     isThinking?: boolean,
   ) => {
     const inputQuery = manualQuery || query;
-    if (!inputQuery.trim() || isLoading) return;
+    const currentAttachments = (manualAttachments || attachments).map((a) =>
+      normalizeLegacyAttachment(a),
+    );
+    if ((!inputQuery.trim() && currentAttachments.length === 0) || isLoading)
+      return;
 
     const thinkingRequested = !!isThinking;
     thinkingRequestedRef.current = thinkingRequested;
     requestStartedAtRef.current = Date.now();
     setShowWelcome(false);
     const currentQuery = inputQuery.trim();
-    const currentAttachments = manualAttachments || attachments;
 
-    // Prepare content with attachments for the API
-    let apiContent = currentQuery;
-    if (currentAttachments.length > 0) {
-      const aiContext = currentAttachments
-        .map((a) =>
-          a.type.startsWith("image/")
-            ? `![${a.name}](${a.content})`
-            : `\n\nFile: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``,
-        )
-        .join("\n");
-      apiContent = `${aiContext}\n\n${currentQuery}`;
-    }
+    let apiContent = buildMultimodalUserContent(
+      currentQuery,
+      currentAttachments,
+    );
 
     // Append hidden instruction if provided
     if (systemInstruction) {
-      apiContent = `${systemInstruction}\n\n${apiContent}`;
+      if (typeof apiContent === "string") {
+        apiContent = `${systemInstruction}\n\n${apiContent}`;
+      } else {
+        apiContent = [{ type: "text", text: systemInstruction }, ...apiContent];
+      }
     }
 
     const userMessage: Message = {
       id: `user-${sessionId ?? "chat"}-${Date.now()}`,
       role: Role.User,
-      content: currentQuery, // Keep visible content clean
+      content: currentQuery || "(attachment)",
       attachments: [...currentAttachments],
     };
 
@@ -627,6 +630,15 @@ export function useChatSession({
 
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
+        const ollamaUser = toOllamaMessage(apiContent);
+        const historyForOllama = historyForModel.map((m) => {
+          const converted = toOllamaMessage(m.content);
+          return {
+            role: m.role,
+            content: converted.content,
+            ...(converted.images ? { images: converted.images } : {}),
+          };
+        });
 
         const buildOllamaPayload = (
           stage: ThinkingStage,
@@ -638,8 +650,11 @@ export function useChatSession({
             thinkingStage: stage,
           });
           const chatMessages = buildChatMessagesForThinkingStage({
-            history: historyForModel,
-            userContent: apiContent,
+            history: historyForOllama.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+            userContent: ollamaUser.content,
             stage,
             priorReasoning,
           });
@@ -647,7 +662,16 @@ export function useChatSession({
             model: ollamaModelName,
             messages: [
               { role: "system", content: systemPrompt },
-              ...chatMessages,
+              ...chatMessages.map((m, index) => {
+                if (
+                  index === chatMessages.length - 1 &&
+                  m.role === "user" &&
+                  ollamaUser.images?.length
+                ) {
+                  return { ...m, images: ollamaUser.images };
+                }
+                return m;
+              }),
             ],
             stream: true,
           };
@@ -683,8 +707,12 @@ export function useChatSession({
               role: "system",
               content: buildChatSystemPrompt({ modelId: model, locale }),
             },
-            ...historyForModel,
-            { role: "user", content: apiContent },
+            ...historyForOllama,
+            {
+              role: "user",
+              content: ollamaUser.content,
+              ...(ollamaUser.images ? { images: ollamaUser.images } : {}),
+            },
           ],
           stream: true,
         };

@@ -194,7 +194,9 @@ export const ChatMessage = memo(
                 {message.attachments && message.attachments.length > 0 && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {message.attachments.map((att, i) =>
-                      att.type.startsWith("image/") ? (
+                      att.type.startsWith("image/") ||
+                      att.kind === "image" ||
+                      att.kind === "video_frame" ? (
                         <div
                           key={i}
                           className="relative max-w-full overflow-hidden rounded-lg border border-border/50"

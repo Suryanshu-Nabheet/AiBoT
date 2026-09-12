@@ -8,6 +8,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CODER_AGENT_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
+import {
+  buildMultimodalUserContent,
+  normalizeLegacyAttachment,
+} from "@/lib/chat/attachments";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { coderRequestSchema } from "@/lib/server/request-schemas";
 
@@ -37,7 +41,11 @@ export async function POST(req: NextRequest) {
         { message: "Invalid code request" },
         { status: 400 },
       );
-    const { prompt } = parsed.data;
+    const { prompt, attachments } = parsed.data;
+    const userContent = buildMultimodalUserContent(
+      prompt,
+      (attachments ?? []).map((a) => normalizeLegacyAttachment(a)),
+    );
 
     let lastError = null;
 
@@ -62,7 +70,7 @@ export async function POST(req: NextRequest) {
               model: model.id,
               messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: prompt },
+                { role: "user", content: userContent },
               ],
               temperature: 0.4,
               max_tokens: 8000,

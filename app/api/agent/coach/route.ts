@@ -8,6 +8,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COACH_VOICE_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
+import {
+  buildMultimodalUserContent,
+  normalizeLegacyAttachment,
+} from "@/lib/chat/attachments";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { coachRequestSchema } from "@/lib/server/request-schemas";
 
@@ -37,7 +41,25 @@ export async function POST(req: NextRequest) {
         { message: "Invalid coach request" },
         { status: 400 },
       );
-    const { messages } = parsed.data;
+    const { messages, attachments } = parsed.data;
+    const normalized = (attachments ?? []).map((a) =>
+      normalizeLegacyAttachment(a),
+    );
+
+    const outbound = messages.map((m, index) => {
+      if (
+        index === messages.length - 1 &&
+        m.role === "user" &&
+        normalized.length > 0
+      ) {
+        const text = typeof m.content === "string" ? m.content : "";
+        return {
+          role: m.role,
+          content: buildMultimodalUserContent(text, normalized),
+        };
+      }
+      return m;
+    });
 
     let lastError = null;
 
@@ -62,7 +84,7 @@ export async function POST(req: NextRequest) {
               model: model.id,
               messages: [
                 { role: "system", content: systemPrompt },
-                ...messages,
+                ...outbound,
               ],
               temperature: 0.7,
               max_tokens: 1000,
