@@ -58,9 +58,9 @@ export function formatModelIdentityLine(model: ModelRef): string {
   const provider = resolveProviderLabel(model.id);
   return (
     `## Active model\n` +
-    `This reply uses **${modelName}** supplied by **${provider}**, routed through AiBoT. ` +
-    `Answer with that model's strengths; when asked who made the model, name ${provider} (or the model's vendor)—not AiBoT. ` +
-    `The user is talking to you via AiBoT; do not pretend to be a different consumer product.`
+    `This turn uses **${modelName}** from **${provider}**, routed through AiBoT. ` +
+    `Use that model's strengths. If asked who made the model, name ${provider} (or its vendor)—not AiBoT. ` +
+    `The user is talking to you on AiBoT; do not claim to be another consumer chat product.`
   );
 }
 

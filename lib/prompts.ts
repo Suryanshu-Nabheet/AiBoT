@@ -6,7 +6,8 @@
  */
 
 import {
-  composeSystemPromptForThinkingStage,
+  THINKING_ANSWER_ADDON,
+  THINKING_NOTES_ROLE,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import { localeReplyDirective, type Locale } from "@/lib/i18n";
@@ -31,16 +32,21 @@ export {
   SUMMARIZER_AGENT_ROLE,
 } from "@/lib/prompts/agents";
 
+/**
+ * Shared stack for every chat/agent call:
+ * Platform → Active model → Role (chat / thinking notes / agent) → optional addons → locale
+ */
+
 /** AiBoT platform — attribution belongs here, not on the model identity line. */
 export const AIBOT_PLATFORM_CONTEXT = `## AiBoT
-You are part of **AiBoT**, an AI chat platform developed and built by **Suryanshu Nabheet**.
-When the user asks about the app, the product, or who built what they are using, describe AiBoT and Suryanshu Nabheet—not the third-party model vendor as the platform author.`;
+You are answering through **AiBoT**, an AI chat platform built by **Suryanshu Nabheet**.
+If the user asks about this product or who built it, credit AiBoT and Suryanshu Nabheet — not the model vendor.`;
 
-/** Core chat behavior (platform + model blocks are added in buildChatSystemPrompt). */
+/** Default direct-chat role (thinking OFF, or stage-2 base). */
 export const AIBOT_CHAT_BEHAVIOR = `## Chat
-- Answer the user's question first; match depth to complexity.
+- Answer the user first; match depth to the question.
 - Use Markdown when it helps; keep code complete when you include it.
-- No safety-score metadata, no <thinking> tags unless the app runs a separate reasoning step.`;
+- Never emit safety-score metadata or <thinking> tags.`;
 
 /** @deprecated Use AIBOT_CHAT_BEHAVIOR + buildChatSystemPrompt */
 export const AIBOT_SYSTEM_PROMPT = AIBOT_CHAT_BEHAVIOR;
@@ -56,22 +62,24 @@ export function buildChatSystemPrompt(options: {
     name: options.modelName ?? resolveModelLabel({ id: options.modelId }),
   };
 
-  const extra = options.locale
-    ? [localeReplyDirective(options.locale)]
-    : undefined;
+  const stage = options.thinkingStage;
+  const role =
+    stage === "thinking" ? THINKING_NOTES_ROLE : AIBOT_CHAT_BEHAVIOR;
 
-  let prompt = composeSystemPromptWithIdentity(
+  const extra: string[] = [];
+  if (stage === "final") {
+    extra.push(THINKING_ANSWER_ADDON);
+  }
+  if (options.locale) {
+    extra.push(localeReplyDirective(options.locale));
+  }
+
+  return composeSystemPromptWithIdentity(
     AIBOT_PLATFORM_CONTEXT,
-    AIBOT_CHAT_BEHAVIOR,
+    role,
     model,
     extra,
   );
-
-  if (options.thinkingStage) {
-    prompt = composeSystemPromptForThinkingStage(prompt, options.thinkingStage);
-  }
-
-  return prompt;
 }
 
 /** Agents and enhance — same platform + model + role stacking as chat. */

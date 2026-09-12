@@ -38,7 +38,7 @@ describe("composeSystemPromptWithIdentity", () => {
     );
     expect(prompt).toContain("Suryanshu Nabheet");
     expect(prompt).toContain("OpenRouter Free");
-    expect(prompt).toContain("supplied by **OpenRouter**");
+    expect(prompt).toContain("from **OpenRouter**");
     expect(prompt).not.toMatch(
       /OpenRouter Free.*developed and built by Suryanshu/i,
     );
@@ -50,7 +50,20 @@ describe("buildChatSystemPrompt", () => {
     const prompt = buildChatSystemPrompt({ modelId: "gpt-4o" });
     expect(prompt).toContain("GPT-4o");
     expect(prompt).toContain("AiBoT");
+    expect(prompt).toContain("## Chat");
     expect(resolveProviderLabel("openai/gpt-4o")).toBe("OpenAI");
+  });
+
+  it("uses thinking notes role instead of chat for stage thinking", () => {
+    const prompt = buildChatSystemPrompt({
+      modelId: "gpt-4o",
+      thinkingStage: "thinking",
+      locale: "hi",
+    });
+    expect(prompt).toContain("## Thinking");
+    expect(prompt).toContain("## Language");
+    expect(prompt).toContain("Suryanshu Nabheet");
+    expect(prompt).not.toContain("## Chat");
   });
 });
 
@@ -60,6 +73,6 @@ describe("composeAgentSystemPrompt", () => {
       id: "openrouter/auto",
       name: "OpenRouter Auto",
     });
-    expect(prompt).toContain("developed and built by **Suryanshu Nabheet**");
+    expect(prompt).toContain("built by **Suryanshu Nabheet**");
   });
 });

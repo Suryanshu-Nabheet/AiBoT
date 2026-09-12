@@ -19,11 +19,41 @@ import {
   isSubstantiveThinkingContent,
   mergeThinkingAndAnswerForHistory,
   parseLegacyThinkingContent,
+  looksLikeFinalAnswer,
   reconcileTwoStageThinking,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
+  THINKING_NOTES_ROLE,
   wrapThinkingForContext,
 } from "@/lib/chat/thinking-mode";
+import { buildChatSystemPrompt } from "@/lib/prompts";
+
+describe("thinking system prompt stack", () => {
+  it("keeps platform + model identity for thinking notes stage", () => {
+    const prompt = buildChatSystemPrompt({
+      modelId: "ollama/gemma2:2b",
+      thinkingStage: "thinking",
+    });
+    expect(prompt).toContain("Suryanshu Nabheet");
+    expect(prompt).toContain("## Active model");
+    expect(prompt).toContain("## Thinking");
+    expect(prompt).toContain("Private scratchpad");
+    expect(prompt).not.toContain("## Chat");
+    expect(prompt).toContain(THINKING_NOTES_ROLE.slice(0, 20));
+  });
+
+  it("keeps chat role and answer addon for final stage", () => {
+    const prompt = buildChatSystemPrompt({
+      modelId: "ollama/gemma2:2b",
+      thinkingStage: "final",
+      locale: "en",
+    });
+    expect(prompt).toContain("## Chat");
+    expect(prompt).toContain("## Answer");
+    expect(prompt).toContain("## Language");
+    expect(prompt).not.toContain("## Thinking");
+  });
+});
 
 describe("cleanThinkingText", () => {
   it("returns plain notes unchanged", () => {
@@ -79,10 +109,85 @@ describe("reconcileTwoStageThinking", () => {
     expect(result.content).toContain("stage 1");
   });
 
-  it("keeps both when stage-2 succeeds", () => {
+  it("keeps both when stage-2 succeeds with brief notes", () => {
     const result = reconcileTwoStageThinking("Brief notes.", "Final answer.");
     expect(result.thinkingText).toBe("Brief notes.");
     expect(result.content).toBe("Final answer.");
+  });
+
+  it("promotes answer-like stage-1 when stage-2 is only a thin coda", () => {
+    const essay = [
+      "## Unveiling the Magic of Artificial Intelligence",
+      "",
+      "Artificial intelligence is transforming how we live and work across industries.",
+      "",
+      "### What is AI?",
+      "",
+      "AI systems learn from data, reason about problems, and perceive their environment.",
+      "Machine learning and deep learning are the core building blocks behind modern systems.",
+      "",
+      "### Impact",
+      "",
+      "- Healthcare diagnostics",
+      "- Finance fraud detection",
+      "- Transportation autonomy",
+      "",
+      "In conclusion, AI will keep shaping society for decades to come.",
+    ].join("\n");
+    const coda =
+      "Let me know if you want to explore a specific aspect of AI and we can delve deeper.";
+
+    const result = reconcileTwoStageThinking(essay, coda);
+    expect(result.thinkingText).toBe("");
+    expect(result.content).toContain("Unveiling the Magic");
+    expect(result.content).not.toBe(coda);
+  });
+
+  it("clears answer-like stage-1 when stage-2 already has a full reply", () => {
+    const dumpedNotes = [
+      "## Draft outline of a long answer about quantum computing basics",
+      "",
+      "Quantum computing uses qubits. Superposition and entanglement enable parallel state exploration.",
+      "Applications include cryptography, chemistry simulation, and optimization problems at scale.",
+      "This draft is long enough to look like a finished article rather than private notes.",
+    ].join("\n");
+    const realAnswer = [
+      "## Quantum Computing",
+      "",
+      "Quantum computers encode information in qubits that can exist in superposition.",
+      "That property lets certain algorithms explore many possibilities at once.",
+      "Practical uses today are still early, but research continues in chemistry and cryptography.",
+    ].join("\n");
+
+    const result = reconcileTwoStageThinking(dumpedNotes, realAnswer);
+    expect(result.thinkingText).toBe("");
+    expect(result.content).toContain("Quantum Computing");
+  });
+});
+
+describe("looksLikeFinalAnswer", () => {
+  it("rejects brief greeting notes", () => {
+    expect(
+      looksLikeFinalAnswer(
+        "Okay, I see you initiated contact. How can I help you today?",
+      ),
+    ).toBe(false);
+  });
+
+  it("detects structured long replies", () => {
+    expect(
+      looksLikeFinalAnswer(
+        [
+          "## What is AI?",
+          "",
+          "A long explanation with enough substance to count as a final reply for the user.",
+          "",
+          "### Building blocks",
+          "",
+          "Machine learning and deep learning power most modern systems in production today.",
+        ].join("\n"),
+      ),
+    ).toBe(true);
   });
 });
 

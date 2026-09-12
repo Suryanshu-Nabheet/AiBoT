@@ -538,8 +538,30 @@ export function useChatSession({
 
       const res2 = await requestStage("final", thinkingInner);
       if (!res2.ok) {
+        // Stage 1 may already hold the reply (small models). Promote it
+        // instead of leaving the essay trapped under the Thinking panel.
+        const fallback = reconcileTwoStageThinking(thinkingInner, "");
+        if (fallback.content.trim()) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? {
+                    ...m,
+                    thinkingText: fallback.thinkingText,
+                    content: fallback.content,
+                    isThinkingRequested: true,
+                    isError: false,
+                  }
+                : m,
+            ),
+          );
+          setIsLoading(false);
+          refreshExecutions();
+          return;
+        }
         const errorText = await res2.text();
         pushAgentHttpError(res2.status, errorText);
+        setIsLoading(false);
         return;
       }
 

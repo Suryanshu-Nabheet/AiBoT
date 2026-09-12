@@ -42,13 +42,12 @@ export function applyDocumentLocale(locale: Locale) {
   document.documentElement.lang = meta?.htmlLang ?? "en";
 }
 
-/** Appended to system prompts so the model replies in the user's display language. */
+/** Appended to system prompts so visible output matches the user's display language. */
 export function localeReplyDirective(locale: Locale): string {
   const language = getLanguageName(locale);
   return (
-    `\n\n## RESPONSE LANGUAGE\n` +
-    `- Always write your final user-visible answer in ${language}.\n` +
-    `- Keep code identifiers, file paths, and technical API names in their original form.\n` +
-    `- Structural tags such as <thinking>...</thinking> stay as instructed; only the content and final answer use ${language}.`
+    `## Language\n` +
+    `- Write user-visible text (notes and answers) in ${language}.\n` +
+    `- Keep code identifiers, file paths, and technical API names unchanged.`
   );
 }

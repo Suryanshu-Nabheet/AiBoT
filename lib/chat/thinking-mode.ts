@@ -28,25 +28,23 @@ export const THINKING_CLOSE_TAG = "</thinking>";
 const OPEN_TAG = /<thinking>/i;
 const CLOSE_TAG = /<\/thinking>/i;
 
-const REASONING_SYSTEM = [
-  "Thinking mode: take extra time to process, analyze, and structure your reply.",
-  "Output only a few sentences of private notes about the user's message.",
-  "Do not write the final answer they will read.",
-  "Do not output safety ratings, metadata labels, or a different model identity.",
-].join(" ");
+/**
+ * Stage-1 role — stacked by buildChatSystemPrompt with platform + model identity.
+ * Replaces Chat behavior so the model does not answer yet.
+ */
+export const THINKING_NOTES_ROLE = `## Thinking
+Private scratchpad only — think silently first; the user-facing answer comes next.
 
-const ANSWER_HINT =
-  "Provide the final answer for the user. Do not repeat your notes verbatim.";
+- Write 1–3 short sentences: what the user wants, then how you will answer.
+- Speak about the user in third person, never as a reply to them.
+- Example — user asks "what is AI?": The user asked what AI is. I will give a plain definition, then a few everyday examples.
+- No greetings, questions back, titles, headings, lists, or the final answer.
+- No safety-score metadata.`;
 
-export function composeSystemPromptForThinkingStage(
-  fullAssistantSystemPrompt: string,
-  stage: ThinkingStage,
-): string {
-  if (stage === "thinking") {
-    return REASONING_SYSTEM;
-  }
-  return `${fullAssistantSystemPrompt}\n\n${ANSWER_HINT}`;
-}
+/** Stage-2 addon — Chat role stays; this closes the loop after notes. */
+export const THINKING_ANSWER_ADDON = `## Answer
+Your notes are done. Reply to the user directly now — clear, complete, and natural.
+Do not repeat the notes or mention that you were thinking.`;
 
 /** Strip optional <thinking> wrappers; store plain notes in the UI. */
 export function cleanThinkingText(raw: string): string {
@@ -94,8 +92,41 @@ export function sanitizeAssistantStreamField(
 }
 
 /**
- * Small models sometimes skip stage 2 or only answer in stage 1.
- * Prefer a real stage-2 answer; otherwise show stage-1 text as the reply.
+ * Detect when stage 1 ignored "notes only" and wrote a user-facing reply
+ * (common with small local models like gemma2:2b).
+ */
+export function looksLikeFinalAnswer(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+
+  const paragraphs = t.split(/\n\s*\n/).filter((p) => p.trim().length > 0)
+    .length;
+  const hasHeading = /^#{1,6}\s+\S/m.test(t);
+  const hasList = /^[-*•]\s+\S/m.test(t);
+  const hasTitleLine = /^\*\*[^*]{12,}\*\*\s*$/m.test(t);
+
+  if (t.length >= 400) return true;
+  if (t.length >= 220 && (hasHeading || hasTitleLine || paragraphs >= 3)) {
+    return true;
+  }
+  if ((hasHeading || hasTitleLine) && (paragraphs >= 2 || hasList)) return true;
+  return false;
+}
+
+/** Stage-2 text too thin to be the real reply when stage 1 already wrote one. */
+function isThinRelativeToThinking(content: string, thinking: string): boolean {
+  const c = content.trim();
+  const t = thinking.trim();
+  if (!c) return true;
+  if (c.length < 220 && t.length > c.length * 2.5) return true;
+  if (c.length < t.length * 0.35 && t.length >= 280) return true;
+  return false;
+}
+
+/**
+ * Small models sometimes dump the full reply in stage 1 and only a short coda
+ * in stage 2. Prefer a real stage-2 answer when it is substantive; otherwise
+ * promote stage-1 text and never leave an essay trapped under Thinking.
  */
 export function reconcileTwoStageThinking(
   thinkingNotes: string,
@@ -103,12 +134,27 @@ export function reconcileTwoStageThinking(
 ): { thinkingText: string; content: string } {
   const thinking = cleanThinkingText(thinkingNotes);
   const content = normalizeAssistantMessageContent(answerRaw);
+
+  if (!content && thinking) {
+    return { thinkingText: "", content: thinking };
+  }
+
+  if (content && thinking && looksLikeFinalAnswer(thinking)) {
+    // Stage 1 ignored "notes only". If stage 2 is only a thin coda, promote
+    // the stage-1 essay; otherwise keep stage 2 and hide the dump.
+    if (
+      !looksLikeFinalAnswer(content) &&
+      isThinRelativeToThinking(content, thinking)
+    ) {
+      return { thinkingText: "", content: thinking };
+    }
+    return { thinkingText: "", content };
+  }
+
   if (content) {
     return { thinkingText: thinking, content };
   }
-  if (thinking) {
-    return { thinkingText: "", content: thinking };
-  }
+
   return { thinkingText: "", content: "" };
 }
 
@@ -119,7 +165,7 @@ export function wrapThinkingForContext(notes: string): string {
 }
 
 export function getStage2ContinuationUserPrompt(): string {
-  return "Write your final answer now.";
+  return "Now give your full answer to the user.";
 }
 
 export function buildChatMessagesForThinkingStage(params: {
