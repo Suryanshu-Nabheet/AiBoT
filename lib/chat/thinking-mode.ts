@@ -17,7 +17,10 @@ import {
 
 export type ThinkingStage = "thinking" | "final";
 
-export { cleanAssistantContent, stripModelOutputArtifacts } from "@/lib/chat/assistant-output";
+export {
+  cleanAssistantContent,
+  stripModelOutputArtifacts,
+} from "@/lib/chat/assistant-output";
 
 export const THINKING_OPEN_TAG = "<thinking>";
 export const THINKING_CLOSE_TAG = "</thinking>";
@@ -82,7 +85,9 @@ export function sanitizeAssistantStreamField(
   finalize: boolean,
 ): string {
   if (field === "thinkingText") {
-    return finalize ? cleanThinkingText(raw) : stripModelOutputArtifacts(raw.trim());
+    return finalize
+      ? cleanThinkingText(raw)
+      : stripModelOutputArtifacts(raw.trim());
   }
   if (!finalize) return stripModelOutputArtifacts(raw);
   return normalizeAssistantMessageContent(raw);

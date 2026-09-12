@@ -49,7 +49,9 @@ describe("cleanThinkingText", () => {
 describe("cleanAssistantContent", () => {
   it("strips trailing safety labels from answers", () => {
     expect(
-      cleanAssistantContent("Hello!\n\nUser Safety: safe\nResponse Safety: safe"),
+      cleanAssistantContent(
+        "Hello!\n\nUser Safety: safe\nResponse Safety: safe",
+      ),
     ).toBe("Hello!");
   });
 });
