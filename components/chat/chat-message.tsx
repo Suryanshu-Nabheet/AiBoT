@@ -126,7 +126,6 @@ export const ChatMessage = memo(
     const {
       thinkingContent,
       mainResponse,
-      hasThinkingTag,
       hasClosingThinkingTag,
       hideAnswerPanel,
     } = parseAssistantThinkingContent(contentToShow, {
