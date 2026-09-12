@@ -44,10 +44,9 @@ export function SettingsModal() {
     >
       <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-black/55 backdrop-blur-[2px]"
-        className="flex h-[min(614px,calc(100dvh-2rem))] w-[min(871px,calc(100vw-2rem))] max-w-[min(871px,calc(100vw-2rem))] translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded-3xl border border-border/60 bg-background p-0 shadow-2xl sm:max-w-[min(871px,calc(100vw-2rem))]"
+        overlayClassName="bg-black/40 backdrop-blur-[2px]"
+        className="flex h-[min(620px,calc(100dvh-2rem))] w-[min(840px,calc(100vw-1.5rem))] max-w-[min(840px,calc(100vw-1.5rem))] translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded-2xl border border-border/60 bg-background p-0 shadow-[0_16px_64px_-16px_rgba(0,0,0,0.28)] sm:max-w-[min(840px,calc(100vw-1.5rem))]"
         onOpenAutoFocus={(event) => {
-          // Keep focus inside the dialog without jumping to the first field.
           event.preventDefault();
           (event.currentTarget as HTMLElement).focus();
         }}

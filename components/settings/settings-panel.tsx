@@ -14,7 +14,6 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
   User,
@@ -47,6 +46,13 @@ import packageJson from "@/package.json";
 import { BrandIcon } from "@/components/ui/brand-icon";
 import { normalizeOllamaUrl, probeOllamaTags } from "@/lib/chat/ollama-url";
 import type { SettingsSection } from "@/lib/settings-sections";
+import {
+  SettingsCard,
+  SettingsPageHeader,
+  SettingsRow,
+  SettingsSectionLabel,
+  settingsControlClass,
+} from "@/components/settings/settings-ui";
 
 export type { SettingsSection };
 
@@ -78,6 +84,31 @@ const SECTIONS: SectionItem[] = [
 ];
 
 const APP_VERSION = packageJson.version || "0.1.0";
+
+function CopyableCommand({
+  value,
+  onCopied,
+}: {
+  value: string;
+  onCopied: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-3 py-2 font-mono text-[11px] text-foreground">
+      <span className="min-w-0 break-all">{value}</span>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard.writeText(value);
+          onCopied();
+        }}
+        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        aria-label="Copy"
+      >
+        <Copy className="size-3.5" />
+      </button>
+    </div>
+  );
+}
 
 const PROVIDERS = [
   {
@@ -283,35 +314,25 @@ export function SettingsPanel({
     switch (activeSection) {
       case "general":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <header>
-              <h3 className="text-xl font-bold tracking-tight mb-1 text-foreground">
-                {t("general.title")}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t("general.subtitle")}
-              </p>
-            </header>
+          <div className="animate-in fade-in duration-200">
+            <SettingsPageHeader
+              title={t("general.title")}
+              description={t("general.subtitle")}
+            />
 
-            <div className="space-y-4">
-              <div className="flex flex-col items-stretch gap-4 rounded-2xl border border-border/40 bg-muted/20 p-5 transition-colors sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-inner shrink-0">
-                    <Globe className="size-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold">
-                      {t("general.language.title")}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("general.language.desc")}
-                    </p>
-                  </div>
-                </div>
+            <SettingsSectionLabel>
+              {t("general.group.preferences")}
+            </SettingsSectionLabel>
+            <SettingsCard>
+              <SettingsRow
+                icon={<Globe className="size-4" weight="duotone" />}
+                label={t("general.language.title")}
+                description={t("general.language.desc")}
+              >
                 <select
                   value={locale}
                   onChange={(e) => setLocale(e.target.value as Locale)}
-                  className="w-full shrink-0 cursor-pointer rounded-xl border border-border/50 bg-background/50 p-2 px-4 text-xs font-bold transition-all focus:outline-none focus:ring-1 focus:ring-primary/40 sm:w-auto"
+                  className={cn(settingsControlClass, "min-w-[8.5rem]")}
                   aria-label={t("general.language.title")}
                 >
                   {LOCALES.map((item) => (
@@ -320,26 +341,17 @@ export function SettingsPanel({
                     </option>
                   ))}
                 </select>
-              </div>
+              </SettingsRow>
 
-              <div className="flex flex-col items-stretch gap-4 rounded-2xl border border-border/40 bg-muted/20 p-5 transition-colors sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-inner shrink-0">
-                    <MoonStars className="size-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold">
-                      {t("general.theme.title")}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("general.theme.desc")}
-                    </p>
-                  </div>
-                </div>
+              <SettingsRow
+                icon={<MoonStars className="size-4" weight="duotone" />}
+                label={t("general.theme.title")}
+                description={t("general.theme.desc")}
+              >
                 <select
                   value={themeValue}
                   onChange={(e) => setTheme(e.target.value)}
-                  className="w-full shrink-0 cursor-pointer rounded-xl border border-border/50 bg-background/50 p-2 px-4 text-xs font-bold transition-all focus:outline-none focus:ring-1 focus:ring-primary/40 sm:w-auto"
+                  className={cn(settingsControlClass, "min-w-[8.5rem]")}
                   aria-label={t("general.theme.title")}
                 >
                   <option value="system">
@@ -349,52 +361,37 @@ export function SettingsPanel({
                   <option value="light">{t("general.theme.light")}</option>
                   <option value="dark">{t("general.theme.dark")}</option>
                 </select>
-              </div>
+              </SettingsRow>
+            </SettingsCard>
 
-              <div className="flex flex-col items-stretch gap-4 rounded-2xl border border-border/40 bg-muted/20 p-5 transition-colors sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-inner shrink-0">
-                    <Bell className="size-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold">
-                      {t("general.notifications.title")}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("general.notifications.desc")}
-                    </p>
-                  </div>
-                </div>
+            <SettingsSectionLabel className="mt-6">
+              {t("general.group.alerts")}
+            </SettingsSectionLabel>
+            <SettingsCard>
+              <SettingsRow
+                icon={<Bell className="size-4" weight="duotone" />}
+                label={t("general.notifications.title")}
+                description={t("general.notifications.desc")}
+              >
                 <Switch
                   checked={desktopNotifications}
                   onCheckedChange={handleNotificationsToggle}
                   aria-label={t("general.notifications.title")}
-                  className="self-end sm:self-auto"
                 />
-              </div>
+              </SettingsRow>
 
-              <div className="flex flex-col items-stretch gap-4 rounded-2xl border border-border/40 bg-muted/20 p-5 transition-colors sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-inner shrink-0">
-                    <SpeakerHigh className="size-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold">
-                      {t("general.sound.title")}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("general.sound.desc")}
-                    </p>
-                  </div>
-                </div>
+              <SettingsRow
+                icon={<SpeakerHigh className="size-4" weight="duotone" />}
+                label={t("general.sound.title")}
+                description={t("general.sound.desc")}
+              >
                 <Switch
                   checked={completionSound}
                   onCheckedChange={setCompletionSound}
                   aria-label={t("general.sound.title")}
-                  className="self-end sm:self-auto"
                 />
-              </div>
-            </div>
+              </SettingsRow>
+            </SettingsCard>
           </div>
         );
 
@@ -404,158 +401,106 @@ export function SettingsPanel({
         );
 
         return (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <header className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold tracking-tight mb-1 text-foreground">
-                  {t("models.title")}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("models.subtitle")}
-                </p>
-              </div>
-            </header>
+          <div className="animate-in fade-in duration-200">
+            <SettingsPageHeader
+              title={t("models.title")}
+              description={t("models.subtitle")}
+            />
 
-            <div className="space-y-12">
-              {/* Platform Models */}
+            <div className="space-y-8">
               <section>
-                <div className="flex items-center gap-2 mb-5 ml-1">
-                  <div className="size-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    {t("models.platform")}
-                  </h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SettingsSectionLabel>
+                  {t("models.platform")}
+                </SettingsSectionLabel>
+                <SettingsCard>
                   {MODELS.map((m) => (
-                    <div
+                    <SettingsRow
                       key={m.id}
-                      className={cn(
-                        "flex items-center justify-between p-4.5 rounded-2xl border transition-all duration-300",
-                        enabledModels.includes(m.id)
-                          ? "bg-primary/[0.02] border-primary/10 shadow-sm"
-                          : "bg-muted/10 border-border/20 opacity-50 grayscale",
-                      )}
+                      icon={
+                        <BrandIcon
+                          src={m.logo || "/icons/ai.svg"}
+                          alt=""
+                          className="size-4"
+                        />
+                      }
+                      label={m.name.replace(" (Free)", "")}
+                      description={t("models.platformOptimized")}
                     >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-sm">
-                          <BrandIcon
-                            src={m.logo || "/icons/ai.svg"}
-                            alt=""
-                            className="w-full h-full"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[14px] font-bold tracking-tight truncate">
-                            {m.name.replace(" (Free)", "")}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-wider truncate opacity-70">
-                            {t("models.platformOptimized")}
-                          </p>
-                        </div>
-                      </div>
                       <Switch
                         checked={enabledModels.includes(m.id)}
                         onCheckedChange={() => toggleModel(m.id)}
                       />
-                    </div>
+                    </SettingsRow>
                   ))}
-                </div>
+                </SettingsCard>
               </section>
 
-              {/* Dynamic Provider Models */}
               {activeProviders.length > 0 && (
-                <div className="pt-10 border-t border-border/30 mt-10">
-                  <div className="flex flex-col gap-1.5 mb-10">
-                    <h4 className="text-[11px] font-bold uppercase tracking-[0.4em] text-primary">
+                <div className="space-y-6">
+                  <div>
+                    <SettingsSectionLabel>
                       {t("models.external")}
-                    </h4>
-                    <p className="text-[10px] text-muted-foreground font-medium">
+                    </SettingsSectionLabel>
+                    <p className="-mt-1 mb-3 px-0.5 text-[12px] text-muted-foreground">
                       {t("models.externalDesc")}
                     </p>
                   </div>
 
-                  <div className="space-y-12">
-                    {activeProviders.map((providerId) => {
-                      const provider = PROVIDERS.find(
-                        (p) => p.id === providerId,
-                      );
-                      const models = getModelsForProvider(providerId);
+                  {activeProviders.map((providerId) => {
+                    const provider = PROVIDERS.find((p) => p.id === providerId);
+                    const models = getModelsForProvider(providerId);
+                    if (models.length === 0) return null;
 
-                      if (models.length === 0) return null;
-
-                      return (
-                        <section
-                          key={providerId}
-                          className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-                        >
-                          <div className="flex items-center gap-2 mb-5 ml-1">
-                            <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                              {provider?.name} {t("models.ecosystem")}
-                            </h4>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {models.map((m) => (
-                              <div
-                                key={m.id}
-                                className={cn(
-                                  "flex items-center justify-between p-4.5 rounded-2xl border transition-all duration-300",
-                                  enabledModels.includes(m.id)
-                                    ? "bg-emerald-500/[0.02] border-emerald-500/20 shadow-sm"
-                                    : "bg-muted/10 border-border/20 opacity-50 grayscale",
-                                )}
-                              >
-                                <div className="flex items-center gap-4 min-w-0">
-                                  <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-sm">
-                                    <BrandIcon
-                                      src={provider?.icon || "/icons/ai.svg"}
-                                      alt=""
-                                      className="w-full h-full"
-                                    />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-[14px] font-bold tracking-tight truncate">
-                                      {m.name}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-wider truncate opacity-70">
-                                      {m.id}
-                                    </p>
-                                  </div>
-                                </div>
-                                <Switch
-                                  checked={enabledModels.includes(m.id)}
-                                  onCheckedChange={() => toggleModel(m.id)}
+                    return (
+                      <section key={providerId}>
+                        <SettingsSectionLabel>
+                          {provider?.name} {t("models.ecosystem")}
+                        </SettingsSectionLabel>
+                        <SettingsCard>
+                          {models.map((m) => (
+                            <SettingsRow
+                              key={m.id}
+                              icon={
+                                <BrandIcon
+                                  src={provider?.icon || "/icons/ai.svg"}
+                                  alt=""
+                                  className="size-4"
                                 />
-                              </div>
-                            ))}
-                          </div>
-                        </section>
-                      );
-                    })}
-                  </div>
+                              }
+                              label={m.name}
+                              description={m.id}
+                            >
+                              <Switch
+                                checked={enabledModels.includes(m.id)}
+                                onCheckedChange={() => toggleModel(m.id)}
+                              />
+                            </SettingsRow>
+                          ))}
+                        </SettingsCard>
+                      </section>
+                    );
+                  })}
                 </div>
               )}
 
               {activeProviders.length === 0 && (
-                <div className="p-12 rounded-3xl border border-dashed border-border/60 bg-muted/5 flex flex-col items-center text-center space-y-4">
-                  <div className="size-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground shadow-inner">
-                    <Key className="size-6" />
-                  </div>
-                  <div className="max-w-[280px] space-y-2">
-                    <p className="text-[15px] font-bold">
+                <SettingsCard>
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-[13px] font-medium text-foreground">
                       {t("models.unlock.title")}
                     </p>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="mx-auto mt-1.5 max-w-sm text-[12px] leading-relaxed text-muted-foreground">
                       {t("models.unlock.desc")}{" "}
                       <button
+                        type="button"
                         onClick={() => selectSection("api-keys")}
-                        className="text-primary font-bold hover:underline"
+                        className="font-medium text-foreground underline-offset-2 hover:underline"
                       >
                         {t("models.unlock.link")}
                       </button>
                     </p>
                   </div>
-                </div>
+                </SettingsCard>
               )}
             </div>
           </div>
@@ -563,47 +508,44 @@ export function SettingsPanel({
 
       case "api-keys":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <header>
-              <h3 className="text-xl font-bold tracking-tight mb-1 text-foreground">
-                {t("apiKeys.title")}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t("apiKeys.subtitle")}
-              </p>
-            </header>
+          <div className="animate-in fade-in duration-200">
+            <SettingsPageHeader
+              title={t("apiKeys.title")}
+              description={t("apiKeys.subtitle")}
+            />
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {PROVIDERS.map((provider) => (
-                <div
-                  key={provider.id}
-                  className="p-5 rounded-2xl bg-muted/20 border border-border/40 space-y-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shadow-sm">
-                        <BrandIcon
-                          src={provider.icon}
-                          alt=""
-                          className="w-full h-full"
-                        />
+                <SettingsCard key={provider.id}>
+                  <div className="space-y-3 px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted/60">
+                          <BrandIcon
+                            src={provider.icon}
+                            alt=""
+                            className="size-4"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium">
+                            {provider.name}
+                          </p>
+                          <p className="text-[12px] text-muted-foreground">
+                            {t("apiKeys.enterKey", {
+                              provider: provider.name,
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold">{provider.name}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {t("apiKeys.enterKey", { provider: provider.name })}
-                        </p>
-                      </div>
+                      {apiKeys[provider.id as keyof ApiKeys] ? (
+                        <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                          {t("apiKeys.active")}
+                        </span>
+                      ) : null}
                     </div>
-                    {apiKeys[provider.id as keyof ApiKeys] && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[9px] font-bold uppercase tracking-wider">
-                        {t("apiKeys.active")}
-                      </span>
-                    )}
-                  </div>
 
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <div className="relative flex-1 group">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Input
                         type="password"
                         placeholder={provider.placeholder}
@@ -614,92 +556,67 @@ export function SettingsPanel({
                             e.target.value,
                           )
                         }
-                        className="bg-background/50 border-border/50 rounded-xl px-4 py-5 text-xs font-mono focus:ring-1 focus:ring-primary/30"
+                        className="h-9 flex-1 rounded-lg border-border/60 bg-background font-mono text-[12px]"
                       />
-                      <Key className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/30 group-focus-within:text-primary/50 transition-colors" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleVerifyKey(
+                            provider.id as keyof ApiKeys,
+                            apiKeys[provider.id as keyof ApiKeys] || "",
+                          )
+                        }
+                        disabled={
+                          verifyingProvider === provider.id ||
+                          !apiKeys[provider.id as keyof ApiKeys]
+                        }
+                        className="h-9 rounded-lg px-4 text-[12px] font-medium"
+                      >
+                        {verifyingProvider === provider.id
+                          ? t("apiKeys.checking")
+                          : t("apiKeys.verify")}
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        handleVerifyKey(
-                          provider.id as keyof ApiKeys,
-                          apiKeys[provider.id as keyof ApiKeys] || "",
-                        )
-                      }
-                      disabled={
-                        verifyingProvider === provider.id ||
-                        !apiKeys[provider.id as keyof ApiKeys]
-                      }
-                      className="h-auto rounded-xl border-border/50 px-6 py-2.5 text-[11px] font-bold transition-all duration-300 hover:border-primary hover:bg-primary hover:text-white"
-                    >
-                      {verifyingProvider === provider.id
-                        ? t("apiKeys.checking")
-                        : t("apiKeys.verify")}
-                    </Button>
                   </div>
-                </div>
+                </SettingsCard>
               ))}
 
-              <div className="p-5 rounded-2xl bg-primary/[0.03] border border-primary/10 flex items-start gap-4 mt-8">
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                  <ShieldCheck className="size-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-primary mb-1">
-                    {t("apiKeys.storage.title")}
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {t("apiKeys.storage.desc")}
-                  </p>
-                </div>
-              </div>
+              <p className="px-1 pt-2 text-[12px] leading-relaxed text-muted-foreground">
+                {t("apiKeys.storage.desc")}
+              </p>
             </div>
           </div>
         );
 
       case "local-llm":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <header className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shadow-sm shrink-0">
-                  <BrandIcon
-                    src="/icons/ollama.svg"
-                    alt="Ollama"
-                    className="w-full h-full"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold tracking-tight text-foreground">
-                    {t("localLlm.title")}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t("localLlm.subtitle")}
-                  </p>
-                </div>
-              </div>
-            </header>
+          <div className="animate-in fade-in duration-200 space-y-5">
+            <SettingsPageHeader
+              title={t("localLlm.title")}
+              description={t("localLlm.subtitle")}
+            />
 
-            <div className="p-6 rounded-2xl bg-muted/20 border border-border/40 space-y-5">
-              <div className="flex flex-col gap-2">
+            <SettingsCard>
+              <div className="space-y-3 px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <p className="text-[13px] font-medium">
                     {t("localLlm.endpoint")}
-                  </label>
+                  </p>
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
-                      ollamaStatus === "connected" && "text-emerald-500",
-                      ollamaStatus === "disconnected" && "text-red-400",
+                      "inline-flex items-center gap-1.5 text-[11px] font-medium",
+                      ollamaStatus === "connected" &&
+                        "text-emerald-600 dark:text-emerald-400",
+                      ollamaStatus === "disconnected" && "text-red-500",
                       ollamaStatus === "unknown" && "text-muted-foreground",
                     )}
                   >
                     <span
                       className={cn(
                         "size-1.5 rounded-full",
-                        ollamaStatus === "connected" &&
-                          "bg-emerald-500 animate-pulse",
-                        ollamaStatus === "disconnected" && "bg-red-400",
+                        ollamaStatus === "connected" && "bg-emerald-500",
+                        ollamaStatus === "disconnected" && "bg-red-500",
                         ollamaStatus === "unknown" && "bg-muted-foreground/50",
                       )}
                     />
@@ -710,84 +627,72 @@ export function SettingsPanel({
                         : t("localLlm.status.unknown")}
                   </span>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="relative flex-1 group">
-                    <Input
-                      type="text"
-                      placeholder="http://localhost:11434"
-                      value={ollamaUrl}
-                      onChange={(e) => {
-                        setOllamaUrl(e.target.value);
-                        setOllamaStatus("unknown");
-                      }}
-                      className="bg-background/50 border-border/50 rounded-xl px-4 py-5 text-xs font-mono focus:ring-1 focus:ring-primary/30"
-                    />
-                  </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    type="text"
+                    placeholder="http://localhost:11434"
+                    value={ollamaUrl}
+                    onChange={(e) => {
+                      setOllamaUrl(e.target.value);
+                      setOllamaStatus("unknown");
+                    }}
+                    className="h-9 flex-1 rounded-lg border-border/60 bg-background font-mono text-[12px]"
+                  />
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={handleAutoDetect}
                     disabled={isScanning}
-                    className={cn(
-                      "rounded-xl border-border/50 text-[11px] font-bold h-auto py-2.5 px-6 transition-all duration-300",
-                      "hover:bg-primary hover:text-white hover:border-primary",
-                      isScanning && "opacity-80",
-                    )}
+                    className="h-9 rounded-lg px-4 text-[12px] font-medium"
                   >
-                    {isScanning ? (
-                      <span className="flex items-center gap-2">
-                        <span className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        {t("localLlm.scanning")}
-                      </span>
-                    ) : (
-                      t("localLlm.autoDetect")
-                    )}
+                    {isScanning
+                      ? t("localLlm.scanning")
+                      : t("localLlm.autoDetect")}
                   </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground opacity-70 leading-relaxed mt-1">
+                <p className="text-[12px] leading-relaxed text-muted-foreground">
                   {t("localLlm.hint")}
                 </p>
               </div>
-            </div>
+            </SettingsCard>
 
             {showTroubleshooter && (
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-2xl bg-red-500/[0.02] border border-red-500/10 space-y-6"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-red-500/10 text-red-500 shrink-0">
-                    <WarningCircle className="size-6 font-bold" />
+              <SettingsCard className="border-red-500/15 bg-red-500/[0.03]">
+                <div className="space-y-4 px-4 py-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-background text-red-500 ring-1 ring-red-500/20">
+                      <WarningCircle className="size-4" weight="duotone" />
+                    </div>
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="text-[13px] font-medium text-foreground">
+                        {t("localLlm.diagnostics.title")}
+                      </p>
+                      <p className="text-[12px] leading-snug text-muted-foreground">
+                        {t("localLlm.diagnostics.desc")}
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-[14px] font-bold text-foreground">
-                      {t("localLlm.diagnostics.title")}
-                    </h4>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      {t("localLlm.diagnostics.desc")}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="border-t border-border/40 pt-5 space-y-4">
-                  {ollamaScanDetail && (
-                    <p className="text-[10px] font-mono text-red-400/90 break-all leading-relaxed">
+                  {ollamaScanDetail ? (
+                    <p className="break-all rounded-lg bg-background/80 px-3 py-2 font-mono text-[11px] leading-relaxed text-red-600/90 dark:text-red-400/90">
                       {ollamaScanDetail}
                     </p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  ) : null}
+
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
                       {t("localLlm.diagnostics.os")}
                     </p>
-                    <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/30">
+                    <div className="flex rounded-lg border border-border/50 bg-background p-0.5">
                       {(["macos", "windows", "linux"] as const).map((os) => (
                         <button
                           key={os}
+                          type="button"
                           onClick={() => setSelectedOS(os)}
                           className={cn(
-                            "px-3 py-1 text-[10px] font-bold rounded-md capitalize transition-all duration-200",
+                            "rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition-colors",
                             selectedOS === os
-                              ? "bg-background text-foreground shadow-sm"
+                              ? "bg-muted text-foreground"
                               : "text-muted-foreground hover:text-foreground",
                           )}
                         >
@@ -797,7 +702,7 @@ export function SettingsPanel({
                     </div>
                   </div>
 
-                  <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
+                  <div className="space-y-3 text-[12px] leading-relaxed text-muted-foreground">
                     {selectedOS === "macos" && (
                       <div className="space-y-3">
                         <p>
@@ -809,40 +714,19 @@ export function SettingsPanel({
                           for the menu-bar app (launchctl alone often does not
                           apply to Ollama.app):
                         </p>
-                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between gap-2">
-                          <span className="break-all">
-                            {macOllamaEnvFileCommand}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                macOllamaEnvFileCommand,
-                              );
-                              toast.success(t("localLlm.copied"));
-                            }}
-                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                          >
-                            <Copy className="size-3.5" />
-                          </button>
-                        </div>
+                        <CopyableCommand
+                          value={macOllamaEnvFileCommand}
+                          onCopied={() => toast.success(t("localLlm.copied"))}
+                        />
                         <p>
                           3. Quit Ollama, then restart (or run{" "}
                           <code className="text-foreground">pkill ollama</code>{" "}
                           if needed):
                         </p>
-                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
-                          <span>open -a Ollama</span>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText("open -a Ollama");
-                              toast.success(t("localLlm.copied"));
-                            }}
-                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Copy className="size-3.5" />
-                          </button>
-                        </div>
+                        <CopyableCommand
+                          value="open -a Ollama"
+                          onCopied={() => toast.success(t("localLlm.copied"))}
+                        />
                       </div>
                     )}
 
@@ -857,23 +741,10 @@ export function SettingsPanel({
                           2. Open <strong>PowerShell</strong> and run this
                           command to configure user variables:
                         </p>
-                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
-                          <span className="break-all">
-                            {`[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "${ollamaOriginsValue}", "User")`}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                `[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "${ollamaOriginsValue}", "User")`,
-                              );
-                              toast.success(t("localLlm.copied"));
-                            }}
-                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Copy className="size-3.5" />
-                          </button>
-                        </div>
+                        <CopyableCommand
+                          value={`[Environment]::SetEnvironmentVariable("OLLAMA_ORIGINS", "${ollamaOriginsValue}", "User")`}
+                          onCopied={() => toast.success(t("localLlm.copied"))}
+                        />
                         <p>
                           3. Relaunch <strong>Ollama</strong> from your Start
                           menu.
@@ -887,301 +758,174 @@ export function SettingsPanel({
                           1. Open your terminal and open the service
                           configuration editor:
                         </p>
-                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
-                          <span>sudo systemctl edit ollama.service</span>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                "sudo systemctl edit ollama.service",
-                              );
-                              toast.success(t("localLlm.copied"));
-                            }}
-                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Copy className="size-3.5" />
-                          </button>
-                        </div>
+                        <CopyableCommand
+                          value="sudo systemctl edit ollama.service"
+                          onCopied={() => toast.success(t("localLlm.copied"))}
+                        />
                         <p>
                           2. Add the environment variable in the file under the{" "}
                           <code>[Service]</code> block and save it:
                         </p>
-                        <pre className="bg-muted/30 border border-border/40 rounded-xl p-3 text-[10px] text-foreground font-mono">
-                          {`[Service]
-Environment="OLLAMA_ORIGINS=*"`}
+                        <pre className="overflow-x-auto rounded-lg border border-border/50 bg-background px-3 py-2 font-mono text-[11px] text-foreground">
+                          {`[Service]\nEnvironment="OLLAMA_ORIGINS=*"`}
                         </pre>
                         <p>
                           3. Reload systemd configurations and restart the
                           Ollama service:
                         </p>
-                        <div className="relative group bg-muted/40 border border-border/50 rounded-xl p-3 font-mono text-[10px] text-foreground flex items-center justify-between">
-                          <span>
-                            sudo systemctl daemon-reload && sudo systemctl
-                            restart ollama
-                          </span>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                "sudo systemctl daemon-reload && sudo systemctl restart ollama",
-                              );
-                              toast.success(t("localLlm.copied"));
-                            }}
-                            className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Copy className="size-3.5" />
-                          </button>
-                        </div>
+                        <CopyableCommand
+                          value="sudo systemctl daemon-reload && sudo systemctl restart ollama"
+                          onCopied={() => toast.success(t("localLlm.copied"))}
+                        />
                       </div>
                     )}
                   </div>
-                </div>
 
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowTroubleshooter(false)}
-                    className="text-[11px] font-bold rounded-xl"
-                  >
-                    {t("localLlm.diagnostics.hide")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleAutoDetect}
-                    className="text-[11px] font-bold rounded-xl border-red-500/20 hover:bg-red-500/5 hover:border-red-500/30 text-red-400"
-                  >
-                    {t("localLlm.diagnostics.retry")}
-                  </Button>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowTroubleshooter(false)}
+                      className="h-8 rounded-lg text-[12px] font-medium"
+                    >
+                      {t("localLlm.diagnostics.hide")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAutoDetect}
+                      className="h-8 rounded-lg text-[12px] font-medium"
+                    >
+                      {t("localLlm.diagnostics.retry")}
+                    </Button>
+                  </div>
                 </div>
-              </motion.div>
+              </SettingsCard>
             )}
 
             {ollamaModels.length > 0 ? (
-              <section className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                      {t("localLlm.discovered", { count: ollamaModels.length })}
-                    </h4>
-                  </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-0.5">
+                  <SettingsSectionLabel className="mb-0">
+                    {t("localLlm.discovered", { count: ollamaModels.length })}
+                  </SettingsSectionLabel>
                   <button
+                    type="button"
                     onClick={handleAutoDetect}
-                    className="text-[10px] font-bold uppercase text-primary hover:underline"
+                    className="text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
                     {t("localLlm.refresh")}
                   </button>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SettingsCard>
                   {ollamaModels.map((m) => {
                     const modelId = `ollama/${m.name}`;
                     const sizeInGB = m.size
                       ? `${(m.size / (1024 * 1024 * 1024)).toFixed(2)} GB`
                       : "Unknown size";
                     const isEnabled = enabledModels.includes(modelId);
+                    const meta = [
+                      m.details?.parameter_size || "local",
+                      sizeInGB,
+                    ].join(" · ");
 
                     return (
-                      <div
+                      <SettingsRow
                         key={m.name}
-                        className={cn(
-                          "flex items-center justify-between p-4.5 rounded-2xl border transition-all duration-300",
-                          isEnabled
-                            ? "bg-primary/[0.02] border-primary/10 shadow-sm"
-                            : "bg-muted/10 border-border/20 opacity-50 grayscale",
-                        )}
+                        icon={
+                          <BrandIcon
+                            src="/icons/ollama.svg"
+                            alt=""
+                            className="size-4"
+                          />
+                        }
+                        label={m.name}
+                        description={meta}
                       >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-sm">
-                            <BrandIcon
-                              src="/icons/ollama.svg"
-                              alt=""
-                              className="w-full h-full"
-                            />
-                          </div>
-                          <div className="min-w-0 space-y-0.5">
-                            <p className="text-[14px] font-bold tracking-tight truncate">
-                              {m.name}
-                            </p>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono truncate">
-                              <span className="px-1.5 py-0.5 rounded bg-muted/65 uppercase tracking-wider font-bold">
-                                {m.details?.parameter_size || "local"}
-                              </span>
-                              <span>{sizeInGB}</span>
-                            </div>
-                          </div>
-                        </div>
                         <Switch
                           checked={isEnabled}
                           onCheckedChange={() => toggleModel(modelId)}
                         />
-                      </div>
+                      </SettingsRow>
                     );
                   })}
-                </div>
-              </section>
+                </SettingsCard>
+              </div>
             ) : (
-              <div className="p-12 rounded-3xl border border-dashed border-border/60 bg-muted/5 flex flex-col items-center text-center space-y-4">
-                <div className="size-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground shadow-inner">
-                  <BrandIcon
-                    src="/icons/ollama.svg"
-                    alt=""
-                    className="size-6 opacity-50"
-                  />
-                </div>
-                <div className="max-w-[320px] space-y-2">
-                  <p className="text-[15px] font-bold">
+              <SettingsCard>
+                <div className="px-4 py-8 text-center">
+                  <p className="text-[13px] font-medium text-foreground">
                     {t("localLlm.empty.title")}
                   </p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="mx-auto mt-1 max-w-sm text-[12px] leading-relaxed text-muted-foreground">
                     {t("localLlm.empty.desc")}
                   </p>
                 </div>
-              </div>
+              </SettingsCard>
             )}
 
-            <div className="p-5 rounded-2xl bg-primary/[0.03] border border-primary/10 flex items-start gap-4 mt-8">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
-                <ShieldCheck className="size-6" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-primary mb-1">
-                  {t("localLlm.privacy.title")}
-                </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {t("localLlm.privacy.desc")}
-                </p>
-              </div>
-            </div>
+            <p className="px-1 text-[12px] leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground/80">
+                {t("localLlm.privacy.title")}
+              </span>
+              {" — "}
+              {t("localLlm.privacy.desc")}
+            </p>
           </div>
         );
 
       case "about":
         return (
-          <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 max-w-3xl mx-auto">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="relative">
-                <div className="absolute -inset-10 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-3xl opacity-20" />
-                <h1 className="text-6xl font-extrabold tracking-tighter relative z-10">
-                  <span className="text-foreground">Ai</span>
-                  <span className="text-primary">BoT</span>
-                </h1>
-              </div>
-              <div className="space-y-2 relative z-10">
-                <p className="text-[10px] font-bold text-primary uppercase tracking-[0.6em] ml-[0.6em]">
-                  {t("about.tagline")}
-                </p>
-                <div className="flex items-center justify-center gap-3 opacity-40">
-                  <span className="text-[9px] font-bold uppercase tracking-widest">
-                    {t("about.version", { version: APP_VERSION })}
-                  </span>
-                  <div className="size-1 rounded-full bg-border" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest">
-                    {t("about.edition")}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="animate-in fade-in duration-200 space-y-6">
+            <SettingsPageHeader
+              title="AiBoT"
+              description={`${t("about.tagline")} · ${t("about.version", { version: APP_VERSION })}`}
+            />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-8 rounded-[2.5rem] bg-muted/10 border border-border/40 space-y-4 transition-all hover:bg-muted/20">
-                <div className="flex items-center gap-3 text-primary">
-                  <User weight="fill" className="size-5" />
-                  <span className="text-xs font-bold uppercase tracking-widest">
-                    {t("about.developer")}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-bold text-foreground">
-                    Suryanshu Nabheet
-                  </p>
-                  <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    {t("about.developer.bio")}
-                  </p>
-                </div>
-              </div>
+            <SettingsCard>
+              <SettingsRow
+                icon={<User className="size-4" weight="duotone" />}
+                label={t("about.developer")}
+                description={t("about.developer.bio")}
+              >
+                <span className="text-[12px] font-medium text-muted-foreground">
+                  Suryanshu Nabheet
+                </span>
+              </SettingsRow>
+              <SettingsRow
+                icon={<Cpu className="size-4" weight="duotone" />}
+                label={t("about.stack")}
+                description="Next.js · React · TypeScript · Tailwind"
+              />
+            </SettingsCard>
 
-              <div className="p-8 rounded-[2.5rem] bg-muted/10 border border-border/40 space-y-4 transition-all hover:bg-muted/20">
-                <div className="flex items-center gap-3 text-primary">
-                  <Cpu weight="fill" className="size-5" />
-                  <span className="text-xs font-bold uppercase tracking-widest">
-                    {t("about.stack")}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[11px] font-bold text-muted-foreground/80 uppercase tracking-tight">
-                  <div className="flex items-center gap-2">
-                    <div className="size-1.5 rounded-full bg-primary/40" />{" "}
-                    Next.js 15.5
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="size-1.5 rounded-full bg-primary/40" />{" "}
-                    React 19
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="size-1.5 rounded-full bg-primary/40" />{" "}
-                    TypeScript 5.8
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="size-1.5 rounded-full bg-primary/40" />{" "}
-                    Tailwind 4.0
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <div className="flex items-center justify-center gap-2 px-1">
-                <div className="h-px w-12 bg-border/50" />
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground">
-                  {t("about.foundation")}
-                </h4>
-                <div className="h-px w-12 bg-border/50" />
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                {[
-                  {
-                    title: t("about.feature.orchestration.title"),
-                    desc: t("about.feature.orchestration.desc"),
-                    icon: ShieldCheck,
-                  },
-                  {
-                    title: t("about.feature.coding.title"),
-                    desc: t("about.feature.coding.desc"),
-                    icon: ArrowSquareOut,
-                  },
-                  {
-                    title: t("about.feature.research.title"),
-                    desc: t("about.feature.research.desc"),
-                    icon: Info,
-                  },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="group p-6 rounded-[2rem] bg-muted/5 border border-border/30 hover:border-primary/20 hover:bg-primary/[0.01] transition-all duration-300 flex items-start gap-6"
-                  >
-                    <div className="w-10 h-10 rounded-2xl bg-background border border-border/50 flex items-center justify-center text-primary shrink-0 shadow-sm transition-transform group-hover:scale-110">
-                      <item.icon weight="bold" className="size-5" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-sm font-bold text-foreground tracking-tight">
-                        {item.title}
-                      </p>
-                      <p className="text-[12px] text-muted-foreground leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-8 text-center pt-8">
-              <div className="h-px w-full max-w-[200px] bg-gradient-to-r from-transparent via-border to-transparent" />
-              <div className="flex gap-10 grayscale opacity-30 hover:opacity-100 hover:grayscale-0 transition-all duration-700 cursor-default">
-                <BrandIcon src="/icons/meta.svg" alt="" className="size-6" />
-                <BrandIcon src="/icons/google.svg" alt="" className="size-6" />
-                <BrandIcon src="/icons/openai.svg" alt="" className="size-6" />
-                <BrandIcon src="/icons/nvidia.svg" alt="" className="size-6" />
-              </div>
-            </div>
+            <SettingsSectionLabel>{t("about.foundation")}</SettingsSectionLabel>
+            <SettingsCard>
+              {[
+                {
+                  title: t("about.feature.orchestration.title"),
+                  desc: t("about.feature.orchestration.desc"),
+                  icon: ShieldCheck,
+                },
+                {
+                  title: t("about.feature.coding.title"),
+                  desc: t("about.feature.coding.desc"),
+                  icon: ArrowSquareOut,
+                },
+                {
+                  title: t("about.feature.research.title"),
+                  desc: t("about.feature.research.desc"),
+                  icon: Info,
+                },
+              ].map((item) => (
+                <SettingsRow
+                  key={item.title}
+                  icon={<item.icon className="size-4" weight="duotone" />}
+                  label={item.title}
+                  description={item.desc}
+                />
+              ))}
+            </SettingsCard>
           </div>
         );
       default:
@@ -1192,30 +936,38 @@ Environment="OLLAMA_ORIGINS=*"`}
   return (
     <div
       className={cn(
-        "relative flex min-h-0 w-full max-w-full flex-col overflow-hidden bg-background xl:flex-row",
-        variant === "modal" ? "h-full" : "h-full border-t border-border/50",
+        "relative flex min-h-0 w-full max-w-full overflow-hidden bg-background",
+        variant === "modal"
+          ? "h-full flex-col sm:flex-row"
+          : "h-full flex-col border-t border-border/50 xl:flex-row",
       )}
     >
       {/* Settings Sidebar */}
       <div
         className={cn(
-          "relative z-20 flex w-full shrink-0 flex-col border-b border-border/50 bg-muted/[0.02] xl:border-r xl:border-b-0",
-          variant === "modal" ? "xl:w-[240px]" : "xl:w-[260px]",
+          "relative z-20 flex w-full shrink-0 flex-col border-border/40 bg-muted/30",
+          variant === "modal"
+            ? "border-b sm:w-[220px] sm:border-b-0 sm:border-r"
+            : "border-b xl:w-[240px] xl:border-r xl:border-b-0",
         )}
       >
-        <div className="px-4 pt-4 pb-2 sm:px-6 xl:p-7 xl:pb-10">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="size-2 rounded-full bg-primary/80" />
-            <h2 className="text-[12px] font-bold uppercase tracking-[0.3em] text-foreground">
-              {t("settings.title")}
-            </h2>
-          </div>
-          <p className="hidden text-[9px] font-medium uppercase tracking-widest text-muted-foreground opacity-40 xl:block">
-            {t("settings.subtitle")}
-          </p>
+        <div
+          className={cn(
+            "px-4 pt-5 pb-3",
+            variant === "modal" ? "sm:px-3 sm:pt-5" : "sm:px-6 xl:px-4 xl:pt-6",
+          )}
+        >
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            {t("settings.title")}
+          </h2>
         </div>
 
-        <div className="px-4 pb-4 sm:px-6 xl:hidden">
+        <div
+          className={cn(
+            "px-4 pb-3",
+            variant === "modal" ? "sm:hidden" : "xl:hidden",
+          )}
+        >
           <label className="sr-only" htmlFor="settings-section">
             {t("settings.title")}
           </label>
@@ -1225,7 +977,7 @@ Environment="OLLAMA_ORIGINS=*"`}
             onChange={(event) =>
               selectSection(event.target.value as SettingsSection)
             }
-            className="h-11 w-full cursor-pointer rounded-xl border border-border/50 bg-background px-3 text-sm font-bold text-foreground outline-none transition-colors focus:ring-2 focus:ring-primary/30"
+            className={cn(settingsControlClass, "h-10 w-full")}
           >
             {SECTIONS.map((section) => (
               <option key={section.id} value={section.id}>
@@ -1235,67 +987,83 @@ Environment="OLLAMA_ORIGINS=*"`}
           </select>
         </div>
 
-        <div className="hidden w-full gap-1 overflow-x-auto px-2 pb-3 scrollbar-none xl:flex xl:flex-1 xl:flex-col xl:gap-1 xl:overflow-y-auto xl:px-3 xl:pb-0">
-          {SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              onClick={() => selectSection(section.id)}
-              className={cn(
-                "inline-flex h-10 shrink-0 cursor-pointer items-center justify-start gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-bold tracking-tight outline-none transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 xl:w-full xl:gap-3 xl:px-4",
-                activeSection === section.id
-                  ? "bg-primary/[0.08] text-primary"
-                  : "bg-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-              )}
-            >
-              <section.icon
+        <nav
+          aria-label={t("settings.title")}
+          className={cn(
+            "hidden flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-3",
+            variant === "modal" ? "sm:flex" : "xl:flex",
+          )}
+        >
+          {SECTIONS.map((section) => {
+            const active = activeSection === section.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => selectSection(section.id)}
                 className={cn(
-                  "size-4.5 transition-all duration-300",
-                  activeSection === section.id
-                    ? "text-primary scale-110"
-                    : "text-muted-foreground/40",
+                  "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                  active
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/60"
+                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
                 )}
-              />
-              <span className="truncate">{t(section.labelKey)}</span>
-            </button>
-          ))}
-        </div>
+              >
+                <section.icon
+                  className={cn(
+                    "size-4 shrink-0",
+                    active ? "text-foreground" : "text-muted-foreground/70",
+                  )}
+                  weight={active ? "fill" : "regular"}
+                />
+                <span className="truncate">{t(section.labelKey)}</span>
+              </button>
+            );
+          })}
+        </nav>
 
-        <div className="hidden p-8 xl:block">
-          <div className="p-4 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-center">
-            <span className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-[0.4em]">
-              AiBoT
-            </span>
-          </div>
+        <div
+          className={cn(
+            "mt-auto hidden px-3 pb-4",
+            variant === "modal" ? "sm:block" : "xl:block",
+          )}
+        >
+          <p className="rounded-xl px-2.5 py-2 text-[10px] font-medium tracking-wide text-muted-foreground/50">
+            AiBoT
+          </p>
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
-        {/* Navigation Header */}
-        <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b border-border/30 px-4 backdrop-blur-sm sm:px-6 xl:h-14 xl:px-8">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-30">
-              {t("settings.breadcrumb")}
+        <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 px-4 sm:px-6">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            <span className="text-muted-foreground/50">
+              {t("settings.title")}
             </span>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-[0.3em]">
-              {activeSection.replace("-", " ")}
+            <span className="mx-1.5 text-muted-foreground/40">/</span>
+            <span className="text-foreground/80">
+              {t(
+                SECTIONS.find((s) => s.id === activeSection)?.labelKey ??
+                  "settings.section.general",
+              )}
             </span>
-          </div>
+          </p>
           <button
             type="button"
             aria-label="Close settings"
             onClick={onClose}
-            className="group rounded-full border border-border/50 bg-muted/30 p-2 text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <X className="size-4 transition-transform duration-300 group-hover:rotate-90" />
+            <X className="size-3.5" weight="bold" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-border/50 scrollbar-track-transparent">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div
             className={cn(
-              "mx-auto w-full max-w-3xl px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8",
-              variant === "modal" ? "xl:px-8 xl:py-8" : "xl:px-14 xl:py-16",
+              "mx-auto w-full max-w-2xl px-4 py-5 sm:px-6 sm:py-6",
+              variant === "page" && "xl:max-w-3xl xl:px-10 xl:py-10",
             )}
           >
             {renderSection()}

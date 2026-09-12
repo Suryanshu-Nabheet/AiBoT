@@ -8,7 +8,7 @@
 export const en = {
   // Settings shell
   "settings.title": "Settings",
-  "settings.subtitle": "Architectural Hub",
+  "settings.subtitle": "Preferences",
   "settings.breadcrumb": "SETTINGS /",
   "settings.section.general": "General",
   "settings.section.models": "Model Preferences",
@@ -16,10 +16,12 @@ export const en = {
   "settings.section.localLlm": "Local LLM",
   "settings.section.about": "About AiBoT",
   "settings.footer.edition": "Edition",
+  "general.group.preferences": "Preferences",
+  "general.group.alerts": "Alerts",
 
   // General
-  "general.title": "General Settings",
-  "general.subtitle": "Manage your core application experience.",
+  "general.title": "General",
+  "general.subtitle": "Language, appearance, and notifications.",
   "general.language.title": "Display Language",
   "general.language.desc":
     "The language used for the interface and AI replies.",

@@ -9,7 +9,7 @@ import type { EnDictionary } from "./en";
 
 export const hi = {
   "settings.title": "सेटिंग्स",
-  "settings.subtitle": "आर्किटेक्चरल हब",
+  "settings.subtitle": "वरीयताएँ",
   "settings.breadcrumb": "सेटिंग्स /",
   "settings.section.general": "सामान्य",
   "settings.section.models": "मॉडल प्राथमिकताएँ",
@@ -17,8 +17,10 @@ export const hi = {
   "settings.section.localLlm": "लोकल LLM",
   "settings.section.about": "AiBoT के बारे में",
   "settings.footer.edition": "संस्करण",
-  "general.title": "सामान्य सेटिंग्स",
-  "general.subtitle": "अपने मुख्य ऐप अनुभव को प्रबंधित करें।",
+  "general.group.preferences": "वरीयताएँ",
+  "general.group.alerts": "अलर्ट",
+  "general.title": "सामान्य",
+  "general.subtitle": "भाषा, दिखावट और सूचनाएँ।",
   "general.language.title": "डिस्प्ले भाषा",
   "general.language.desc":
     "इंटरफ़ेस और AI जवाबों के लिए उपयोग की जाने वाली भाषा।",
