@@ -57,7 +57,7 @@ describe("normalizeThinkingStage1Output", () => {
 
   it("uses user hint when empty", () => {
     const out = normalizeThinkingStage1Output("", { userMessageHint: "hi" });
-    expect(extractThinkingInner(out)).toContain("About: hi");
+    expect(extractThinkingInner(out)).toContain("greeting");
   });
 });
 
@@ -90,9 +90,9 @@ describe("polishThinkingDisplayContent", () => {
     const meta =
       "Okay, I need to understand what the user wants me to do. Then I'll process and respond.";
     expect(looksLikeMetaProcessThinking(meta)).toBe(true);
-    expect(polishThinkingDisplayContent(meta, { userMessageHint: "hi" })).toBe(
-      "About: hi",
-    );
+    expect(
+      polishThinkingDisplayContent(meta, { userMessageHint: "hi" }),
+    ).toContain("greeting");
   });
 });
 

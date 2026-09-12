@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
@@ -144,6 +144,7 @@ export function ModelSelector({
   enablePickerShortcut = false,
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
+  const modelSearchRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
   const { availableModels, enabledModels } = useSettings();
 
@@ -172,6 +173,21 @@ export function ModelSelector({
     }
   }, [value, persistedModelId, setModelId]);
 
+  const focusModelSearch = useCallback(() => {
+    requestAnimationFrame(() => {
+      const input = modelSearchRef.current;
+      if (!input) return;
+      input.focus();
+      input.select();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (open && showModelList) {
+      focusModelSearch();
+    }
+  }, [open, showModelList, focusModelSearch]);
+
   useEffect(() => {
     if (!enablePickerShortcut || disabled) return;
 
@@ -179,12 +195,13 @@ export function ModelSelector({
       if (!(event.metaKey || event.ctrlKey)) return;
       if (event.key !== "/" && event.code !== "Slash") return;
       event.preventDefault();
-      setOpen((prev) => !prev);
+      setOpen(true);
+      focusModelSearch();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enablePickerShortcut, disabled]);
+  }, [enablePickerShortcut, disabled, focusModelSearch]);
 
   const handleValueChange = (newValue: string) => {
     setModelId(newValue);
@@ -259,8 +276,10 @@ export function ModelSelector({
         {showModelList ? (
           <Command className="rounded-none bg-popover">
             <CommandInput
+              ref={modelSearchRef}
               placeholder={t("model.search")}
               className="h-10 border-0 border-b border-border/50 text-sm"
+              autoFocus
             />
             {showThinking && onThinkingChange && (
               <ThinkingMenuRow

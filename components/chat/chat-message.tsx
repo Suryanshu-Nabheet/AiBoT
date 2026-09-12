@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import {
   isSubstantiveThinkingContent,
   parseLegacyThinkingContent,
+  polishThinkingDisplayContent,
 } from "@/lib/chat/thinking-mode";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
@@ -135,7 +136,9 @@ export const ChatMessage = memo(
         : null;
 
     const thinkingContent = usesStructuredThinking
-      ? (message.thinkingText ?? "")
+      ? polishThinkingDisplayContent(message.thinkingText ?? "", {
+          userMessageHint,
+        })
       : (legacyParsed?.thinkingContent ?? "");
 
     const mainResponse = isUser

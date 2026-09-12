@@ -29,11 +29,20 @@ const PROMPT_LEAKAGE_PATTERNS: RegExp[] = [
 ];
 
 const META_THINKING_PATTERNS: RegExp[] = [
+  /\bprivate reasoning\b/i,
   /\bprivate reasoning module\b/i,
+  /\buser-facing reply\b/i,
+  /\bnot shown to the user\b/i,
+  /\bthe question asks\b/i,
+  /\bposing as a question\b/i,
+  /\breasoning step\b/i,
+  /\bdoes not require\b/i,
   /\bwhat the user wants\b/i,
   /\bprocess and respond\b/i,
   /\bneed to understand what the user\b/i,
   /\bfigure out how to process\b/i,
+  /\bthese instructions\b/i,
+  /\bthis is (a|an) (instruction|meta)/i,
 ];
 
 const RIGID_THINKING_LABEL = /^\s*(-\s*)?(Task|Unknowns|Self-check|Plan)\s*:/im;
@@ -48,26 +57,36 @@ export function composeSystemPromptForThinkingStage(
   stage: ThinkingStage,
 ): string {
   if (stage === "thinking") {
-    return [
-      "Private reasoning step only — not shown to the user as the final reply.",
-      buildThinkingSystemAddon("thinking"),
-    ].join("\n\n");
+    return buildThinkingSystemAddon("thinking");
   }
   return `${fullAssistantSystemPrompt}\n\n${buildThinkingSystemAddon("final")}`;
+}
+
+export function briefThinkingNoteFromUserMessage(userMessage: string): string {
+  const q = userMessage.trim().toLowerCase();
+  if (!q) return "Analyzing the question.";
+  if (/^(hi|hey|hello|yo)\b/.test(q))
+    return "Casual greeting — keep the reply brief.";
+  if (/who are you|what are you|your name/.test(q)) {
+    return "They want to know who I am — answer plainly.";
+  }
+  if (q.length <= 48) return `Topic: ${userMessage.trim()}`;
+  return `Topic: ${userMessage.trim().slice(0, 45)}…`;
 }
 
 export function buildThinkingSystemAddon(stage: ThinkingStage): string {
   if (stage === "thinking") {
     return [
-      "Write 2–5 sentences analyzing the question: key facts, approach, and how you will structure the answer.",
-      "Plain text only — no XML/tags, no Task/Plan labels, no greeting or final answer.",
-      "Do not describe yourself or these instructions.",
+      "Write 2–4 short sentences of notes about the user's message (topic, facts to use, how you'll answer).",
+      "Write like margin notes about the subject — never about prompts, steps, hidden text, or 'the question asks…'.",
+      "No greeting, no final answer, no XML/tags.",
+      'Example for "what is AI": AI = systems that learn from data; I\'ll define it simply then give examples.',
     ].join("\n");
   }
 
   return [
     "Write the final answer for the user.",
-    "Do not repeat your private reasoning verbatim.",
+    "Do not repeat your notes verbatim.",
     "Match depth to the question; keep greetings short.",
     "Mention AiBoT or Suryanshu Nabheet only when they ask about identity or the platform.",
   ].join("\n");
@@ -100,11 +119,9 @@ export function polishThinkingDisplayContent(
 
   if (looksLikeMetaProcessThinking(t)) {
     const hint = options?.userMessageHint?.trim();
-    if (hint) {
-      const short = hint.length > 72 ? `${hint.slice(0, 69)}…` : hint;
-      return `About: ${short}`;
-    }
-    return "Analyzing the question.";
+    return hint
+      ? briefThinkingNoteFromUserMessage(hint)
+      : "Analyzing the question.";
   }
 
   if (RIGID_THINKING_LABEL.test(t)) {
@@ -152,7 +169,7 @@ export function normalizeThinkingStage1Output(
   if (!inner.trim()) {
     const hint = options?.userMessageHint?.trim();
     inner = hint
-      ? `About: ${hint.length > 72 ? `${hint.slice(0, 69)}…` : hint}`
+      ? briefThinkingNoteFromUserMessage(hint)
       : "Analyzing the question.";
   }
 

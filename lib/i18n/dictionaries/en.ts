@@ -190,7 +190,7 @@ export const en = {
   "composer.thinking": "Thinking mode",
 
   "shortcut.toggleSidebar": "Toggle sidebar (⌘B)",
-  "shortcut.toggleModel": "Switch model (⌘/)",
+  "shortcut.toggleModel": "Search models (⌘/)",
   "composer.enhance": "Enhance prompt",
   "composer.send": "Send message",
   "composer.stop": "Stop generating",
