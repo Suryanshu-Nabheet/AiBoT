@@ -32,8 +32,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { Message, MODELS, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
-  cleanThinkingText,
-  normalizeAssistantMessageContent,
+  displayThinkingFields,
   isSubstantiveThinkingContent,
   parseLegacyThinkingContent,
 } from "@/lib/chat/thinking-mode";
@@ -121,35 +120,30 @@ export const ChatMessage = memo(
       setIsThinkingExpanded(true);
     }, [message.id]);
 
-    const usesStructuredThinking =
-      !isUser &&
-      Boolean(
-        message.thinkingText?.trim() ||
-        (message.isThinkingRequested && isStreaming),
-      );
+    const liveFields =
+      !isUser && Boolean(message.isThinkingRequested)
+        ? displayThinkingFields(message.thinkingText, message.content, {
+            streaming: isStreaming,
+          })
+        : null;
 
     const legacyParsed =
-      !isUser && !usesStructuredThinking
+      !isUser && !liveFields
         ? parseLegacyThinkingContent(
             isStreaming ? message.content : displayedContent,
           )
         : null;
 
-    const thinkingContent = usesStructuredThinking
-      ? cleanThinkingText(message.thinkingText ?? "")
+    const thinkingContent = liveFields
+      ? liveFields.thinkingText
       : (legacyParsed?.thinkingContent ?? "");
 
-    const rawMainResponse = isUser
-      ? message.content
-      : usesStructuredThinking
-        ? isStreaming
-          ? message.content
-          : displayedContent
-        : (legacyParsed?.mainResponse ?? message.content);
-
     const mainResponse = isUser
-      ? rawMainResponse
-      : normalizeAssistantMessageContent(rawMainResponse);
+      ? message.content
+      : liveFields
+        ? liveFields.content
+        : (legacyParsed?.mainResponse ??
+          (isStreaming ? message.content : displayedContent));
 
     useEffect(() => {
       if (

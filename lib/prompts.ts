@@ -63,8 +63,7 @@ export function buildChatSystemPrompt(options: {
   };
 
   const stage = options.thinkingStage;
-  const role =
-    stage === "thinking" ? THINKING_NOTES_ROLE : AIBOT_CHAT_BEHAVIOR;
+  const role = stage === "thinking" ? THINKING_NOTES_ROLE : AIBOT_CHAT_BEHAVIOR;
 
   const extra: string[] = [];
   if (stage === "final") {

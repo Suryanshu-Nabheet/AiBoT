@@ -31,6 +31,7 @@ import {
   cleanThinkingText,
   reconcileTwoStageThinking,
   sanitizeAssistantStreamField,
+  thinkingPanelPreview,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -522,13 +523,15 @@ export function useChatSession({
         streamField: "thinkingText",
       });
       const thinkingInner = cleanThinkingText(stage1Raw);
+      // Hide answer dumps from the Thinking panel while stage 2 runs.
+      const thinkingPreview = thinkingPanelPreview(thinkingInner);
 
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
             ? {
                 ...m,
-                thinkingText: thinkingInner,
+                thinkingText: thinkingPreview,
                 content: "",
                 isThinkingRequested: true,
               }

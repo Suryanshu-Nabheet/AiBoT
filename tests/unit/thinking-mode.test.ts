@@ -24,6 +24,7 @@ import {
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
   THINKING_NOTES_ROLE,
+  thinkingPanelPreview,
   wrapThinkingForContext,
 } from "@/lib/chat/thinking-mode";
 import { buildChatSystemPrompt } from "@/lib/prompts";
@@ -37,7 +38,7 @@ describe("thinking system prompt stack", () => {
     expect(prompt).toContain("Suryanshu Nabheet");
     expect(prompt).toContain("## Active model");
     expect(prompt).toContain("## Thinking");
-    expect(prompt).toContain("Private scratchpad");
+    expect(prompt).toContain("Private reasoning");
     expect(prompt).not.toContain("## Chat");
     expect(prompt).toContain(THINKING_NOTES_ROLE.slice(0, 20));
   });
@@ -97,6 +98,11 @@ describe("normalizeAssistantMessageContent", () => {
     const raw = `${THINKING_OPEN_TAG}\nnotes\n${THINKING_CLOSE_TAG}\n\nUser-facing answer.`;
     expect(normalizeAssistantMessageContent(raw)).toBe("User-facing answer.");
   });
+
+  it("does not promote thinking-only payloads into the answer", () => {
+    const raw = `${THINKING_OPEN_TAG}\nonly notes\n${THINKING_CLOSE_TAG}`;
+    expect(normalizeAssistantMessageContent(raw)).toBe("");
+  });
 });
 
 describe("reconcileTwoStageThinking", () => {
@@ -110,8 +116,11 @@ describe("reconcileTwoStageThinking", () => {
   });
 
   it("keeps both when stage-2 succeeds with brief notes", () => {
-    const result = reconcileTwoStageThinking("Brief notes.", "Final answer.");
-    expect(result.thinkingText).toBe("Brief notes.");
+    const result = reconcileTwoStageThinking(
+      "The user asked a short question. I will answer clearly.",
+      "Final answer.",
+    );
+    expect(result.thinkingText).toContain("user asked");
     expect(result.content).toBe("Final answer.");
   });
 
@@ -162,6 +171,83 @@ describe("reconcileTwoStageThinking", () => {
     const result = reconcileTwoStageThinking(dumpedNotes, realAnswer);
     expect(result.thinkingText).toBe("");
     expect(result.content).toContain("Quantum Computing");
+  });
+
+  it("strips notes echoed at the start of the answer", () => {
+    const notes =
+      "The user asked what AI is. I will define it and give everyday examples.";
+    const result = reconcileTwoStageThinking(
+      notes,
+      `${notes}\n\nArtificial intelligence is software that learns from data.`,
+    );
+    expect(result.thinkingText).toContain("user asked");
+    expect(result.content).toContain("Artificial intelligence");
+    expect(result.content).not.toContain("I will define");
+  });
+
+  it("clears greeting-as-thinking when a real answer exists", () => {
+    const result = reconcileTwoStageThinking(
+      "Okay, I see you initiated contact. How can I help you today?",
+      "Hi there! I'm AiBoT. How can I help?",
+    );
+    expect(result.thinkingText).toBe("");
+    expect(result.content).toContain("AiBoT");
+  });
+
+  it("drops thinking when notes and answer are near-duplicates", () => {
+    const text =
+      "Artificial intelligence is the field of building systems that learn from data.";
+    const result = reconcileTwoStageThinking(text, text);
+    expect(result.thinkingText).toBe("");
+    expect(result.content).toBe(text);
+  });
+  it("documents weak-model dump repair: Thinking clears, text becomes response", () => {
+    // Small models often write the full reply in stage 1. The platform must
+    // promote that text to content so the UI does not look "broken".
+    const dumpedReply = [
+      "## What is Artificial Intelligence?",
+      "",
+      "AI is the field of building systems that learn from data, reason about problems,",
+      "and perceive their environment. Machine learning and deep learning are the main tools.",
+      "",
+      "### Everyday impact",
+      "",
+      "- Healthcare imaging",
+      "- Fraud detection in finance",
+      "- Route planning in transportation",
+      "",
+      "That overview is the complete user-facing answer the model wrote too early.",
+    ].join("\n");
+
+    const result = reconcileTwoStageThinking(
+      dumpedReply,
+      "Want me to go deeper on any section?",
+    );
+
+    expect(result.thinkingText).toBe("");
+    expect(result.content).toContain("What is Artificial Intelligence?");
+    expect(result.content).not.toBe("Want me to go deeper on any section?");
+  });
+});
+
+describe("thinkingPanelPreview", () => {
+  it("hides answer dumps from the live Thinking panel", () => {
+    const essay = [
+      "## What is AI?",
+      "",
+      "A long explanation with enough substance to count as a final reply for the user.",
+      "",
+      "### Building blocks",
+      "",
+      "Machine learning and deep learning power most modern systems in production today.",
+    ].join("\n");
+    expect(thinkingPanelPreview(essay)).toBe("");
+  });
+
+  it("keeps real planning notes visible", () => {
+    const notes =
+      "The user asked what AI is. Cover a plain definition and a few everyday examples.";
+    expect(thinkingPanelPreview(notes)).toContain("user asked");
   });
 });
 
