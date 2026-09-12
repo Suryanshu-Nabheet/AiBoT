@@ -166,6 +166,113 @@ function isThinRelativeToThinking(content: string, thinking: string): boolean {
   return false;
 }
 
+/** One repair attempt — keeps latency and cost bounded for production. */
+export const MAX_THINKING_NOTE_RETRIES = 1;
+
+/**
+ * True when stage-1 text is usable as Thinking notes (not an answer dump).
+ */
+export function isValidThinkingNotes(text: string): boolean {
+  const notes = cleanThinkingText(text);
+  if (notes.length < 8) return false;
+  if (looksLikeFinalAnswer(notes) || looksLikeUserDirectedReply(notes)) {
+    return false;
+  }
+  return true;
+}
+
+export function shouldRetryThinkingNotes(text: string): boolean {
+  return !isValidThinkingNotes(text);
+}
+
+export function getStage1RepairUserPrompt(): string {
+  return (
+    "That output was a draft answer, not planning notes. " +
+    "Rewrite as private planning notes only: 3–6 short sentences on intent, " +
+    "points to cover, and approach. Do not write the final answer."
+  );
+}
+
+/**
+ * When the model never produces valid notes, keep a short plan visible in
+ * Thinking so the panel still feels purposeful.
+ */
+export function synthesizePlanningNotesFromDump(dump: string): string {
+  const text = cleanThinkingText(dump);
+  if (!text) return "Planning the reply from the user's request.";
+
+  const heading = text.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim();
+  if (heading && heading.length <= 100) {
+    return `The user asked about ${heading}. Cover the key points clearly, then give practical examples.`;
+  }
+
+  const plain = text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentences = plain.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const snippet = sentences.slice(0, 2).join(" ").trim();
+  if (
+    snippet.length >= 20 &&
+    snippet.length <= 220 &&
+    !looksLikeFinalAnswer(snippet) &&
+    !looksLikeUserDirectedReply(snippet)
+  ) {
+    return `Early draft captured. Focus: ${snippet}`;
+  }
+
+  return "The model drafted a full reply early. Answering from that draft next.";
+}
+
+export type Stage1LoopResult = {
+  /** Notes shown in Thinking + used as stage-2 prior. */
+  notes: string;
+  /** Full early answer dump, if any — used when stage 2 is thin/empty. */
+  answerDraft: string;
+};
+
+/**
+ * Resolve stage-1 attempts after the validate/repair loop.
+ * Prefer the latest valid notes; otherwise synthesize notes and keep the dump.
+ */
+export function finalizeStage1Attempts(attempts: string[]): Stage1LoopResult {
+  const cleaned = attempts.map((a) => cleanThinkingText(a)).filter(Boolean);
+
+  for (let i = cleaned.length - 1; i >= 0; i--) {
+    const notes = cleaned[i] ?? "";
+    if (isValidThinkingNotes(notes)) {
+      return { notes, answerDraft: "" };
+    }
+  }
+
+  const dump = cleaned[cleaned.length - 1] ?? "";
+  return {
+    notes: synthesizePlanningNotesFromDump(dump),
+    answerDraft: dump,
+  };
+}
+
+/**
+ * Stage-2 prior: real notes, plus an early draft when the model dumped an answer
+ * in stage 1 so stage 2 can rewrite it cleanly.
+ */
+export function buildStage2PriorReasoning(
+  notes: string,
+  answerDraft?: string,
+): string {
+  const n = cleanThinkingText(notes);
+  const draft = cleanThinkingText(answerDraft ?? "");
+  if (draft && looksLikeFinalAnswer(draft)) {
+    return [
+      n || "Rewrite the draft into a clear final answer for the user.",
+      "",
+      "Draft to improve (write the polished final answer; do not paste the notes):",
+      draft.slice(0, 12_000),
+    ].join("\n");
+  }
+  return n;
+}
+
 function normalizeForCompare(text: string): string {
   return text
     .toLowerCase()
@@ -212,19 +319,40 @@ function stripNotesEchoFromAnswer(content: string, notes: string): string {
 
 /**
  * Autonomous split: answer never stays under Thinking; notes never become the
- * response. Prefer a real stage-2 answer; otherwise promote stage-1 text.
+ * response. Prefer a real stage-2 answer; otherwise promote stage-1 / answerDraft.
  *
- * When a weak model dumps the full reply into stage 1, Thinking is cleared and
- * that text becomes `content`. That is intentional platform repair — not a UI
- * bug — so the user still gets the answer instead of an essay trapped under Thinking.
+ * When a weak model dumps the full reply into stage 1, the deep loop keeps
+ * short synthesized notes in Thinking and places the dump (or stage-2 rewrite)
+ * in the response — so the product still feels intentional.
  */
 export function reconcileTwoStageThinking(
   thinkingNotes: string,
   answerRaw: string,
+  options?: { answerDraft?: string },
 ): { thinkingText: string; content: string } {
   const thinking = cleanThinkingText(thinkingNotes);
+  const draft = cleanThinkingText(options?.answerDraft ?? "");
   let content = extractUserFacingAnswer(answerRaw);
   content = stripNotesEchoFromAnswer(content, thinking);
+  if (draft) {
+    content = stripNotesEchoFromAnswer(content, draft);
+  }
+
+  const preferDraft =
+    Boolean(draft) &&
+    (!content ||
+      (looksLikeFinalAnswer(draft) &&
+        !looksLikeFinalAnswer(content) &&
+        isThinRelativeToThinking(content, draft)));
+
+  if (preferDraft) {
+    return {
+      thinkingText: isValidThinkingNotes(thinking)
+        ? thinking
+        : synthesizePlanningNotesFromDump(draft),
+      content: draft,
+    };
+  }
 
   // No answer channel → promote whatever stage 1 produced; clear Thinking.
   if (!content && thinking) {
@@ -309,6 +437,16 @@ export function buildChatMessagesForThinkingStage(params: {
   const { history, userContent, stage, priorReasoning } = params;
 
   if (stage === "thinking") {
+    // priorReasoning on the thinking stage = repair loop: draft was not notes.
+    const repairDraft = cleanThinkingText(priorReasoning ?? "");
+    if (repairDraft) {
+      return [
+        ...history,
+        { role: "user", content: userContent },
+        { role: "assistant", content: repairDraft },
+        { role: "user", content: getStage1RepairUserPrompt() },
+      ];
+    }
     return [...history, { role: "user", content: userContent }];
   }
 

@@ -13,14 +13,19 @@ import {
 } from "../fixtures/thinking-content";
 import {
   buildChatMessagesForThinkingStage,
+  buildStage2PriorReasoning,
   cleanAssistantContent,
   cleanThinkingText,
+  finalizeStage1Attempts,
   normalizeAssistantMessageContent,
   isSubstantiveThinkingContent,
+  isValidThinkingNotes,
   mergeThinkingAndAnswerForHistory,
   parseLegacyThinkingContent,
   looksLikeFinalAnswer,
   reconcileTwoStageThinking,
+  shouldRetryThinkingNotes,
+  synthesizePlanningNotesFromDump,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
   THINKING_NOTES_ROLE,
@@ -227,6 +232,107 @@ describe("reconcileTwoStageThinking", () => {
     expect(result.thinkingText).toBe("");
     expect(result.content).toContain("What is Artificial Intelligence?");
     expect(result.content).not.toBe("Want me to go deeper on any section?");
+  });
+
+  it("keeps synthesized notes when answerDraft is preferred over a thin coda", () => {
+    const dump = [
+      "## What is AI?",
+      "",
+      "Artificial intelligence is the field of building systems that learn from data,",
+      "reason about problems, and perceive their environment with modern machine learning.",
+      "",
+      "### Examples",
+      "",
+      "- Healthcare imaging",
+      "- Fraud detection",
+      "",
+      "This dump is long enough to count as the early full reply.",
+    ].join("\n");
+    const notes = synthesizePlanningNotesFromDump(dump);
+    const result = reconcileTwoStageThinking(notes, "Want more detail?", {
+      answerDraft: dump,
+    });
+    expect(result.thinkingText.length).toBeGreaterThan(8);
+    expect(result.content).toContain("What is AI?");
+  });
+});
+
+describe("stage1 deep loop", () => {
+  it("retries until notes are valid", () => {
+    expect(
+      shouldRetryThinkingNotes(
+        [
+          "## Long essay title",
+          "",
+          "Paragraph one with enough substance to look like a finished answer for the user.",
+          "",
+          "### Section",
+          "",
+          "Paragraph two continues the essay so the validator rejects it as notes.",
+        ].join("\n"),
+      ),
+    ).toBe(true);
+    expect(
+      isValidThinkingNotes(
+        "The user asked what AI is. Cover a plain definition and everyday examples.",
+      ),
+    ).toBe(true);
+  });
+
+  it("finalizes dumps into short notes + answerDraft", () => {
+    const dump = [
+      "## Quantum Computing",
+      "",
+      "Quantum computers encode information in qubits that can exist in superposition.",
+      "That property lets certain algorithms explore many possibilities at once.",
+      "Practical uses today are still early, but research continues in chemistry.",
+    ].join("\n");
+    const result = finalizeStage1Attempts([dump]);
+    expect(result.answerDraft).toContain("Quantum Computing");
+    expect(result.notes.length).toBeGreaterThan(8);
+    expect(result.notes).not.toContain("###");
+    expect(isValidThinkingNotes(result.notes)).toBe(true);
+  });
+
+  it("prefers a repaired valid attempt over earlier dumps", () => {
+    const dump = [
+      "## Essay",
+      "",
+      "A long explanation with enough substance to count as a final reply for the user.",
+      "",
+      "### More",
+      "",
+      "Machine learning and deep learning power most modern systems in production today.",
+    ].join("\n");
+    const notes =
+      "The user asked for an overview. Cover definition, examples, and one caveat.";
+    const result = finalizeStage1Attempts([dump, notes]);
+    expect(result.notes).toBe(notes);
+    expect(result.answerDraft).toBe("");
+  });
+
+  it("builds repair messages when priorReasoning is set on thinking stage", () => {
+    const msgs = buildChatMessagesForThinkingStage({
+      history: [],
+      userContent: "what is ai",
+      stage: "thinking",
+      priorReasoning: "## Dump\n\nFull essay body that should not be notes.",
+    });
+    expect(msgs).toHaveLength(3);
+    expect(msgs[1]?.role).toBe("assistant");
+    expect(msgs[2]?.content).toContain("planning notes only");
+  });
+
+  it("packs draft into stage-2 prior for rewrite", () => {
+    const draft = [
+      "## Draft essay about AI systems",
+      "",
+      "Artificial intelligence covers learning, reasoning, and perception in software systems.",
+      "This draft is long enough that stage 2 should treat it as material to rewrite.",
+    ].join("\n");
+    const prior = buildStage2PriorReasoning("Cover a plain definition.", draft);
+    expect(prior).toContain("Cover a plain definition");
+    expect(prior).toContain("Draft to improve");
   });
 });
 

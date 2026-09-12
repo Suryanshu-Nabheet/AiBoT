@@ -28,9 +28,13 @@ import {
 } from "@/lib/chat/attachments";
 import {
   buildChatMessagesForThinkingStage,
+  buildStage2PriorReasoning,
   cleanThinkingText,
+  finalizeStage1Attempts,
+  MAX_THINKING_NOTE_RETRIES,
   reconcileTwoStageThinking,
   sanitizeAssistantStreamField,
+  shouldRetryThinkingNotes,
   thinkingPanelPreview,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
@@ -509,41 +513,74 @@ export function useChatSession({
         priorReasoning?: string,
       ) => Promise<Response>,
     ) => {
-      const res1 = await requestStage("thinking");
-      if (!res1.ok) {
-        const errorText = await res1.text();
-        pushAgentHttpError(res1.status, errorText);
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-        return;
+      const applyThinkingPreview = (text: string) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? {
+                  ...m,
+                  thinkingText: text,
+                  content: "",
+                  isThinkingRequested: true,
+                }
+              : m,
+          ),
+        );
+      };
+
+      const streamThinkingAttempt = async (
+        priorForRepair?: string,
+      ): Promise<string | null> => {
+        const res = await requestStage("thinking", priorForRepair);
+        if (!res.ok) {
+          if (!priorForRepair) {
+            const errorText = await res.text();
+            pushAgentHttpError(res.status, errorText);
+            setMessages((prev) => prev.filter((m) => m.id !== tempId));
+          }
+          return null;
+        }
+        const raw = await processStream(res, true, isOllama, {
+          finalize: false,
+          tempId,
+          streamField: "thinkingText",
+        });
+        return cleanThinkingText(raw);
+      };
+
+      const attempts: string[] = [];
+      const first = await streamThinkingAttempt();
+      if (first === null) return;
+      attempts.push(first);
+      applyThinkingPreview(thinkingPanelPreview(first));
+
+      let current = first;
+      let repairs = 0;
+      while (
+        shouldRetryThinkingNotes(current) &&
+        repairs < MAX_THINKING_NOTE_RETRIES
+      ) {
+        applyThinkingPreview("");
+        const repaired = await streamThinkingAttempt(current);
+        if (repaired === null) break;
+        attempts.push(repaired);
+        current = repaired;
+        repairs += 1;
+        applyThinkingPreview(thinkingPanelPreview(current));
       }
 
-      const stage1Raw = await processStream(res1, true, isOllama, {
-        finalize: false,
-        tempId,
-        streamField: "thinkingText",
-      });
-      const thinkingInner = cleanThinkingText(stage1Raw);
-      // Hide answer dumps from the Thinking panel while stage 2 runs.
-      const thinkingPreview = thinkingPanelPreview(thinkingInner);
+      const stage1 = finalizeStage1Attempts(attempts);
+      applyThinkingPreview(stage1.notes);
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === tempId
-            ? {
-                ...m,
-                thinkingText: thinkingPreview,
-                content: "",
-                isThinkingRequested: true,
-              }
-            : m,
-        ),
+      const stage2Prior = buildStage2PriorReasoning(
+        stage1.notes,
+        stage1.answerDraft,
       );
-
-      const res2 = await requestStage("final", thinkingInner);
+      const res2 = await requestStage("final", stage2Prior);
       if (!res2.ok) {
-        // Stage 1 may already hold the reply (small models). Promote it
-        // instead of leaving the essay trapped under the Thinking panel.
-        const fallback = reconcileTwoStageThinking(thinkingInner, "");
+        const fallback = reconcileTwoStageThinking(stage1.notes, "", {
+          answerDraft: stage1.answerDraft,
+        });
         if (fallback.content.trim()) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -575,7 +612,9 @@ export function useChatSession({
         allowEmptyContent: true,
       });
 
-      const reconciled = reconcileTwoStageThinking(thinkingInner, stage2Raw);
+      const reconciled = reconcileTwoStageThinking(stage1.notes, stage2Raw, {
+        answerDraft: stage1.answerDraft,
+      });
 
       setMessages((prev) => {
         const updatedMessages = prev.map((m) => {
