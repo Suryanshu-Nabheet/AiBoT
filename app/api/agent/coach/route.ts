@@ -6,6 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import {
+  COACH_VOICE_ROLE,
+  composeSystemPromptWithIdentity,
+} from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { coachRequestSchema } from "@/lib/server/request-schemas";
@@ -13,31 +17,6 @@ import { coachRequestSchema } from "@/lib/server/request-schemas";
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const SITE_NAME = "AiBoT";
-
-const UNIVERSAL_SYSTEM_PROMPT = `You are an Expert AI Voice Conversation Partner.
-You are chatting with a user via VOICE. They cannot see your text. You must speak naturally without visual formatting or unconventional syntax.
-
-## CORE RULES
-1. **NO MARKDOWN**: Never use bold, italics, code blocks, headers, or bullet points.
-2. **NO LISTS**: Do not use "Step 1, Step 2". Instead, maintain a natural conversational flow using transition words like "First", "then", and "finally".
-3. **NO VISUAL REFERENCES**: Do not use phrases like "As you can see below" or "Here is a list".
-4. **NATURAL PUNCTUATION**: Use standard commas and periods to create natural pauses during speech synthesis.
-
-## PERSONA
-- **Professional and Engaging**: Maintain a highly competent yet accessible tone.
-- **Adaptive**:
-  - Casual Chat: Function as a supportive and knowledgeable peer.
-  - Deep Discussion: Provide thorough academic or technical insights.
-  - Professional Mock Interview: Assume the role of a rigorous interviewer.
-  - Debate: Present objective counter-arguments respectfully.
-
-## NATURAL SPEECH OPTIMIZATION
-- Use standard contractions (e.g., "I'm", "can't") to improve speech cadence.
-- Prioritize concise responses (1-3 sentences) unless the context requires detailed explanation.
-- Address any linguistic nuances subtly without breaking the conversation flow.
-
-CONTEXT:
-Adapt immediately to user intent. Maintain a seamless conversational flow without meta-commentary on the selected mode.`;
 
 export async function POST(req: NextRequest) {
   const blocked = protectApiRequest(req, {
@@ -63,17 +42,14 @@ export async function POST(req: NextRequest) {
       );
     const { messages } = parsed.data;
 
-    // Try each model in fallback chain
     let lastError = null;
 
     for (const model of MODELS) {
       try {
-        console.log(`Coach: Trying model ${model.id} for universal mode...`);
-
-        const providerTitle = model.id.includes("/")
-          ? model.id.split("/")[0].toUpperCase()
-          : "AI";
-        const identityPrompt = `You are the ${model.name} model (provided by ${providerTitle}), integrated within the AiBoT platform, which was founded and developed by Suryanshu Nabheet.\n\n${UNIVERSAL_SYSTEM_PROMPT}`;
+        const systemPrompt = composeSystemPromptWithIdentity(COACH_VOICE_ROLE, {
+          id: model.id,
+          name: model.name,
+        });
 
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -88,7 +64,7 @@ export async function POST(req: NextRequest) {
             body: JSON.stringify({
               model: model.id,
               messages: [
-                { role: "system", content: identityPrompt },
+                { role: "system", content: systemPrompt },
                 ...messages,
               ],
               temperature: 0.7,
@@ -103,18 +79,13 @@ export async function POST(req: NextRequest) {
           const content = data.choices[0]?.message?.content || "";
 
           if (content) {
-            console.log(`Coach: Success with model ${model.id}`);
             return NextResponse.json({ content });
           }
         }
 
-        // If rate limited or error, try next model
         const errorText = response.bodyUsed
           ? "Empty completion"
           : await response.text();
-        console.log(
-          `Coach: Model ${model.id} failed (${response.status}), trying next...`,
-        );
         lastError = errorText;
       } catch (modelError) {
         console.error(`Coach: Error with model ${model.id}:`, modelError);
@@ -123,7 +94,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // All models failed
     console.error("Coach: All models failed. Last error:", lastError);
     return NextResponse.json(
       {

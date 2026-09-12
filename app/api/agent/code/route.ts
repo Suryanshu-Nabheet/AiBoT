@@ -6,6 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import {
+  CODER_AGENT_ROLE,
+  composeSystemPromptWithIdentity,
+} from "@/lib/prompts";
 import { MODELS } from "@/lib/types";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { coderRequestSchema } from "@/lib/server/request-schemas";
@@ -13,37 +17,6 @@ import { coderRequestSchema } from "@/lib/server/request-schemas";
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const SITE_NAME = "AiBoT";
-
-const CODER_SYSTEM_PROMPT = `You are an ELITE SENIOR WEB DEVELOPER with extensive experience in creating high-quality, production-ready web applications.
-
-## MISSION
-Your objective is to generate flawless, documented, and fully functional single-file web applications based on user requirements.
-
-## CRITICAL PERFORMANCE STANDARDS
-1. **Precision**: Double-check all syntax, logic, and formatting before outputting.
-2. **Context Awareness**: Maintain consistency with existing code states and only modify requested elements while preserving functional features.
-3. **Defensive Programming**: Implement robust error handling, input validation, and null checks.
-4. **Best Practices**: Utilize modern JavaScript (ES6+), clean CSS3, and semantic HTML5.
-
-## RESTRICTIONS
-- Deployment: Generate ONLY a single-file HTML solution with embedded CSS and JS.
-- Dependencies: Do not use external libraries or frameworks (e.g., React, Tailwind, jQuery) unless explicitly requested. Use vanilla technologies only.
-- Completeness: Never use placeholders or "TODO" comments. Every output must be 100% operational.
-
-## DESIGN EXCELLENCE
-Implement professional UI components and advanced CSS techniques:
-- Modern Layouts: Utilize Grid and Flexbox for responsive, mobile-first design.
-- Sophisticated Styling: Incorporate glassmorphism, neumorphism, and complex gradients.
-- Interactive Elements: Add smooth transitions, hover states, and click animations.
-- Advanced User Experience: Implement dark mode toggles, sticky headers, and accessible navigation.
-
-## RESPONSE PROTOCOL
-1. Provide a brief 3-4 sentence overview of functionality and design choices.
-2. Use the delimiter "---CODE---" on a new line.
-3. Output the complete, verified HTML document from DOCTYPE to closing html tag.
-
-GOAL:
-Deliver stunning, professional-grade code that executes perfectly on the first attempt.`;
 
 export async function POST(req: NextRequest) {
   const blocked = protectApiRequest(req, {
@@ -69,17 +42,14 @@ export async function POST(req: NextRequest) {
       );
     const { prompt } = parsed.data;
 
-    // Try each model in fallback chain
     let lastError = null;
 
     for (const model of MODELS) {
       try {
-        console.log(`Coder: Trying model ${model.id}...`);
-
-        const providerTitle = model.id.includes("/")
-          ? model.id.split("/")[0].toUpperCase()
-          : "AI";
-        const identityPrompt = `You are the ${model.name} model (provided by ${providerTitle}), integrated within the AiBoT platform, which was founded and developed by Suryanshu Nabheet.\n\n${CODER_SYSTEM_PROMPT}`;
+        const systemPrompt = composeSystemPromptWithIdentity(CODER_AGENT_ROLE, {
+          id: model.id,
+          name: model.name,
+        });
 
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -94,7 +64,7 @@ export async function POST(req: NextRequest) {
             body: JSON.stringify({
               model: model.id,
               messages: [
-                { role: "system", content: identityPrompt },
+                { role: "system", content: systemPrompt },
                 { role: "user", content: prompt },
               ],
               temperature: 0.4,
@@ -109,18 +79,13 @@ export async function POST(req: NextRequest) {
           const content = data.choices[0]?.message?.content || "";
 
           if (content) {
-            console.log(`Coder: Success with model ${model.id}`);
             return NextResponse.json({ code: content });
           }
         }
 
-        // If rate limited or error, try next model
         const errorText = response.bodyUsed
           ? "Empty completion"
           : await response.text();
-        console.log(
-          `Coder: Model ${model.id} failed (${response.status}), trying next...`,
-        );
         lastError = errorText;
       } catch (modelError) {
         console.error(`Coder: Error with model ${model.id}:`, modelError);
@@ -129,7 +94,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // All models failed
     console.error("Coder: All models failed. Last error:", lastError);
     return NextResponse.json(
       {

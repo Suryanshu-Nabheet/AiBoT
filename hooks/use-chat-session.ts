@@ -18,14 +18,13 @@ import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { ExecutionType } from "@/hooks/useExecution";
 import { Message, Role } from "@/lib/types";
-import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
+import { buildChatSystemPrompt } from "@/lib/prompts";
 import { mapMessagesForModelHistory } from "@/lib/chat/message-history";
 import {
   buildChatMessagesForThinkingStage,
   cleanThinkingText,
   reconcileTwoStageThinking,
   sanitizeAssistantStreamField,
-  composeSystemPromptForThinkingStage,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -37,7 +36,7 @@ import {
   playCompletionChime,
   showDesktopNotification,
 } from "@/lib/desktop-notifications";
-import { translate, localeReplyDirective, type Locale } from "@/lib/i18n";
+import { translate, type Locale } from "@/lib/i18n";
 import { resolveChatError, type ChatErrorCode } from "@/lib/chat/chat-error";
 import type { CustomKeys } from "@/lib/chat/resolve-provider";
 
@@ -629,16 +628,15 @@ export function useChatSession({
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
 
-        const baseSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}${localeReplyDirective(locale)}`;
-
         const buildOllamaPayload = (
           stage: ThinkingStage,
           priorReasoning?: string,
         ) => {
-          const systemPrompt = composeSystemPromptForThinkingStage(
-            baseSystemPrompt,
-            stage,
-          );
+          const systemPrompt = buildChatSystemPrompt({
+            modelId: model,
+            locale,
+            thinkingStage: stage,
+          });
           const chatMessages = buildChatMessagesForThinkingStage({
             history: historyForModel,
             userContent: apiContent,
@@ -681,7 +679,10 @@ export function useChatSession({
         const chatPayload = {
           model: ollamaModelName,
           messages: [
-            { role: "system", content: baseSystemPrompt },
+            {
+              role: "system",
+              content: buildChatSystemPrompt({ modelId: model, locale }),
+            },
             ...historyForModel,
             { role: "user", content: apiContent },
           ],

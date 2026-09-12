@@ -7,10 +7,9 @@
 
 import "server-only";
 
-import { AIBOT_SYSTEM_PROMPT } from "@/lib/prompts";
+import { buildChatSystemPrompt } from "@/lib/prompts";
 import {
   buildChatMessagesForThinkingStage,
-  composeSystemPromptForThinkingStage,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
 import {
@@ -22,7 +21,7 @@ import {
 import { normalizeOllamaUrl } from "@/lib/chat/ollama-url";
 import { chatErrorResponseBody } from "@/lib/chat/chat-error";
 import { inferChatKeySource } from "@/lib/chat/chat-key-context";
-import { localeReplyDirective, type Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
 
 export type ChatMessageInput = {
   role: "user" | "assistant" | "system";
@@ -65,18 +64,16 @@ export function formatMessagesForProvider(messages: ChatMessageInput[]) {
   });
 }
 
-export function buildSystemPrompt(stage?: ThinkingStage, locale?: Locale) {
-  let dynamicSystemPrompt = `You are a helpful AI assistant integrated within the AiBoT platform, developed by Suryanshu Nabheet.\n\n${AIBOT_SYSTEM_PROMPT}`;
-
-  if (locale) {
-    dynamicSystemPrompt += localeReplyDirective(locale);
-  }
-
-  if (stage === "thinking" || stage === "final") {
-    return composeSystemPromptForThinkingStage(dynamicSystemPrompt, stage);
-  }
-
-  return dynamicSystemPrompt;
+export function buildSystemPrompt(
+  modelId: string,
+  stage?: ThinkingStage,
+  locale?: Locale,
+) {
+  return buildChatSystemPrompt({
+    modelId,
+    locale,
+    thinkingStage: stage,
+  });
 }
 
 function messageTextContent(content: unknown): string {
@@ -156,7 +153,7 @@ export async function openChatUpstreamStream(
     const ollamaModelName = targetModel.replace("ollama/", "");
     const targetUrl = normalizeOllamaUrl(ollamaUrl);
     const stage = thinkingStage;
-    const dynamicSystemPrompt = buildSystemPrompt(stage, locale);
+    const dynamicSystemPrompt = buildSystemPrompt(targetModel, stage, locale);
     const optimized = formatMessagesForProvider(messages);
     const annotated = stage
       ? prepareMessagesForThinking(optimized, stage, priorReasoning)
@@ -250,7 +247,7 @@ export async function openChatUpstreamStream(
 
   const stage = thinkingStage;
   const optimizedMessages = formatMessagesForProvider(messages);
-  const dynamicSystemPrompt = buildSystemPrompt(stage, locale);
+  const dynamicSystemPrompt = buildSystemPrompt(targetModel, stage, locale);
   const annotated = stage
     ? prepareMessagesForThinking(optimizedMessages, stage, priorReasoning)
     : optimizedMessages;

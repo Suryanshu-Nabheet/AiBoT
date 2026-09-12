@@ -6,7 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import {
+  PROMPT_ENHANCE_ROLE,
+  composeSystemPromptWithIdentity,
+  resolveModelLabel,
+} from "@/lib/prompts";
 import { isLocale, localeReplyDirective } from "@/lib/i18n";
+import { MODELS } from "@/lib/types";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { enhanceRequestSchema } from "@/lib/server/request-schemas";
 
@@ -14,46 +20,7 @@ const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const SITE_NAME = "AiBoT";
 
-const PROMPT_ENGINEER_SYSTEM = `You are the OpenRouter Free model (provided by OPENROUTER), integrated within the AiBoT platform, which was founded and developed by Suryanshu Nabheet. You are an elite prompt engineering specialist with deep expertise in optimizing prompts for maximum AI effectiveness.
-
-## MISSION
-Transform user input into professionally structured, highly effective prompts that yield superior AI responses.
-
-## ANALYSIS FRAMEWORK
-1. Intent Recognition: Identify the core objective (question, task, creation, analysis, etc.)
-2. Context Extraction: Determine implied context and requirements.
-3. Optimization Strategy: Select the best enhancement approach.
-4. Quality Assurance: Ensure clarity, specificity, and actionability.
-
-## ENHANCEMENT PRINCIPLES
-
-### Clarity and Precision
-- Replace vague terms with specific, measurable criteria.
-- Add concrete examples when beneficial.
-- Define scope and boundaries clearly.
-
-### Contextual Enrichment
-- Add relevant domain context.
-- Specify technical level and audience.
-- Include format and style requirements.
-
-### Structural Optimization
-- Break complex requests into logical components.
-- Add helpful constraints (length, format, tone).
-- Specify desired output structure.
-
-### Professional Standards
-- Use clear, direct language.
-- Maintain the user's original intent.
-- Add value without unnecessary complexity.
-
-## OUTPUT REQUIREMENTS
-- Return ONLY the enhanced prompt.
-- No explanations, quotes, or meta-commentary.
-- Keep the user's voice and perspective.
-- Make it immediately actionable.
-
-Ensure your output is production-ready and optimized for the highest quality AI generation.`;
+const ENHANCE_MODEL_ID = "openrouter/free";
 
 export async function POST(req: NextRequest) {
   const blocked = protectApiRequest(req, {
@@ -81,9 +48,15 @@ export async function POST(req: NextRequest) {
     const { prompt, locale: rawLocale } = parsed.data;
     const locale = isLocale(rawLocale) ? rawLocale : undefined;
 
-    const systemPrompt = locale
-      ? `${PROMPT_ENGINEER_SYSTEM}${localeReplyDirective(locale)}`
-      : PROMPT_ENGINEER_SYSTEM;
+    const enhanceModel = MODELS.find((m) => m.id === ENHANCE_MODEL_ID);
+    const systemPrompt = composeSystemPromptWithIdentity(
+      PROMPT_ENHANCE_ROLE,
+      {
+        id: ENHANCE_MODEL_ID,
+        name: enhanceModel?.name ?? resolveModelLabel({ id: ENHANCE_MODEL_ID }),
+      },
+      locale ? [localeReplyDirective(locale)] : undefined,
+    );
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -96,7 +69,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "openrouter/free",
+          model: ENHANCE_MODEL_ID,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
