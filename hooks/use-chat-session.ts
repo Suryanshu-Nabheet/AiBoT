@@ -31,10 +31,12 @@ import {
   buildStage2PriorReasoning,
   cleanThinkingText,
   finalizeStage1Attempts,
+  MAX_THINKING_ANSWER_RETRIES,
   MAX_THINKING_NOTE_RETRIES,
   reconcileTwoStageThinking,
   sanitizeAssistantStreamField,
   shouldRetryThinkingNotes,
+  shouldRetryThinkingAnswer,
   thinkingPanelPreview,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
@@ -605,12 +607,37 @@ export function useChatSession({
         return;
       }
 
-      const stage2Raw = await processStream(res2, true, isOllama, {
+      let stage2Raw = await processStream(res2, true, isOllama, {
         finalize: false,
         tempId,
         streamField: "content",
         allowEmptyContent: true,
       });
+
+      // A model can obey the first stage but leak the protocol in stage 2.
+      // Give it one clean rewrite opportunity before reconciliation; keeping
+      // this bounded prevents retry loops and runaway provider cost.
+      let answerRepairs = 0;
+      while (
+        shouldRetryThinkingAnswer(stage2Raw) &&
+        answerRepairs < MAX_THINKING_ANSWER_RETRIES
+      ) {
+        const repairPrior = buildStage2PriorReasoning(stage1.notes, stage2Raw);
+        const repairResponse = await requestStage("final", repairPrior);
+        if (!repairResponse.ok) break;
+        stage2Raw = await processStream(
+          repairResponse,
+          true,
+          isOllama,
+          {
+            finalize: false,
+            tempId,
+            streamField: "content",
+            allowEmptyContent: true,
+          },
+        );
+        answerRepairs += 1;
+      }
 
       const reconciled = reconcileTwoStageThinking(stage1.notes, stage2Raw, {
         answerDraft: stage1.answerDraft,

@@ -9,7 +9,6 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { siteConfig } from "@/config/site";
-import { Noto_Sans_Devanagari, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import { AppFrame } from "@/components/layout/app-frame";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
@@ -27,20 +26,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const fontSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
-const fontDevanagari = Noto_Sans_Devanagari({
-  subsets: ["devanagari"],
-  variable: "--font-devanagari",
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${fontSans.variable} ${fontDevanagari.variable} ${fontSans.className} font-sans antialiased`}
+        className="font-sans antialiased"
       >
         <Providers>
           <ViewModeProvider>

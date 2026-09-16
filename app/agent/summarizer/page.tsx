@@ -31,16 +31,8 @@ import { useSettings } from "@/contexts/settings-context";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import ReactMarkdown from "react-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
-import { Geist_Mono } from "next/font/google";
 import AITextLoading from "@/components/ui/ai-text-loading";
 import { PageShell, PageScrollRegion } from "@/components/layout/page-shell";
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  preload: true,
-  display: "swap",
-});
 
 export default function AssignmentSummarizerPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -87,7 +79,6 @@ export default function AssignmentSummarizerPage() {
     isWrapped: false,
     // toggleWrap removed
     resolvedTheme: "dark",
-    geistMono,
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

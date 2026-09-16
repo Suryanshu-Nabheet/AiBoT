@@ -5,6 +5,9 @@
  * See LICENSE file for details
  */
 
+/* Attachment previews use data URLs, which next/image cannot optimize. */
+/* eslint-disable @next/next/no-img-element */
+
 "use client";
 
 import { useRef } from "react";

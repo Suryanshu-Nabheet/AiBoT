@@ -5,6 +5,9 @@
  * See LICENSE file for details
  */
 
+/* Provider icons may be dynamic external assets. */
+/* eslint-disable @next/next/no-img-element */
+
 "use client";
 
 import { cn } from "@/lib/utils";

@@ -25,6 +25,7 @@ import {
   looksLikeFinalAnswer,
   reconcileTwoStageThinking,
   shouldRetryThinkingNotes,
+  shouldRetryThinkingAnswer,
   synthesizePlanningNotesFromDump,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
@@ -333,6 +334,46 @@ describe("stage1 deep loop", () => {
     const prior = buildStage2PriorReasoning("Cover a plain definition.", draft);
     expect(prior).toContain("Cover a plain definition");
     expect(prior).toContain("Draft to improve");
+  });
+});
+
+describe("stage2 protocol boundary", () => {
+  it("rejects leaked protocol instructions for one bounded rewrite", () => {
+    expect(
+      shouldRetryThinkingAnswer(
+        "<aibot-planning-context>Private planning notes</aibot-planning-context>",
+      ),
+    ).toBe(true);
+    expect(shouldRetryThinkingAnswer("AI is a field of computer science.")).toBe(
+      false,
+    );
+  });
+
+  it("preserves draft provenance in the stage-2 context", () => {
+    const msgs = buildChatMessagesForThinkingStage({
+      history: [],
+      userContent: "Explain photosynthesis",
+      stage: "final",
+      priorReasoning: buildStage2PriorReasoning(
+        "The user asked for a clear explanation and one caveat.",
+        "## Photosynthesis\n\nPlants use light energy to make food.",
+      ),
+    });
+    expect(msgs[1]?.content).toContain("<aibot-untrusted-draft>");
+    expect(msgs[2]?.content).toContain("original user request");
+  });
+
+  it("rejects short clarification answers that escaped from planning", () => {
+    expect(
+      shouldRetryThinkingNotes(
+        "The user asked for help with an incomplete message. Could you please provide more details or clarify your question?",
+      ),
+    ).toBe(true);
+    expect(
+      shouldRetryThinkingAnswer(
+        "The user is asking for help. Intent is to understand their needs fully. Points to cover include context and relevant details.",
+      ),
+    ).toBe(true);
   });
 });
 

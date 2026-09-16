@@ -114,7 +114,7 @@ html {
 }
 
 @theme inline {
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -235,13 +235,12 @@ html {
   }
 
   .font-locale {
-    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
   }
 
   :lang(hi),
   :lang(hi) .font-locale {
-    font-family: var(--font-devanagari), var(--font-jakarta), ui-sans-serif,
-      system-ui, sans-serif;
+    font-family: "Noto Sans Devanagari", ui-sans-serif, system-ui, sans-serif;
   }
 
   .chat-welcome-line {

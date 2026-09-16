@@ -29,7 +29,6 @@ interface UseMarkdownOptions {
   isWrapped?: boolean;
   toggleWrap?: () => void;
   resolvedTheme?: string;
-  geistMono?: any;
 }
 
 export const useMarkdown = (options: UseMarkdownOptions = {}) => {
@@ -37,9 +36,6 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
     onCopy,
     copied = false,
     isWrapped = false,
-    toggleWrap,
-    resolvedTheme,
-    geistMono,
   } = options;
 
   // Preprocessing function
@@ -225,7 +221,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
         <hr className="my-6 border-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       ),
     }),
-    [onCopy, copied, isWrapped, toggleWrap, resolvedTheme, geistMono],
+    [onCopy, copied, isWrapped],
   );
 
   // Remark and rehype plugins

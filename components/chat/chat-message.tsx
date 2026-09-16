@@ -5,10 +5,12 @@
  * See LICENSE file for details
  */
 
+/* Attachment previews use data URLs, which next/image cannot optimize. */
+/* eslint-disable @next/next/no-img-element */
+
 "use client";
 
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Geist_Mono } from "next/font/google";
 import {
   CheckIcon,
   CopyIcon,
@@ -38,13 +40,6 @@ import {
 } from "@/lib/chat/thinking-mode";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  preload: true,
-  display: "swap",
-});
 
 export type ChatMessageLayout = "thread" | "arena";
 
@@ -97,7 +92,6 @@ export const ChatMessage = memo(
       copied: isCopied,
       isWrapped: false,
       resolvedTheme: "dark",
-      geistMono,
     });
 
     const isUser = message.role === Role.User;
