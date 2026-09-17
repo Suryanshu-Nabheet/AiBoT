@@ -246,7 +246,31 @@ export function shouldRetryThinkingAnswer(text: string): boolean {
   return (
     /<\/?(?:thinking|aibot-[^>]+)>|private planning notes|planning context|untrusted draft|now give your full answer|do not mention planning/i.test(
       answer,
-    ) || looksLikePlanningEcho(answer)
+    ) ||
+    /^(?:as an ai(?: chat)? assistant|i am an ai(?: chat)? assistant|my purpose is to|i am designed to|i'm designed to|i can provide assistance by)\b/i.test(
+      answer,
+    ) ||
+    /\b(?:cutting-edge language models|respond to user inquiries accurately and efficiently)\b/i.test(
+      answer,
+    ) ||
+    looksLikePlanningEcho(answer)
+  );
+}
+
+/**
+ * Very short social turns do not benefit from a multi-call planning loop.
+ * Bypassing it prevents greetings from becoming retries, refusals, or model
+ * identity dumps while preserving thinking mode for substantive requests.
+ */
+export function shouldSkipThinkingForQuery(query: string): boolean {
+  const normalized = query
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?,。！？]+$/u, "")
+    .trim();
+  if (!normalized || normalized.length > 32) return false;
+  return /^(?:hi|hello|hey|yo|hiya|good morning|good afternoon|good evening|thanks|thank you|bye|goodbye|how are you)$/i.test(
+    normalized,
   );
 }
 

@@ -13,6 +13,9 @@ const scriptSource =
     : "'self' 'unsafe-inline'";
 
 const nextConfig: NextConfig = {
+  // Allows isolated release builds while a local dev server is using .next.
+  // Deployments keep the standard .next directory unless overridden.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   experimental: {
     serverActions: {
       bodySizeLimit: "12mb",

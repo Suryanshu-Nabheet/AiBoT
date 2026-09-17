@@ -26,6 +26,7 @@ import {
   reconcileTwoStageThinking,
   shouldRetryThinkingNotes,
   shouldRetryThinkingAnswer,
+  shouldSkipThinkingForQuery,
   synthesizePlanningNotesFromDump,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
@@ -426,6 +427,22 @@ describe("stage2 protocol boundary", () => {
         "I can't share hidden chain-of-thought, but I can answer your question.",
       ),
     ).toBe(true);
+  });
+
+  it("rejects model identity dumps from the final answer channel", () => {
+    expect(
+      shouldRetryThinkingAnswer(
+        "As an AI chat assistant, I am designed to respond to user inquiries accurately and efficiently using cutting-edge language models.",
+      ),
+    ).toBe(true);
+  });
+
+  it("skips the planning loop for trivial social turns", () => {
+    expect(shouldSkipThinkingForQuery("hi")).toBe(true);
+    expect(shouldSkipThinkingForQuery("Hello!")).toBe(true);
+    expect(shouldSkipThinkingForQuery("what is reinforcement learning?")).toBe(
+      false,
+    );
   });
 });
 
