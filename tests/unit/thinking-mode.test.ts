@@ -344,9 +344,9 @@ describe("stage2 protocol boundary", () => {
         "<aibot-planning-context>Private planning notes</aibot-planning-context>",
       ),
     ).toBe(true);
-    expect(shouldRetryThinkingAnswer("AI is a field of computer science.")).toBe(
-      false,
-    );
+    expect(
+      shouldRetryThinkingAnswer("AI is a field of computer science."),
+    ).toBe(false);
   });
 
   it("preserves draft provenance in the stage-2 context", () => {

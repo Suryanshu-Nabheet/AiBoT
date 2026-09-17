@@ -32,11 +32,7 @@ interface UseMarkdownOptions {
 }
 
 export const useMarkdown = (options: UseMarkdownOptions = {}) => {
-  const {
-    onCopy,
-    copied = false,
-    isWrapped = false,
-  } = options;
+  const { onCopy, copied = false, isWrapped = false } = options;
 
   // Preprocessing function
   const preprocessMarkdown = useMemo(

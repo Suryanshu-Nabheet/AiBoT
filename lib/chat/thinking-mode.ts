@@ -243,8 +243,7 @@ export function shouldRetryThinkingAnswer(text: string): boolean {
   return (
     /<\/?(?:thinking|aibot-[^>]+)>|private planning notes|planning context|untrusted draft|now give your full answer|do not mention planning/i.test(
       answer,
-    ) ||
-    looksLikePlanningEcho(answer)
+    ) || looksLikePlanningEcho(answer)
   );
 }
 

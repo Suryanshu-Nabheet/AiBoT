@@ -625,17 +625,12 @@ export function useChatSession({
         const repairPrior = buildStage2PriorReasoning(stage1.notes, stage2Raw);
         const repairResponse = await requestStage("final", repairPrior);
         if (!repairResponse.ok) break;
-        stage2Raw = await processStream(
-          repairResponse,
-          true,
-          isOllama,
-          {
-            finalize: false,
-            tempId,
-            streamField: "content",
-            allowEmptyContent: true,
-          },
-        );
+        stage2Raw = await processStream(repairResponse, true, isOllama, {
+          finalize: false,
+          tempId,
+          streamField: "content",
+          allowEmptyContent: true,
+        });
         answerRepairs += 1;
       }
 
