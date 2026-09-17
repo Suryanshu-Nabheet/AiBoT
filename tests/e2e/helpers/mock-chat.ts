@@ -39,7 +39,7 @@ export async function mockThinkingChatStream(
 ) {
   const notes =
     options.notes ??
-    "The user asked for a concise explanation. Cover the definition, one example, and an important caveat.";
+    "I should give a concise explanation. I will cover the definition, one example, and an important caveat.";
   const answer =
     options.answer ??
     "Reinforcement learning is a way for an agent to learn by taking actions, receiving rewards, and improving its strategy over time.";

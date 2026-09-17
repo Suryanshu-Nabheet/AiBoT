@@ -25,7 +25,7 @@ describe("thinking model matrix", () => {
       expect(messages.at(-1)?.content).toContain("Explain");
       expect(
         isValidThinkingNotes(
-          "The user asked for a definition and one example.",
+          "I should give a definition and one example, then mention the main caveat.",
         ),
         model.id,
       ).toBe(true);

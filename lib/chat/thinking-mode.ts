@@ -208,6 +208,15 @@ export function isValidThinkingNotes(text: string): boolean {
   if (looksLikeFinalAnswer(notes) || looksLikeUserDirectedReply(notes)) {
     return false;
   }
+  // Concise answer prose can otherwise pass as notes. Thinking summaries
+  // must contain a first-person planning signal, not a third-person recap.
+  if (
+    !/\bI(?:'|’)?(?:ll| will| should| need to| can| plan to| want to| must)\b/i.test(
+      notes,
+    )
+  ) {
+    return false;
+  }
   // Notes must describe a plan, not impersonate the final response.
   if (/\b(?:final answer|here(?:'|’)s the answer)\b/i.test(notes)) {
     return false;
@@ -252,25 +261,10 @@ export function synthesizePlanningNotesFromDump(dump: string): string {
 
   const heading = text.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim();
   if (heading && heading.length <= 100) {
-    return `The user asked about ${heading}. Cover the key points clearly, then give practical examples.`;
+    return `I should explain ${heading} clearly, then cover practical examples and one useful caveat.`;
   }
 
-  const plain = text
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const sentences = plain.split(/(?<=[.!?])\s+/).filter(Boolean);
-  const snippet = sentences.slice(0, 2).join(" ").trim();
-  if (
-    snippet.length >= 20 &&
-    snippet.length <= 220 &&
-    !looksLikeFinalAnswer(snippet) &&
-    !looksLikeUserDirectedReply(snippet)
-  ) {
-    return `Early draft captured. Focus: ${snippet}`;
-  }
-
-  return "The model drafted a full reply early. Answering from that draft next.";
+  return "I should use the early draft as untrusted material, verify its key points, and answer the original request directly.";
 }
 
 export type Stage1LoopResult = {

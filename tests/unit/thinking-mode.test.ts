@@ -275,7 +275,7 @@ describe("stage1 deep loop", () => {
     ).toBe(true);
     expect(
       isValidThinkingNotes(
-        "The user asked what AI is. Cover a plain definition and everyday examples.",
+        "I should explain what AI is, cover a plain definition, and give everyday examples.",
       ),
     ).toBe(true);
   });
@@ -306,7 +306,7 @@ describe("stage1 deep loop", () => {
       "Machine learning and deep learning power most modern systems in production today.",
     ].join("\n");
     const notes =
-      "The user asked for an overview. Cover definition, examples, and one caveat.";
+      "I should give an overview, cover the definition and examples, and mention one caveat.";
     const result = finalizeStage1Attempts([dump, notes]);
     expect(result.notes).toBe(notes);
     expect(result.answerDraft).toBe("");
@@ -355,7 +355,7 @@ describe("stage2 protocol boundary", () => {
       userContent: "Explain photosynthesis",
       stage: "final",
       priorReasoning: buildStage2PriorReasoning(
-        "The user asked for a clear explanation and one caveat.",
+        "I should give a clear explanation and mention one caveat.",
         "## Photosynthesis\n\nPlants use light energy to make food.",
       ),
     });
@@ -370,6 +370,11 @@ describe("stage2 protocol boundary", () => {
       ),
     ).toBe(true);
     expect(
+      shouldRetryThinkingNotes(
+        "Reinforcement learning trains an agent with rewards and penalties.",
+      ),
+    ).toBe(true);
+    expect(
       shouldRetryThinkingAnswer(
         "The user is asking for help. Intent is to understand their needs fully. Points to cover include context and relevant details.",
       ),
@@ -379,12 +384,12 @@ describe("stage2 protocol boundary", () => {
   it("accepts normal planning language without entering a repair loop", () => {
     expect(
       shouldRetryThinkingNotes(
-        "The user is asking what reinforcement learning means. Explain the agent, environment, actions, and rewards, then mention one practical example.",
+        "I should explain reinforcement learning, cover the agent, environment, actions, and rewards, then mention one practical example.",
       ),
     ).toBe(false);
     expect(
       shouldRetryThinkingNotes(
-        "The user asked a question about tradeoffs. Cover both sides and explain the main caveat before answering.",
+        "I should explain the tradeoffs, cover both sides, and state the main caveat before answering.",
       ),
     ).toBe(false);
   });
@@ -395,6 +400,19 @@ describe("stage2 protocol boundary", () => {
     expect(THINKING_NOTES_ROLE).not.toContain(
       "Speak in third-person planning language",
     );
+  });
+
+  it("requires first-person planning instead of accepting concise answer prose", () => {
+    expect(
+      isValidThinkingNotes(
+        "Reinforcement learning trains an agent with rewards and penalties.",
+      ),
+    ).toBe(false);
+    expect(
+      isValidThinkingNotes(
+        "I should explain reinforcement learning with a definition and one example.",
+      ),
+    ).toBe(true);
   });
 });
 
@@ -414,8 +432,8 @@ describe("thinkingPanelPreview", () => {
 
   it("keeps real planning notes visible", () => {
     const notes =
-      "The user asked what AI is. Cover a plain definition and a few everyday examples.";
-    expect(thinkingPanelPreview(notes)).toContain("user asked");
+      "I should explain what AI is, cover a plain definition, and give everyday examples.";
+    expect(thinkingPanelPreview(notes)).toContain("I should explain");
   });
 });
 

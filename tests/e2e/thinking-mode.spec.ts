@@ -29,7 +29,7 @@ test.describe("Thinking mode", () => {
       page.getByText(/reinforcement learning is a way/i),
     ).toBeVisible({ timeout: 15_000 });
     await expect(
-      page.getByText(/the user asked for a concise explanation/i),
+      page.getByText(/i should give a concise explanation/i),
     ).toBeVisible();
     await expect(
       page.getByText(/private planning notes|aibot-planning-context/i),
