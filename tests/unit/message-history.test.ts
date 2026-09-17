@@ -16,7 +16,7 @@ describe("messageContentForModelHistory", () => {
       content: "Hello!",
       thinkingText: "Casual greeting.",
     });
-    expect(merged).toContain("Private planning notes");
+    expect(merged).toContain("High-level planning summary");
     expect(merged).toContain("Casual greeting.");
     expect(merged).toContain("Hello!");
   });

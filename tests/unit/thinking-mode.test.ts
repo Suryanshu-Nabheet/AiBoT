@@ -44,7 +44,7 @@ describe("thinking system prompt stack", () => {
     expect(prompt).toContain("Suryanshu Nabheet");
     expect(prompt).toContain("## Active model");
     expect(prompt).toContain("## Thinking");
-    expect(prompt).toContain("Private reasoning");
+    expect(prompt).toContain("high-level reasoning summary");
     expect(prompt).not.toContain("## Chat");
     expect(prompt).toContain(THINKING_NOTES_ROLE.slice(0, 20));
   });
@@ -321,7 +321,7 @@ describe("stage1 deep loop", () => {
     });
     expect(msgs).toHaveLength(3);
     expect(msgs[1]?.role).toBe("assistant");
-    expect(msgs[2]?.content).toContain("planning notes only");
+    expect(msgs[2]?.content).toContain("planning summary");
   });
 
   it("packs draft into stage-2 prior for rewrite", () => {
@@ -395,7 +395,7 @@ describe("stage2 protocol boundary", () => {
   });
 
   it("defines thinking as concise first-person internal planning", () => {
-    expect(THINKING_NOTES_ROLE).toContain("Private reasoning summary");
+    expect(THINKING_NOTES_ROLE).toContain("high-level reasoning summary");
     expect(THINKING_NOTES_ROLE).toContain("first-person planning language");
     expect(THINKING_NOTES_ROLE).not.toContain(
       "Speak in third-person planning language",
@@ -411,6 +411,19 @@ describe("stage2 protocol boundary", () => {
     expect(
       isValidThinkingNotes(
         "I should explain reinforcement learning with a definition and one example.",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects refusal boilerplate from models that misread the planning request", () => {
+    expect(
+      isValidThinkingNotes(
+        "I can’t provide private planning notes, but I can offer a brief high-level summary instead.",
+      ),
+    ).toBe(false);
+    expect(
+      shouldRetryThinkingNotes(
+        "I can't share hidden chain-of-thought, but I can answer your question.",
       ),
     ).toBe(true);
   });

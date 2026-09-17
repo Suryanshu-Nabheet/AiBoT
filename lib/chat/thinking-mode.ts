@@ -32,16 +32,16 @@ const OPEN_TAG = /<thinking>/i;
 const CLOSE_TAG = /<\/thinking>/i;
 
 const PRIVATE_NOTES_HEADER =
-  "Private planning notes — do not copy into your answer:";
+  "High-level planning summary — use as guidance, do not copy into your answer:";
 
 /**
  * Stage-1 role — stacked by buildChatSystemPrompt with platform + model identity.
  * Replaces Chat behavior so the model does not answer yet.
  */
 export const THINKING_NOTES_ROLE = `## Thinking
-Private reasoning summary only. This is internal planning: think through the task before answering; do not expose raw chain-of-thought.
+Before answering, write a brief high-level reasoning summary for the Thinking panel. This is not raw chain-of-thought: think through the task first, then summarize the intent, approach, and any caveat.
 Write 2–4 short sentences covering the user's intent, key points, approach, and any caveat.
-Use concise first-person planning language (for example: "I should explain…"). Do not greet, address the user, give the final answer, citations, or safety metadata.`;
+Use concise first-person planning language (for example: "I should explain…"). Do not greet, address the user, give the final answer, citations, safety metadata, or a refusal about discussing reasoning. Return the summary only.`;
 
 /** Stage-2 addon — Chat role stays; this closes the loop after notes. */
 export const THINKING_ANSWER_ADDON = `## Answer
@@ -208,6 +208,13 @@ export function isValidThinkingNotes(text: string): boolean {
   if (looksLikeFinalAnswer(notes) || looksLikeUserDirectedReply(notes)) {
     return false;
   }
+  if (
+    /(?:can(?:not|'t|’t)|cannot|won't|will not)\s+(?:provide|share|reveal|discuss)|(?:private|hidden|internal)\s+(?:planning|reasoning|chain[- ]of[- ]thought)|high[- ]level summary instead/i.test(
+      notes,
+    )
+  ) {
+    return false;
+  }
   // Concise answer prose can otherwise pass as notes. Thinking summaries
   // must contain a first-person planning signal, not a third-person recap.
   if (
@@ -245,9 +252,9 @@ export function shouldRetryThinkingAnswer(text: string): boolean {
 
 export function getStage1RepairUserPrompt(): string {
   return (
-    "That output was a draft answer, not planning notes. " +
-    "Rewrite as private planning notes only: 2–4 short first-person sentences " +
-    "about intent, points to cover, and approach. Do not write the final answer."
+    "That output was a draft answer, not a planning summary. " +
+    "Rewrite it as 2–4 short first-person planning sentences about intent, " +
+    "points to cover, and approach. Do not write the final answer."
   );
 }
 
