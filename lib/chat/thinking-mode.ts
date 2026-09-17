@@ -274,6 +274,27 @@ export function shouldSkipThinkingForQuery(query: string): boolean {
   );
 }
 
+/**
+ * Skip planning only for a genuinely standalone social turn. Attachments and
+ * caller-supplied instructions can carry substantive intent even when the
+ * visible caption is just "hi".
+ */
+export function shouldSkipThinkingForTurn({
+  query,
+  hasAttachments,
+  hasSystemInstruction,
+}: {
+  query: string;
+  hasAttachments: boolean;
+  hasSystemInstruction: boolean;
+}): boolean {
+  return (
+    !hasAttachments &&
+    !hasSystemInstruction &&
+    shouldSkipThinkingForQuery(query)
+  );
+}
+
 export function getStage1RepairUserPrompt(): string {
   return (
     "That output was a draft answer, not a planning summary. " +

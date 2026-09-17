@@ -35,7 +35,7 @@ import {
   MAX_THINKING_NOTE_RETRIES,
   reconcileTwoStageThinking,
   sanitizeAssistantStreamField,
-  shouldSkipThinkingForQuery,
+  shouldSkipThinkingForTurn,
   shouldRetryThinkingNotes,
   shouldRetryThinkingAnswer,
   thinkingPanelPreview,
@@ -433,7 +433,12 @@ export function useChatSession({
       return;
 
     const thinkingRequested =
-      !!isThinking && !shouldSkipThinkingForQuery(inputQuery);
+      !!isThinking &&
+      !shouldSkipThinkingForTurn({
+        query: inputQuery,
+        hasAttachments: currentAttachments.length > 0,
+        hasSystemInstruction: Boolean(systemInstruction),
+      });
     thinkingRequestedRef.current = thinkingRequested;
     requestStartedAtRef.current = Date.now();
     setShowWelcome(false);

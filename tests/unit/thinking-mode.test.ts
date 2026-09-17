@@ -27,6 +27,7 @@ import {
   shouldRetryThinkingNotes,
   shouldRetryThinkingAnswer,
   shouldSkipThinkingForQuery,
+  shouldSkipThinkingForTurn,
   synthesizePlanningNotesFromDump,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
@@ -443,6 +444,30 @@ describe("stage2 protocol boundary", () => {
     expect(shouldSkipThinkingForQuery("what is reinforcement learning?")).toBe(
       false,
     );
+  });
+
+  it("keeps planning when a social caption has an attachment or instruction", () => {
+    expect(
+      shouldSkipThinkingForTurn({
+        query: "hi",
+        hasAttachments: true,
+        hasSystemInstruction: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSkipThinkingForTurn({
+        query: "hi",
+        hasAttachments: false,
+        hasSystemInstruction: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSkipThinkingForTurn({
+        query: "hi",
+        hasAttachments: false,
+        hasSystemInstruction: false,
+      }),
+    ).toBe(true);
   });
 });
 
