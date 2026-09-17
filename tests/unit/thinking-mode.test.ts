@@ -388,6 +388,14 @@ describe("stage2 protocol boundary", () => {
       ),
     ).toBe(false);
   });
+
+  it("defines thinking as concise first-person internal planning", () => {
+    expect(THINKING_NOTES_ROLE).toContain("Private reasoning summary");
+    expect(THINKING_NOTES_ROLE).toContain("first-person planning language");
+    expect(THINKING_NOTES_ROLE).not.toContain(
+      "Speak in third-person planning language",
+    );
+  });
 });
 
 describe("thinkingPanelPreview", () => {

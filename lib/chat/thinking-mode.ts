@@ -39,9 +39,9 @@ const PRIVATE_NOTES_HEADER =
  * Replaces Chat behavior so the model does not answer yet.
  */
 export const THINKING_NOTES_ROLE = `## Thinking
-Private reasoning summary only. Do not solve the task yet or write hidden chain-of-thought.
+Private reasoning summary only. This is internal planning: think through the task before answering; do not expose raw chain-of-thought.
 Write 2–4 short sentences covering the user's intent, key points, approach, and any caveat.
-Use third-person planning language. Do not greet, ask the user a question, give conclusions, citations, or safety metadata.`;
+Use concise first-person planning language (for example: "I should explain…"). Do not greet, address the user, give the final answer, citations, or safety metadata.`;
 
 /** Stage-2 addon — Chat role stays; this closes the loop after notes. */
 export const THINKING_ANSWER_ADDON = `## Answer
@@ -237,8 +237,8 @@ export function shouldRetryThinkingAnswer(text: string): boolean {
 export function getStage1RepairUserPrompt(): string {
   return (
     "That output was a draft answer, not planning notes. " +
-    "Rewrite as private planning notes only: 3–6 short sentences on intent, " +
-    "points to cover, and approach. Do not write the final answer."
+    "Rewrite as private planning notes only: 2–4 short first-person sentences " +
+    "about intent, points to cover, and approach. Do not write the final answer."
   );
 }
 
