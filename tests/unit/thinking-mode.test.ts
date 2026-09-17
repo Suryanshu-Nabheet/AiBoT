@@ -375,6 +375,19 @@ describe("stage2 protocol boundary", () => {
       ),
     ).toBe(true);
   });
+
+  it("accepts normal planning language without entering a repair loop", () => {
+    expect(
+      shouldRetryThinkingNotes(
+        "The user is asking what reinforcement learning means. Explain the agent, environment, actions, and rewards, then mention one practical example.",
+      ),
+    ).toBe(false);
+    expect(
+      shouldRetryThinkingNotes(
+        "The user asked a question about tradeoffs. Cover both sides and explain the main caveat before answering.",
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("thinkingPanelPreview", () => {
