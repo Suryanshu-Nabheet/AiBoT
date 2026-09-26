@@ -177,7 +177,7 @@ export const ChatMessage = memo(
                 className={cn(
                   "flex max-w-full flex-col",
                   isUser ? "ml-auto items-end" : "mr-auto items-start",
-                  isUser ? "max-w-[min(100%,36rem)]" : "w-full",
+                  isUser ? "w-fit max-w-[min(100%,36rem)]" : "w-full",
                 )}
               >
                 {message.attachments && message.attachments.length > 0 && (
@@ -245,7 +245,7 @@ export const ChatMessage = memo(
                     )}
                   >
                     {isUser ? (
-                      <div className="overflow-wrap-anywhere whitespace-pre-wrap break-words text-right text-[15px] font-medium leading-relaxed">
+                      <div className="[overflow-wrap:anywhere] whitespace-pre-wrap break-words text-left text-[15px] font-medium leading-relaxed">
                         {mainResponse}
                       </div>
                     ) : isAgentError ? (

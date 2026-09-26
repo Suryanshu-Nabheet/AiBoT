@@ -46,6 +46,42 @@ test.describe("Chat layout after first message", () => {
     );
   });
 
+  test("keeps long user prompts on the right with readable left-aligned text", async ({
+    page,
+  }) => {
+    await mockChatStream(page);
+    await page.goto("/");
+
+    const prompt = Array(18)
+      .fill(
+        "Please explain how the upload flow handles a long document and keeps the conversation context readable.",
+      )
+      .join(" ");
+    await page.getByPlaceholder(/message aibot/i).fill(prompt);
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    const promptText = page.getByText(prompt, { exact: true });
+    await expect(promptText).toBeVisible();
+    await expect
+      .poll(() =>
+        promptText.evaluate((element) => getComputedStyle(element).textAlign),
+      )
+      .toBe("left");
+
+    const message = promptText.locator("..").locator("..");
+    const [messageBox, rowBox] = await Promise.all([
+      message.boundingBox(),
+      message.locator("..").boundingBox(),
+    ]);
+    expect(messageBox && rowBox).toBeTruthy();
+    if (messageBox && rowBox) {
+      expect(
+        Math.abs(rowBox.x + rowBox.width - (messageBox.x + messageBox.width)),
+      ).toBeLessThan(2);
+      expect(messageBox.width).toBeLessThanOrEqual(577);
+    }
+  });
+
   test("attaches a PDF through the browser PDF.js loader", async ({ page }) => {
     await page.goto("/");
 
