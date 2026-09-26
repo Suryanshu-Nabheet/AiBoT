@@ -60,6 +60,7 @@ export const ChatMessage = memo(
     onCopy,
     onModelSelect,
     isGenerating,
+    isDocumentRequest = false,
     layout = "thread",
     pdfFileName = "ai-response.pdf",
     pdfTitle = "AI Response",
@@ -68,6 +69,7 @@ export const ChatMessage = memo(
     onCopy: (content: string) => void;
     onModelSelect?: (modelId: string) => void;
     isGenerating?: boolean;
+    isDocumentRequest?: boolean;
     layout?: ChatMessageLayout;
     pdfFileName?: string;
     pdfTitle?: string;
@@ -176,9 +178,19 @@ export const ChatMessage = memo(
         ? liveFields.content
         : (legacyParsed?.mainResponse ??
           (isStreaming ? message.content : displayedContent));
-    const responseSegments = isUser
+    const parsedResponseSegments = isUser
       ? [{ kind: "conversation" as const, text: mainResponse }]
       : splitDocumentResponse(mainResponse);
+    const hasMarkedDocumentSegment = parsedResponseSegments.some(
+      (segment) => segment.kind === "document",
+    );
+    const responseSegments =
+      !isUser &&
+      isDocumentRequest &&
+      !hasMarkedDocumentSegment &&
+      mainResponse.trim()
+        ? [{ kind: "document" as const, text: mainResponse }]
+        : parsedResponseSegments;
     const documentSegments = responseSegments.filter(
       (segment) => segment.kind === "document",
     );

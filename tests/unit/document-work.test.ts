@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DOCUMENT_WORK_INSTRUCTION,
+  isExplicitDocumentDeliverableRequest,
   isDocumentWorkRequest,
   messageStartsDocumentWork,
   splitDocumentResponse,
@@ -24,6 +25,20 @@ describe("document work chat", () => {
       true,
     );
     expect(isDocumentWorkRequest("What time is it?")).toBe(false);
+  });
+
+  it("marks only explicit deliverable requests for the document card", () => {
+    expect(
+      isExplicitDocumentDeliverableRequest("Do research on this topic"),
+    ).toBe(true);
+    expect(
+      isExplicitDocumentDeliverableRequest(
+        "What does this attached report say?",
+      ),
+    ).toBe(false);
+    expect(
+      isExplicitDocumentDeliverableRequest("Rewrite the report with citations"),
+    ).toBe(true);
   });
 
   it("treats uploaded content as document work", () => {

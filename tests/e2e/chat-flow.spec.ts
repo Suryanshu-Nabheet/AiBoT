@@ -256,6 +256,33 @@ test.describe("Chat layout after first message", () => {
       0,
     );
   });
+
+  test("uses the document card for explicit research requests without model markers", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.route("**/api/chat", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `data: ${JSON.stringify({ choices: [{ delta: { content: "## Research brief\n\nFinding one: the sample is growing." } }] })}\n\ndata: [DONE]\n\n`,
+      });
+    });
+    await page
+      .getByPlaceholder(/message aibot/i)
+      .fill("Do research on these sample figures and make a research brief");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    const documentCard = page.locator('[data-document-response="true"]');
+    await expect(documentCard).toBeVisible({ timeout: 15_000 });
+    await expect(documentCard.getByText("Research brief")).toBeVisible();
+    await expect(
+      documentCard.getByText("Finding one: the sample is growing."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Download as PDF" }),
+    ).toBeVisible();
+  });
 });
 
 function makePdf(content: string) {

@@ -15,6 +15,7 @@ import {
 } from "@/components/chat/chat-message";
 import { Message, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { isExplicitDocumentDeliverableRequest } from "@/lib/chat/document-work";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
 
 export const ChatThread = memo(
@@ -53,43 +54,53 @@ export const ChatThread = memo(
           className,
         )}
       >
-        {messages.map((message, i) => {
-          const isLast = i === messages.length - 1;
-          const isAgentGenerating =
-            isLoading && isLast && message.role === Role.Agent;
-          const msgIsThinking = message.isThinkingRequested;
-          // Thinking mode uses ThinkingPanel on the message — avoid a second ThinkingBar here.
-          const showLoadingStatus =
-            isAgentGenerating && !msgIsThinking && Boolean(loadingStatus);
+        {(() => {
+          let latestUserRequestedDocument = false;
+          return messages.map((message, i) => {
+            const isLast = i === messages.length - 1;
+            if (message.role === Role.User) {
+              latestUserRequestedDocument =
+                isExplicitDocumentDeliverableRequest(message.content ?? "");
+            }
+            const isAgentGenerating =
+              isLoading && isLast && message.role === Role.Agent;
+            const msgIsThinking = message.isThinkingRequested;
+            // Thinking mode uses ThinkingPanel on the message — avoid a second ThinkingBar here.
+            const showLoadingStatus =
+              isAgentGenerating && !msgIsThinking && Boolean(loadingStatus);
 
-          return (
-            <React.Fragment key={message.id || i}>
-              {showLoadingStatus && (
-                <div className={cn(statusPadding, "mb-2")}>
-                  <div
-                    className={layout === "thread" ? "mx-auto max-w-4xl" : ""}
-                  >
-                    <TextShimmer
-                      className="text-sm font-medium opacity-60"
-                      duration={1.2}
+            return (
+              <React.Fragment key={message.id || i}>
+                {showLoadingStatus && (
+                  <div className={cn(statusPadding, "mb-2")}>
+                    <div
+                      className={layout === "thread" ? "mx-auto max-w-4xl" : ""}
                     >
-                      {loadingStatus}
-                    </TextShimmer>
+                      <TextShimmer
+                        className="text-sm font-medium opacity-60"
+                        duration={1.2}
+                      >
+                        {loadingStatus}
+                      </TextShimmer>
+                    </div>
                   </div>
-                </div>
-              )}
-              <ChatMessage
-                message={message}
-                onCopy={onCopy}
-                onModelSelect={onModelSelect}
-                isGenerating={isAgentGenerating}
-                layout={layout}
-                pdfFileName={pdfFileName}
-                pdfTitle={pdfTitle}
-              />
-            </React.Fragment>
-          );
-        })}
+                )}
+                <ChatMessage
+                  message={message}
+                  onCopy={onCopy}
+                  onModelSelect={onModelSelect}
+                  isGenerating={isAgentGenerating}
+                  layout={layout}
+                  pdfFileName={pdfFileName}
+                  pdfTitle={pdfTitle}
+                  isDocumentRequest={
+                    message.role === Role.Agent && latestUserRequestedDocument
+                  }
+                />
+              </React.Fragment>
+            );
+          });
+        })()}
 
         {isLoading &&
           messages.length > 0 &&

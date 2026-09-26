@@ -81,6 +81,16 @@ Deliverable formatting:
 const DOCUMENT_INTENT =
   /\b(summary|summarize|summarise|brief|study notes?|research|research paper|paper|spreadsheet|workbook|sheet|extract|key findings|key takeaways|meeting notes?|analy[sz]e (?:this|these|the attached|the document|the file)|document review|report|memo|guide|plan)\b/i;
 
+const DELIVERABLE_ACTION =
+  /\b(create|make|write|draft|prepare|generate|produce|compile|summari[sz]e|extract|analy[sz]e|research|revise|rewrite|update|expand|shorten|turn .{0,24} into)\b/i;
+const DELIVERABLE_TYPE =
+  /\b(summary|brief|notes?|research(?: paper| report)?|paper|spreadsheet|workbook|sheet|report|memo|guide|plan|analysis|key findings|key takeaways|meeting notes?)\b/i;
+
+/** True only when the latest user turn asks for a document-like deliverable. */
+export function isExplicitDocumentDeliverableRequest(content: string) {
+  return DELIVERABLE_ACTION.test(content) && DELIVERABLE_TYPE.test(content);
+}
+
 export function isDocumentWorkRequest(
   content: string,
   attachments: readonly unknown[] = [],
