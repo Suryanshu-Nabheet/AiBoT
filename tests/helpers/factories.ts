@@ -26,7 +26,7 @@ export function createAssistantMessage(
 ): Message {
   return {
     id: overrides.id ?? "msg-assistant-1",
-    role: Role.Agent,
+    role: Role.Assistant,
     content,
     ...overrides,
   };

@@ -15,7 +15,7 @@ import { Role } from "@/lib/types";
 describe("messageContentForModelHistory", () => {
   it("merges structured thinking and answer for the model", () => {
     const merged = messageContentForModelHistory({
-      role: Role.Agent,
+      role: Role.Assistant,
       content: "Hello!",
       thinkingText: "Casual greeting.",
     });
@@ -39,7 +39,7 @@ describe("messageContentForModelHistory", () => {
           },
         ],
       },
-      { role: Role.Agent, content: "The old image contains a receipt." },
+      { role: Role.Assistant, content: "The old image contains a receipt." },
       {
         role: Role.User,
         content: "Compare this one too",
@@ -93,7 +93,7 @@ describe("messageContentForModelHistory", () => {
   it("limits model history to recent messages and a bounded text context", () => {
     const history = mapMessagesForModelHistory(
       Array.from({ length: 50 }, (_, index) => ({
-        role: index % 2 ? Role.Agent : Role.User,
+        role: index % 2 ? Role.Assistant : Role.User,
         content: `message-${index} ${"x".repeat(20_000)}`,
       })),
     );

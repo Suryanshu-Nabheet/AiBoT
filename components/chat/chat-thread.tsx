@@ -62,12 +62,12 @@ export const ChatThread = memo(
               latestUserRequestedDocument =
                 isExplicitDocumentDeliverableRequest(message.content ?? "");
             }
-            const isAgentGenerating =
-              isLoading && isLast && message.role === Role.Agent;
+            const isAssistantGenerating =
+              isLoading && isLast && message.role === Role.Assistant;
             const msgIsThinking = message.isThinkingRequested;
             // Thinking mode uses ThinkingPanel on the message — avoid a second ThinkingBar here.
             const showLoadingStatus =
-              isAgentGenerating && !msgIsThinking && Boolean(loadingStatus);
+              isAssistantGenerating && !msgIsThinking && Boolean(loadingStatus);
 
             return (
               <React.Fragment key={message.id || i}>
@@ -89,12 +89,13 @@ export const ChatThread = memo(
                   message={message}
                   onCopy={onCopy}
                   onModelSelect={onModelSelect}
-                  isGenerating={isAgentGenerating}
+                  isGenerating={isAssistantGenerating}
                   layout={layout}
                   pdfFileName={pdfFileName}
                   pdfTitle={pdfTitle}
                   isDocumentRequest={
-                    message.role === Role.Agent && latestUserRequestedDocument
+                    message.role === Role.Assistant &&
+                    latestUserRequestedDocument
                   }
                 />
               </React.Fragment>

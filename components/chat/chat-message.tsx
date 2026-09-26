@@ -135,7 +135,7 @@ export const ChatMessage = memo(
     });
 
     const isUser = message.role === Role.User;
-    const isAgentError = !isUser && Boolean(message.isError);
+    const isAssistantError = !isUser && Boolean(message.isError);
     const isStreaming = Boolean(isGenerating);
     const displayedContent = useSmoothTyping(
       message.content,
@@ -221,8 +221,8 @@ export const ChatMessage = memo(
       (isSubstantiveThinkingContent(thinkingContent) ||
         (isStreaming && !mainResponse?.trim()));
     const showAnswer =
-      isAgentError || (!isUser && Boolean(mainResponse?.trim()));
-    const compactAgentContentClass =
+      isAssistantError || (!isUser && Boolean(mainResponse?.trim()));
+    const compactAssistantContentClass =
       "bg-transparent text-foreground px-0 shadow-none border-none";
 
     return (
@@ -292,7 +292,7 @@ export const ChatMessage = memo(
                           {mainResponse}
                         </div>
                       </div>
-                    ) : isAgentError ? (
+                    ) : isAssistantError ? (
                       <div className="w-full max-w-full overflow-hidden break-words py-1">
                         <ChatErrorBanner
                           body={message.content}
@@ -336,7 +336,7 @@ export const ChatMessage = memo(
                                 <div
                                   className={cn(
                                     "w-full max-w-full overflow-hidden break-words py-1.5",
-                                    compactAgentContentClass,
+                                    compactAssistantContentClass,
                                     chatMessageBodyClass,
                                   )}
                                 >
@@ -464,7 +464,7 @@ export const ChatMessage = memo(
                               <div
                                 className={cn(
                                   "w-full max-w-full overflow-hidden break-words",
-                                  compactAgentContentClass,
+                                  compactAssistantContentClass,
                                   chatMessageBodyClass,
                                   hasThinkingPanel && showAnswer
                                     ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
@@ -480,7 +480,7 @@ export const ChatMessage = memo(
                     )}
 
                     {!isUser &&
-                      !isAgentError &&
+                      !isAssistantError &&
                       showAnswer &&
                       mainResponse.trim() &&
                       !hasDocumentSegments &&

@@ -75,7 +75,7 @@ describe("document work chat", () => {
     expect(
       messageStartsDocumentWork({
         id: "assistant-1",
-        role: Role.Agent,
+        role: Role.Assistant,
         content: "Summary",
       }),
     ).toBe(false);

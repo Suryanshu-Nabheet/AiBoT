@@ -21,15 +21,15 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const SITE_NAME = "AiBoT";
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 
-export type AgentCompletionResult =
+export type VoiceCompletionResult =
   | { ok: true; content: string; model: string }
   | { ok: false; status: number; body: Record<string, unknown> };
 
 /**
- * Non-streaming completion for agent routes (coder / voice).
+ * Non-streaming completion for the Voice experience.
  * Uses the same BYOK + platform routing as chat.
  */
-export async function completeAgentChat(params: {
+export async function completeVoiceChat(params: {
   model: string;
   systemPrompt: string;
   userContent: unknown;
@@ -37,7 +37,7 @@ export async function completeAgentChat(params: {
   temperature?: number;
   maxTokens?: number;
   timeoutMs?: number;
-}): Promise<AgentCompletionResult> {
+}): Promise<VoiceCompletionResult> {
   const {
     model,
     systemPrompt,
@@ -54,7 +54,7 @@ export async function completeAgentChat(params: {
       status: 400,
       body: {
         message:
-          "Local Ollama models are available in Chat and Arena. Pick a cloud or BYOK model for this agent.",
+          "Local Ollama models are available in Chat and Arena. Pick a cloud or BYOK model for Voice.",
       },
     };
   }
@@ -203,7 +203,7 @@ export async function completeAgentChat(params: {
     }
     return { ok: true, content, model };
   } catch (error) {
-    console.error("Agent completion failed:", error);
+    console.error("Voice completion failed:", error);
     return {
       ok: false,
       status: 500,

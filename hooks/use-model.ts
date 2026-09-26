@@ -7,29 +7,35 @@
 
 import { useState, useCallback, useEffect } from "react";
 
-import { DEFAULT_AGENT_MODEL } from "@/lib/chat/agent-models";
-
 interface UseModelOptions {
   initialModel?: string;
   storageKey?: string;
+  legacyStorageKey?: string;
   persistToLocalStorage?: boolean;
 }
 
 export function useModel({
-  initialModel = DEFAULT_AGENT_MODEL,
+  initialModel = "openrouter/free",
   storageKey = "preferredModel",
+  legacyStorageKey,
   persistToLocalStorage = true,
 }: UseModelOptions = {}) {
   const [modelId, setModelId] = useState<string>(initialModel);
 
   useEffect(() => {
     if (persistToLocalStorage && typeof window !== "undefined") {
-      const stored = localStorage.getItem(storageKey);
+      const stored =
+        localStorage.getItem(storageKey) ??
+        (legacyStorageKey ? localStorage.getItem(legacyStorageKey) : null);
       if (stored && stored.trim().length > 0) {
         setModelId(stored);
+        if (legacyStorageKey && !localStorage.getItem(storageKey)) {
+          localStorage.setItem(storageKey, stored);
+          localStorage.removeItem(legacyStorageKey);
+        }
       }
     }
-  }, [persistToLocalStorage, storageKey]);
+  }, [legacyStorageKey, persistToLocalStorage, storageKey]);
 
   useEffect(() => {
     if (!persistToLocalStorage || typeof window === "undefined") return;

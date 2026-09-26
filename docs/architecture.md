@@ -1,17 +1,17 @@
 # System Architecture
 
-This document provides a technical overview of the AiBoT platform architecture, detailing the frontend, backend, and specialized agent layers.
+This document provides a technical overview of the AiBoT platform architecture, detailing its frontend, backend, and independent product features.
 
 ## System Overview
 
-AiBoT is built as a modern web application using the Next.js 15 framework. The regular chat interface handles conversational and document work; specialized agents handle coding and voice conversations.
+AiBoT is built as a modern web application using the Next.js 15 framework. Chat, document work, and Voice are independent experiences supported by shared model routing and provider services.
 
 ```mermaid
 graph TB
     subgraph Client_Layer [Client Layer]
         A[React 19 Frontend]
         B[Zustand State Management]
-        C[XTerm.js / Preview Iframe]
+        C[Voice and Chat Interfaces]
     end
 
     subgraph Application_Layer [Application Layer]
@@ -21,8 +21,8 @@ graph TB
     end
 
     subgraph Service_Layer [Service Layer]
-        G[Chat Agent Service]
-        H[Coder Agent Service]
+        G[Chat Service]
+        H[Voice Service]
     end
 
     subgraph Integration_Layer [Integration_Layer]
@@ -36,8 +36,8 @@ graph TB
     D --> E
     E --> F
     F --> G
-    F --> H
     G --> J
+    F --> H
     H --> J
     A --> L
 ```
@@ -66,25 +66,25 @@ The backend consists of serverless-ready API routes hosted within the Next.js en
 
 ### API Layer
 
-- **Standardized Endpoints**: Located in `app/api/`, these endpoints handle requests from the frontend agents.
+- **Standardized Endpoints**: Located in `app/api/`, these endpoints handle requests from each frontend experience.
 - **Streaming Responses**: Implements Server-Sent Events (SSE) to provide real-time AI responses, reducing perceived latency.
 - **Input Validation**: Uses Zod for schema validation on all incoming requests.
 
 ### AI Integration
 
 - **OpenRouter Gateway**: A unified interface to communicate with multiple Large Language Model (LLM) providers.
-- **System Prompt Engineering**: Dynamic prompt generation based on the selected model and agent type to optimize response quality.
+- **System Prompt Engineering**: Dynamic prompt generation based on the selected model and active experience.
 - **Model-Specific Handling**: Includes logic to manage differences in model capabilities, such as system role support and multimodal input formats.
 
-## Agent Architecture
+## Product Services
 
-### Chat Agent
+### Chat
 
 Handles general-purpose conversations. It features model-switching capabilities and supports vision-based interactions by processing image attachments.
 
-### Coder Agent
+### Voice
 
-Designed for rapid web prototyping. It generates complete HTML/CSS/JS code blocks and provides a live preview environment using an isolated iframe.
+Provides spoken input and audio responses through the configured model provider at `/api/voice`.
 
 ### Document Work in Chat
 

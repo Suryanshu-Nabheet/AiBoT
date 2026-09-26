@@ -26,11 +26,11 @@ export {
   type ModelRef,
 } from "@/lib/prompts/identity";
 
-export { VOICE_AGENT_ROLE, CODER_AGENT_ROLE } from "@/lib/prompts/agents";
+export { VOICE_SYSTEM_PROMPT } from "@/lib/prompts/voice";
 
 /**
- * Shared stack for every chat/agent call:
- * Platform → Active model → Role (chat / thinking notes / agent) → optional addons → locale
+ * Shared stack for chat and Voice requests:
+ * Platform → Active model → Role → optional addons → locale
  */
 
 /** AiBoT platform — attribution belongs here, not on the model identity line. */
@@ -81,8 +81,8 @@ export function buildChatSystemPrompt(options: {
   );
 }
 
-/** Agents use the same platform + model + role stacking as chat. */
-export function composeAgentSystemPrompt(
+/** Voice uses the same platform + model + role stacking as chat. */
+export function composeVoiceSystemPrompt(
   rolePrompt: string,
   model: ModelRef,
   extraBlocks?: string[],

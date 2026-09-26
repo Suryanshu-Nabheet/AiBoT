@@ -6,12 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { VOICE_AGENT_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
+import { VOICE_SYSTEM_PROMPT, composeVoiceSystemPrompt } from "@/lib/prompts";
 import {
   buildMultimodalUserContent,
   normalizeLegacyAttachment,
 } from "@/lib/chat/attachments";
-import { completeAgentChat } from "@/lib/server/agent-completion";
+import { completeVoiceChat } from "@/lib/server/voice-completion";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { voiceRequestSchema } from "@/lib/server/request-schemas";
 
@@ -61,12 +61,12 @@ export async function POST(req: NextRequest) {
 
     const userContent = buildMultimodalUserContent(promptText, normalized);
 
-    const systemPrompt = composeAgentSystemPrompt(VOICE_AGENT_ROLE, {
+    const systemPrompt = composeVoiceSystemPrompt(VOICE_SYSTEM_PROMPT, {
       id: model,
       name: model,
     });
 
-    const result = await completeAgentChat({
+    const result = await completeVoiceChat({
       model,
       systemPrompt,
       userContent,

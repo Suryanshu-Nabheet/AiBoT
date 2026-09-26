@@ -59,7 +59,7 @@ import { translate, type Locale } from "@/lib/i18n";
 import { resolveChatError, type ChatErrorCode } from "@/lib/chat/chat-error";
 import type { CustomKeys } from "@/lib/chat/resolve-provider";
 
-function agentErrorFields(
+function assistantErrorFields(
   locale: Locale,
   status: number,
   modelId: string,
@@ -207,7 +207,7 @@ export function useChatSession({
         ...prev,
         {
           id: tempId,
-          role: Role.Agent,
+          role: Role.Assistant,
           content: "",
           isThinkingRequested,
         },
@@ -293,7 +293,7 @@ export function useChatSession({
             streamField === "content" &&
             !options?.allowEmptyContent
           ) {
-            const err = agentErrorFields(
+            const err = assistantErrorFields(
               locale,
               0,
               model,
@@ -348,7 +348,7 @@ export function useChatSession({
         return partial;
       }
       console.error("Stream error", e);
-      const streamErr = agentErrorFields(
+      const streamErr = assistantErrorFields(
         locale,
         0,
         model,
@@ -376,7 +376,7 @@ export function useChatSession({
           ...prev,
           {
             id: `error-stream-${Date.now()}`,
-            role: Role.Agent,
+            role: Role.Assistant,
             content: streamErr.content,
             errorTitle: streamErr.errorTitle,
             errorType: streamErr.errorType,
@@ -504,16 +504,22 @@ export function useChatSession({
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
-    const newAgentMessageId = () =>
+    const newAssistantMessageId = () =>
       `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-    const pushAgentHttpError = (status: number, errorText: string) => {
-      const err = agentErrorFields(locale, status, model, apiKeys, errorText);
+    const pushAssistantHttpError = (status: number, errorText: string) => {
+      const err = assistantErrorFields(
+        locale,
+        status,
+        model,
+        apiKeys,
+        errorText,
+      );
       setMessages((prev) => [
         ...prev,
         {
           id: `error-${Date.now()}`,
-          role: Role.Agent,
+          role: Role.Assistant,
           content: err.content,
           errorTitle: err.errorTitle,
           errorType: err.errorType,
@@ -555,7 +561,7 @@ export function useChatSession({
           const updatedMessages = prev.map((m) => {
             if (m.id !== tempId) return m;
             if (!reconciled.content.trim()) {
-              const err = agentErrorFields(
+              const err = assistantErrorFields(
                 locale,
                 0,
                 model,
@@ -630,7 +636,7 @@ export function useChatSession({
         if (!res.ok) {
           if (!priorForRepair) {
             const errorText = await res.text();
-            pushAgentHttpError(res.status, errorText);
+            pushAssistantHttpError(res.status, errorText);
             setMessages((prev) => prev.filter((m) => m.id !== tempId));
           }
           return null;
@@ -681,7 +687,7 @@ export function useChatSession({
           return;
         }
         const errorText = await res2.text();
-        pushAgentHttpError(res2.status, errorText);
+        pushAssistantHttpError(res2.status, errorText);
         setIsLoading(false);
         return;
       }
@@ -775,12 +781,12 @@ export function useChatSession({
         };
 
         if (thinkingRequested) {
-          const tempId = newAgentMessageId();
+          const tempId = newAssistantMessageId();
           setMessages((prev) => [
             ...prev,
             {
               id: tempId,
-              role: Role.Agent,
+              role: Role.Assistant,
               content: "",
               isThinkingRequested: true,
             },
@@ -830,7 +836,7 @@ export function useChatSession({
 
         if (!res.ok) {
           const errorText = await res.text();
-          const err = agentErrorFields(
+          const err = assistantErrorFields(
             locale,
             res.status,
             model,
@@ -842,7 +848,7 @@ export function useChatSession({
             ...prev,
             {
               id: `error-${Date.now()}`,
-              role: Role.Agent,
+              role: Role.Assistant,
               content: err.content,
               errorTitle: err.errorTitle,
               errorType: err.errorType,
@@ -858,7 +864,7 @@ export function useChatSession({
       }
 
       if (thinkingRequested) {
-        const tempId = newAgentMessageId();
+        const tempId = newAssistantMessageId();
         const apiHistory = [
           ...historyForModel,
           { role: "user", content: apiContent },
@@ -868,7 +874,7 @@ export function useChatSession({
           ...prev,
           {
             id: tempId,
-            role: Role.Agent,
+            role: Role.Assistant,
             content: "",
             isThinkingRequested: true,
           },
@@ -912,7 +918,7 @@ export function useChatSession({
 
       if (!res.ok) {
         const errorText = await res.text();
-        const err = agentErrorFields(
+        const err = assistantErrorFields(
           locale,
           res.status,
           model,
@@ -923,7 +929,7 @@ export function useChatSession({
           ...prev,
           {
             id: `error-${Date.now()}`,
-            role: Role.Agent,
+            role: Role.Assistant,
             content: err.content,
             errorTitle: err.errorTitle,
             errorType: err.errorType,
@@ -939,7 +945,7 @@ export function useChatSession({
       const isAbort = error instanceof Error && error.name === "AbortError";
       if (!isAbort) {
         const message = error instanceof Error ? error.message : String(error);
-        const err = agentErrorFields(
+        const err = assistantErrorFields(
           locale,
           0,
           model,
@@ -951,7 +957,7 @@ export function useChatSession({
           ...prev,
           {
             id: `error-fetch-${Date.now()}`,
-            role: Role.Agent,
+            role: Role.Assistant,
             content: err.content,
             errorTitle: err.errorTitle,
             errorType: err.errorType,

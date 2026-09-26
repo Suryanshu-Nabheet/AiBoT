@@ -21,13 +21,13 @@ import { AIVoiceInput } from "@/components/ui/ai-voice-input";
 import AITextLoading from "@/components/ui/ai-text-loading";
 import AIVoiceOutput from "@/components/ui/ai-voice-output";
 import { PageShell } from "@/components/layout/page-shell";
-import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
+import { VOICE_MODEL_STORAGE_KEY } from "@/lib/voice/model";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { useTranslation } from "@/hooks/use-translation";
 
-export default function VoiceAgentPage() {
+export default function VoicePage() {
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -36,7 +36,8 @@ export default function VoiceAgentPage() {
   const { t } = useTranslation();
   const { apiKeys } = useSettings();
   const { modelId } = useModel({
-    storageKey: AGENT_MODEL_STORAGE.voice,
+    storageKey: VOICE_MODEL_STORAGE_KEY,
+    legacyStorageKey: "agent-voice-model",
   });
 
   // Session Storage Persistence
@@ -52,7 +53,7 @@ export default function VoiceAgentPage() {
           (message) =>
             message &&
             typeof message === "object" &&
-            (message.role === Role.User || message.role === Role.Agent) &&
+            (message.role === Role.User || message.role === Role.Assistant) &&
             typeof message.content === "string",
         )
       ) {
@@ -155,7 +156,7 @@ export default function VoiceAgentPage() {
 
     try {
       const conversation = [...messages, userMsg].slice(-30);
-      const res = await fetch("/api/agent/voice", {
+      const res = await fetch("/api/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -187,7 +188,7 @@ export default function VoiceAgentPage() {
 
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
-        role: Role.Agent,
+        role: Role.Assistant,
         content: aiResponse,
       };
 
@@ -250,8 +251,7 @@ export default function VoiceAgentPage() {
           <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             <SpeakerHigh className="size-6 text-blue-600" weight="bold" />
             <span>
-              Ai{" "}
-              <span className="text-blue-600">{t("models.agents.voice")}</span>
+              Ai <span className="text-blue-600">{t("models.voice")}</span>
             </span>
           </h1>
         </div>
@@ -264,8 +264,8 @@ export default function VoiceAgentPage() {
               showTranscript ? "bg-blue-100 text-blue-600" : "hover:bg-muted",
             )}
             onClick={() => setShowTranscript(!showTranscript)}
-            title={t("agent.voice.toggleTranscript")}
-            aria-label={t("agent.voice.toggleTranscript")}
+            title={t("voice.toggleTranscript")}
+            aria-label={t("voice.toggleTranscript")}
           >
             <TextT className="size-5" />
           </Button>
@@ -341,7 +341,7 @@ export default function VoiceAgentPage() {
           >
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-semibold text-lg text-foreground">
-                {t("agent.voice.transcript")}
+                {t("voice.transcript")}
               </h3>
               <Button
                 variant="ghost"

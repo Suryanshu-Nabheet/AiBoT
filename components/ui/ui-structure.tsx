@@ -40,7 +40,6 @@ import { Execution } from "@/hooks/useExecution";
 import {
   Trash as TrashIcon,
   PencilSimple,
-  TerminalWindow,
   SpeakerHigh,
   Plus,
   DotsThreeVertical,
@@ -102,7 +101,7 @@ export const UIStructure = () => {
         <SidebarGroup className="p-0">
           <SidebarHeader className="border-b border-sidebar-border/50 px-4 pb-4 pt-0">
             <div className="flex w-full flex-col items-center gap-4">
-              <div className="relative top-1 flex w-full items-center justify-center">
+              <div className="relative top-2 flex w-full items-center justify-center">
                 <button
                   type="button"
                   aria-label="AiBoT home"
@@ -145,29 +144,15 @@ export const UIStructure = () => {
                   variant="ghost"
                   className={cn(
                     "h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    pathname?.startsWith("/agent/coder") &&
+                    pathname?.startsWith("/voice") &&
                       "bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
                   )}
-                  onClick={() => router.push("/agent/coder")}
-                >
-                  <span className="flex size-5 shrink-0 items-center justify-center">
-                    <TerminalWindow className="size-4" weight="regular" />
-                  </span>
-                  {t("nav.agent.coder")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    pathname?.startsWith("/agent/voice") &&
-                      "bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
-                  )}
-                  onClick={() => router.push("/agent/voice")}
+                  onClick={() => router.push("/voice")}
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center">
                     <SpeakerHigh className="size-4" weight="regular" />
                   </span>
-                  {t("nav.agent.voice")}
+                  {t("nav.voice")}
                 </Button>
               </div>
             </div>

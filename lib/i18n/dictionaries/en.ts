@@ -48,13 +48,11 @@ export const en = {
   "models.subtitle": "Enable or disable models to clean up your chat selector.",
   "models.platform": "AiBoT Platform Models",
   "models.platformOptimized": "Platform Optimized",
-  "models.agents": "Agents",
-  "models.agents.desc":
-    "Default model for Coder and Voice. Uses the same BYOK keys as chat.",
-  "models.agents.coder": "Coder",
-  "models.agents.coder.desc": "Website generation agent",
-  "models.agents.voice": "Voice",
-  "models.agents.voice.desc": "Voice conversation agent",
+  "models.voiceMode": "Voice mode",
+  "models.voiceMode.desc":
+    "Default model for Voice mode. Uses the same BYOK keys as chat.",
+  "models.voice": "Voice",
+  "models.voice.desc": "Voice conversation model",
   "models.external": "External Provider Models",
   "models.externalDesc": "Models unlocked via your custom API configurations.",
   "models.ecosystem": "Ecosystem",
@@ -119,18 +117,18 @@ export const en = {
   "about.edition": "Community Core",
   "about.developer": "The Developer",
   "about.developer.bio":
-    "A visionary software architect and AI engineer focused on pushing the boundaries of autonomous coding and high-performance intelligent systems.",
+    "A software architect and AI engineer focused on building accessible AI systems and high-performance intelligent tools.",
   "about.stack": "Technical Stack",
   "about.foundation": "Architectural Foundation",
   "about.feature.orchestration.title": "Intelligent Model Orchestration",
   "about.feature.orchestration.desc":
     "State-of-the-art routing engine that dynamically switches between frontier LLMs based on task complexity and performance metrics.",
-  "about.feature.coding.title": "Autonomous Coding Environment",
-  "about.feature.coding.desc":
-    "Real-time web prototyping and functional application generation from natural language, powered by specialized reasoning models and a custom execution context.",
   "about.feature.research.title": "Research-Grade Document Intelligence",
   "about.feature.research.desc":
     "Deep synthesis and multi-format data extraction capable of processing massive datasets for comprehensive, cross-referenced research insights.",
+  "about.feature.voice.title": "Voice Conversations",
+  "about.feature.voice.desc":
+    "Speak naturally with AI and hear responses aloud, using the same models and provider settings as chat.",
 
   // Notifications
   "notify.complete.title": "AiBoT finished responding",
@@ -141,10 +139,8 @@ export const en = {
   // Nav / sidebar
   "nav.search.placeholder": "Search chats...",
   "nav.newChat": "New Chat",
-  "nav.agentMode": "Agent Mode",
   "nav.recentChats": "Recent",
-  "nav.agent.coder": "Coder",
-  "nav.agent.voice": "Voice",
+  "nav.voice": "Voice",
   "nav.madeBy": "Made by Suryanshu Nabheet",
   "nav.toggleSidebar": "Toggle Sidebar",
   "nav.chatDeleted": "Chat deleted",
@@ -299,27 +295,11 @@ export const en = {
   "voice.aria.start": "Start voice input",
   "voice.aria.stop": "Stop voice input",
 
-  // Agents — coder
-  "agent.coder.title": "AI Coder",
-  "agent.coder.placeholder":
-    "Describe the app or component you want to build...",
-  "agent.coder.tab.code": "Code",
-  "agent.coder.tab.preview": "Preview",
-  "agent.coder.edit": "Edit",
-  "agent.coder.save": "Save",
-  "agent.coder.export": "Export",
-  "agent.coder.reset": "Reset",
-  "agent.coder.disclaimer":
-    "Generated code runs in your browser preview. Review before shipping.",
-
-  // Agents — voice
-  "agent.voice.transcript": "Transcript",
-  "agent.voice.toggleTranscript": "Toggle transcript",
+  // Voice
+  "voice.transcript": "Transcript",
+  "voice.toggleTranscript": "Toggle transcript",
 
   // Overlay
-  "overlay.coder.creating": "AI is Creating",
-  "overlay.coder.cancel": "Cancel Generation",
-
   // 404
   "notFound.title": "Lost in the digital void",
   "notFound.body": "This page does not exist or has been moved.",

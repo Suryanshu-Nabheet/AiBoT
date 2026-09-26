@@ -7,7 +7,7 @@
 
 /**
  * Shared full-height page layout for App Router views inside AppFrame.
- * Keeps flex + overflow behavior consistent across chat, agents, and settings.
+ * Keeps flex and overflow behavior consistent across chat, Voice, and settings.
  */
 
 import { cn } from "@/lib/utils";
@@ -31,7 +31,7 @@ export function PageShell({
   );
 }
 
-/** Scrollable main column (messages, settings content, agent forms). */
+/** Scrollable main column (messages, settings content, and feature forms). */
 export function PageScrollRegion({
   children,
   className,

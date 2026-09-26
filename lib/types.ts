@@ -226,6 +226,6 @@ export type Message = {
 export type Messages = Message[];
 
 export enum Role {
-  Agent = "assistant",
+  Assistant = "assistant",
   User = "user",
 }

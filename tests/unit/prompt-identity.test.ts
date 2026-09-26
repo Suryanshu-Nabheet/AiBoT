@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   AIBOT_PLATFORM_CONTEXT,
   buildChatSystemPrompt,
-  composeAgentSystemPrompt,
+  composeVoiceSystemPrompt,
 } from "@/lib/prompts";
 import {
   composeSystemPromptWithIdentity,
@@ -67,9 +67,9 @@ describe("buildChatSystemPrompt", () => {
   });
 });
 
-describe("composeAgentSystemPrompt", () => {
-  it("includes AiBoT platform block for agents", () => {
-    const prompt = composeAgentSystemPrompt("## Agent\nDo work.", {
+describe("composeVoiceSystemPrompt", () => {
+  it("includes AiBoT platform block for Voice", () => {
+    const prompt = composeVoiceSystemPrompt("## Voice\nSpeak naturally.", {
       id: "openrouter/auto",
       name: "OpenRouter Auto",
     });

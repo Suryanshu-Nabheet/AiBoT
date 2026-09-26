@@ -1,6 +1,6 @@
 # API Reference
 
-This document details the internal API endpoints utilized by the AiBoT platform for agent orchestration and data processing.
+This document details the internal API endpoints used for chat, Voice, and document processing.
 
 ## Base URL
 
@@ -8,7 +8,7 @@ All internal API requests are relative to the application's root URL (e.g., `htt
 
 ## Endpoints
 
-### 1. Chat Completion
+### Chat Completion
 
 **Endpoint:** `/api/chat`  
 **Method:** `POST`  
@@ -29,30 +29,23 @@ Chat requests may include extracted document text and image content as user mess
 **Response:**
 Returns a `text/event-stream` containing the AI's response chunks.
 
----
+### Voice Conversation
 
-### 2. Coder Agent
-
-**Endpoint:** `/api/agent/code`  
-**Method:** `POST`  
-**Description:** Generates complete HTML/CSS/JS code based on a description or a modification request.
+**Endpoint:** `/api/voice`<br />
+**Method:** `POST`<br />
+**Description:** Sends a Voice conversation history to the selected model and returns a spoken-response transcript.
 
 **Request Body:**
 
 ```json
 {
-  "prompt": "Create a landing page for a coffee shop..."
+  "messages": [{ "role": "user", "content": "Hello" }],
+  "model": "openrouter/free"
 }
 ```
 
 **Response:**
-Returns a JSON object containing the generated code and an optional explanation.
-
-```json
-{
-  "code": "---CODE---\n<!DOCTYPE html>..."
-}
-```
+Returns a JSON object containing the response `content` and selected `model`.
 
 ---
 

@@ -1,10 +1,10 @@
 # Platform Features
 
-AiBoT is an enterprise-grade AI orchestration platform featuring specialized agents for varied workflows.
+AiBoT is a multi-model AI assistant for conversations, voice interaction, and document work.
 
-## Conversational AI (Chat Agent)
+## Conversational AI
 
-The Chat Agent provides a unified interface for interacting with frontier Large Language Models.
+Chat provides a unified interface for interacting with frontier Large Language Models.
 
 ### Capabilities
 
@@ -13,19 +13,6 @@ The Chat Agent provides a unified interface for interacting with frontier Large 
 - **Context Management**: Handles long-context conversations with automatic summarization logic.
 - **Optimized Rendering**: Uses a smooth typing animation for real-time streaming output.
 - **Thinking mode**: Optional deep reasoning — extra time to process, analyze, and structure the answer before replying.
-
----
-
-## Automated Web Development (Coder Agent)
-
-The Coder Agent is a specialized environment for rapid web application prototyping.
-
-### Capabilities
-
-- **Direct Code Generation**: Generates complete, functional HTML, CSS, and JavaScript from natural language descriptions.
-- **Live Preview**: Features an integrated development environment with a real-time preview iframe.
-- **Intelligent Refinement**: Modify existing code by describing changes; the agent preserves existing logic while implementing updates.
-- **Zero-Dependency Export**: Generates standalone code that requires no external frameworks or build steps.
 
 ---
 
@@ -54,4 +41,4 @@ Upload material into a regular conversation and ask for the output you need. The
 
 - **Streaming Architecture**: Minimal time-to-first-token using Server-Sent Events.
 - **Dynamic Imports**: Optimized bundle sizes for faster initial page loads.
-- **Session Persistence**: Automated saving of conversations and agent states to local and session storage.
+- **Session Persistence**: Automated saving of conversations and Voice session state to local and session storage.

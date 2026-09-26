@@ -21,23 +21,23 @@ test.describe("Sidebar layout", () => {
     await expect(page.getByText("Recent", { exact: true })).toBeVisible();
 
     const newChat = page.getByRole("button", { name: "New Chat" });
-    const agentMode = page.getByRole("button", { name: "Agent Mode" });
-    const [newChatBox, agentModeBox] = await Promise.all([
+    const voice = page.getByRole("button", { name: "Voice" });
+    const [newChatBox, voiceBox] = await Promise.all([
       newChat.boundingBox(),
-      agentMode.boundingBox(),
+      voice.boundingBox(),
     ]);
-    const [newChatIconBox, agentModeIconBox] = await Promise.all([
+    const [newChatIconBox, voiceIconBox] = await Promise.all([
       newChat.locator("span").first().boundingBox(),
-      agentMode.locator("span").first().boundingBox(),
+      voice.locator("span").first().boundingBox(),
     ]);
 
-    expect(newChatBox && agentModeBox).toBeTruthy();
-    expect(newChatIconBox && agentModeIconBox).toBeTruthy();
-    if (newChatBox && agentModeBox && newChatIconBox && agentModeIconBox) {
-      expect(newChatBox.x).toBe(agentModeBox.x);
-      expect(newChatBox.width).toBe(agentModeBox.width);
-      expect(newChatBox.height).toBe(agentModeBox.height);
-      expect(newChatIconBox.x).toBe(agentModeIconBox.x);
+    expect(newChatBox && voiceBox).toBeTruthy();
+    expect(newChatIconBox && voiceIconBox).toBeTruthy();
+    if (newChatBox && voiceBox && newChatIconBox && voiceIconBox) {
+      expect(newChatBox.x).toBe(voiceBox.x);
+      expect(newChatBox.width).toBe(voiceBox.width);
+      expect(newChatBox.height).toBe(voiceBox.height);
+      expect(newChatIconBox.x).toBe(voiceIconBox.x);
     }
   });
 });

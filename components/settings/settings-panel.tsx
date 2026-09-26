@@ -24,7 +24,6 @@ import {
   Bell,
   Globe,
   ShieldCheck,
-  ArrowSquareOut,
   HardDrives,
   WarningCircle,
   Copy,
@@ -55,7 +54,7 @@ import {
   settingsControlClass,
 } from "@/components/settings/settings-ui";
 import { ModelSelector } from "@/components/ui/model-selector";
-import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
+import { VOICE_MODEL_STORAGE_KEY } from "@/lib/voice/model";
 
 export type { SettingsSection };
 
@@ -442,28 +441,18 @@ export function SettingsPanel({
 
               <section>
                 <SettingsSectionLabel>
-                  {t("models.agents")}
+                  {t("models.voiceMode")}
                 </SettingsSectionLabel>
                 <p className="-mt-1 mb-3 px-0.5 text-[12px] text-muted-foreground">
-                  {t("models.agents.desc")}
+                  {t("models.voiceMode.desc")}
                 </p>
                 <SettingsCard>
                   <SettingsRow
-                    label={t("models.agents.coder")}
-                    description={t("models.agents.coder.desc")}
+                    label={t("models.voice")}
+                    description={t("models.voice.desc")}
                   >
                     <ModelSelector
-                      modelStorageKey={AGENT_MODEL_STORAGE.coder}
-                      triggerVariant="compact"
-                      triggerClassName="h-8 max-w-[11rem]"
-                    />
-                  </SettingsRow>
-                  <SettingsRow
-                    label={t("models.agents.voice")}
-                    description={t("models.agents.voice.desc")}
-                  >
-                    <ModelSelector
-                      modelStorageKey={AGENT_MODEL_STORAGE.voice}
+                      modelStorageKey={VOICE_MODEL_STORAGE_KEY}
                       triggerVariant="compact"
                       triggerClassName="h-8 max-w-[11rem]"
                     />
@@ -944,14 +933,14 @@ export function SettingsPanel({
                   icon: ShieldCheck,
                 },
                 {
-                  title: t("about.feature.coding.title"),
-                  desc: t("about.feature.coding.desc"),
-                  icon: ArrowSquareOut,
-                },
-                {
                   title: t("about.feature.research.title"),
                   desc: t("about.feature.research.desc"),
                   icon: Info,
+                },
+                {
+                  title: t("about.feature.voice.title"),
+                  desc: t("about.feature.voice.desc"),
+                  icon: SpeakerHigh,
                 },
               ].map((item) => (
                 <SettingsRow

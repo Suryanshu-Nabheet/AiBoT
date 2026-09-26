@@ -26,7 +26,7 @@ const MAX_MODEL_HISTORY_IMAGE_CHARS = 1_800_000;
 export function messageContentForModelHistory(
   message: Message,
 ): string | OpenAIContentPart[] {
-  if (message.role !== Role.Agent) {
+  if (message.role !== Role.Assistant) {
     const attachments = (message.attachments ?? []).map((a) =>
       normalizeLegacyAttachment(a),
     ) as ChatAttachment[];

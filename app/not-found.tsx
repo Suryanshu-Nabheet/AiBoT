@@ -41,7 +41,7 @@ export default function NotFound() {
           </p>
         </div>
 
-        {/* Action Buttons - matching agent mode style */}
+        {/* Action buttons use the app's shared button styles. */}
         <div className="mt-8 flex flex-col gap-3 w-full sm:flex-row sm:justify-center">
           <Button
             asChild

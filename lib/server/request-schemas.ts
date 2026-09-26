@@ -57,7 +57,7 @@ export const chatRequestSchema = z.object({
   customKeys: customKeysSchema,
 });
 
-const agentAttachmentSchema = z.object({
+const voiceAttachmentSchema = z.object({
   name: z.string().trim().min(1).max(255),
   type: z.string().trim().min(1).max(120),
   kind: z.enum(["image", "document", "text", "video_frame"]),
@@ -65,7 +65,7 @@ const agentAttachmentSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
-const agentModelFields = {
+const voiceModelFields = {
   model: z.string().trim().min(1).max(200).default("openrouter/free"),
   customKeys: customKeysSchema,
 };
@@ -86,14 +86,8 @@ export const voiceRequestSchema = z.object({
     .refine((messages) => messages.some((message) => message.role === "user"), {
       message: "At least one user message is required",
     }),
-  attachments: z.array(agentAttachmentSchema).max(8).optional(),
-  ...agentModelFields,
-});
-
-export const coderRequestSchema = z.object({
-  prompt: z.string().trim().min(1).max(20_000),
-  attachments: z.array(agentAttachmentSchema).max(8).optional(),
-  ...agentModelFields,
+  attachments: z.array(voiceAttachmentSchema).max(8).optional(),
+  ...voiceModelFields,
 });
 
 export const keyVerificationSchema = z.object({

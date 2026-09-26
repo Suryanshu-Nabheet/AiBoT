@@ -108,7 +108,7 @@ Closes #123
 ```
 AiBoT/
 ├── app/                    # Next.js app directory
-│   ├── agent/             # Agent-specific routes
+│   ├── voice/             # Voice experience
 │   ├── chat/              # Chat routes
 │   ├── api/               # API routes
 │   ├── layout.tsx         # Root layout

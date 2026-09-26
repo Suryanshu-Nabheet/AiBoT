@@ -11,9 +11,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-**Multi-Agent AI Platform with Real-Time Code Generation and Document Intelligence**
+**Multi-Model AI Assistant for Conversations, Voice, and Document Intelligence**
 
-Unified interface for over 20 Large Language Models, integrated development environments, and research-grade document analysis.
+Unified interface for over 20 Large Language Models, multimodal conversations, voice interaction, and document analysis.
 
 [Architecture](docs/architecture.md) • [Quick Start](docs/setup.md) • [Features](docs/features.md) • [API Reference](docs/api-reference.md) • [Deployment](docs/deployment.md)
 
@@ -23,17 +23,17 @@ Unified interface for over 20 Large Language Models, integrated development envi
 
 ## Architecture Overview
 
-AiBoT combines streaming chat, document analysis, and specialized coding and voice conversation workflows in one interface.
+AiBoT combines streaming chat, document analysis, and voice conversations in one interface.
 
 ```mermaid
 graph TB
     A[Client Layer] --> B[Next.js 15 App Router]
-    B --> C[Chat Agent]
-    B --> D[Coder Agent]
-    B --> E[Document Processing]
+    B --> C[Chat]
+    B --> D[Document Processing]
+    B --> E[Voice]
     C --> F[OpenRouter API Gateway]
-    D --> G[Code Execution Sandbox]
-    E --> C
+    D --> C
+    E --> F
     F --> I[20+ LLM Providers]
 ```
 
@@ -53,12 +53,6 @@ graph TB
 - **Intelligent Routing**: Automated failover and model selection across multiple frontier LLM providers.
 - **Streaming Response**: High-throughput message delivery using the SSE protocol.
 - **Multimodal Support**: Integrated vision capabilities for image analysis and optical character recognition.
-
-### Coder Agent
-
-- **Automated Web Prototyping**: Generates complete, functional web applications from natural language descriptions.
-- **Integrated Preview**: Live execution environment for immediate feedback on generated code.
-- **Refinement Pipeline**: Context-aware code modification and bug fixing capabilities.
 
 ### Document Work in Chat
 
