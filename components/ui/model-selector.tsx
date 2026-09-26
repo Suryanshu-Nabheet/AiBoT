@@ -45,6 +45,8 @@ interface ModelSelectorProps {
   onThinkingChange?: (enabled: boolean) => void;
   showModelList?: boolean;
   triggerVariant?: "default" | "compact";
+  /** Keep compact composer controls readable on narrow screens. */
+  iconOnlyOnMobile?: boolean;
   /** Register ⌘/ (Ctrl+/) to open this picker (only one per screen). */
   enablePickerShortcut?: boolean;
 }
@@ -145,6 +147,7 @@ export function ModelSelector({
   onThinkingChange,
   showModelList = true,
   triggerVariant = "default",
+  iconOnlyOnMobile = false,
   enablePickerShortcut = false,
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -239,10 +242,17 @@ export function ModelSelector({
               triggerVariant === "compact"
                 ? "max-w-[min(62vw,14rem)] shrink-0 justify-start sm:max-w-[12rem]"
                 : "w-fit max-w-none shrink-0 justify-start",
+              iconOnlyOnMobile &&
+                "w-11 max-w-11 justify-center gap-0 px-1 sm:w-fit sm:max-w-[12rem] sm:justify-start sm:gap-1.5 sm:px-2",
               triggerClassName,
             )}
           >
-            <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+            <span
+              className={cn(
+                "flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden",
+                iconOnlyOnMobile && "flex-none sm:flex-1",
+              )}
+            >
               {showModelList && selectedModelObj && (
                 <BrandIcon
                   src={selectedModelObj.logo || "/icons/ai.svg"}
@@ -254,6 +264,7 @@ export function ModelSelector({
                 <span
                   className={cn(
                     "min-w-0 truncate text-left text-sm font-medium",
+                    iconOnlyOnMobile && "hidden sm:inline",
                     thinkingEnabled
                       ? thinkingAccentTextClass
                       : "text-foreground",

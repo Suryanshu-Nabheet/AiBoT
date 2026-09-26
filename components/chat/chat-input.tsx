@@ -347,6 +347,7 @@ export function ChatInput({
                     onThinkingChange={onThinkingChange}
                     showModelList={showModelSelector}
                     triggerVariant="compact"
+                    iconOnlyOnMobile
                     enablePickerShortcut={Boolean(showComposerModel)}
                     triggerClassName={
                       compactComposer ? "h-8 sm:h-9" : undefined
@@ -370,6 +371,7 @@ export function ChatInput({
                     onThinkingChange={onThinkingChange}
                     showModelList={showModelSelector}
                     triggerVariant="compact"
+                    iconOnlyOnMobile
                     enablePickerShortcut={Boolean(showComposerModel)}
                     triggerClassName="h-8 sm:h-9"
                   />
