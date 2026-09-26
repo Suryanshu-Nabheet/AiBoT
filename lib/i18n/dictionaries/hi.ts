@@ -134,6 +134,13 @@ export const hi = {
   "nav.chatDeleted": "चैट हटाई गई",
   "nav.editChat": "चैट का नाम बदलें",
   "nav.deleteChat": "चैट हटाएँ",
+  "nav.chatOptions": "चैट विकल्प",
+  "nav.confirmDeleteTitle": "चैट हटाएँ?",
+  "nav.confirmDeleteDescription":
+    "इससे {chatTitle} स्थायी रूप से हट जाएगी। इसे वापस नहीं किया जा सकता।",
+  "nav.renameDialogDescription": "{chatTitle} के लिए नया नाम चुनें।",
+  "nav.cancel": "रद्द करें",
+  "nav.save": "सहेजें",
   "nav.titleUpdated": "शीर्षक अपडेट हुआ",
   "header.settings": "सेटिंग्स",
   "header.architecture": "आर्किटेक्चर",

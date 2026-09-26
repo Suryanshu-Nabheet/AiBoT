@@ -19,23 +19,31 @@ import {
   SidebarFooter,
   Sidebar,
 } from "@/components/ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { Execution } from "@/hooks/useExecution";
 import {
   Trash as TrashIcon,
   PencilSimple,
-  Code,
   TerminalWindow,
-  CaretDown,
   SpeakerHigh,
   Plus,
+  DotsThreeVertical,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -48,11 +56,14 @@ export const UIStructure = () => {
   const { t } = useTranslation();
   const { executions, loading, removeExecution, updateExecution } =
     useExecutionContext();
-  const [hoverChatId, setHoverChatId] = useState("");
-  const [editingId, setEditingId] = useState("");
+  const [openChatMenuId, setOpenChatMenuId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [isAgentModeOpen, setIsAgentModeOpen] = useState(false);
-
+  const [executionToRename, setExecutionToRename] = useState<Execution | null>(
+    null,
+  );
+  const [executionToDelete, setExecutionToDelete] = useState<Execution | null>(
+    null,
+  );
   const router = useRouter();
 
   const pathname = usePathname();
@@ -68,10 +79,19 @@ export const UIStructure = () => {
     toast.success(t("nav.chatDeleted"));
   };
 
-  const handleSaveTitle = (id: string) => {
-    updateExecution(id, { title: editTitle });
-    setEditingId("");
+  const handleSaveTitle = () => {
+    if (!executionToRename) return;
+    const title = editTitle.trim();
+    if (!title) return;
+    updateExecution(executionToRename.id, { title });
+    setExecutionToRename(null);
     toast.success(t("nav.titleUpdated"));
+  };
+
+  const confirmDeleteExecution = () => {
+    if (!executionToDelete) return;
+    handleDeleteExecution(executionToDelete.id);
+    setExecutionToDelete(null);
   };
 
   const { setViewMode } = useViewMode();
@@ -81,8 +101,8 @@ export const UIStructure = () => {
       <SidebarContent className="w-full">
         <SidebarGroup className="p-0">
           <SidebarHeader className="border-b border-sidebar-border/50 px-4 pb-4 pt-0">
-            <div className="flex w-full flex-col items-center gap-5">
-              <div className="relative top-2 flex w-full items-center justify-center">
+            <div className="flex w-full flex-col items-center gap-4">
+              <div className="relative top-1 flex w-full items-center justify-center">
                 <button
                   type="button"
                   aria-label="AiBoT home"
@@ -101,7 +121,7 @@ export const UIStructure = () => {
                   </h1>
                 </button>
               </div>
-              <div className="flex w-full flex-col gap-2">
+              <div className="flex w-full flex-col gap-1.5">
                 <Button
                   variant="ghost"
                   onClick={(e) => {
@@ -113,7 +133,7 @@ export const UIStructure = () => {
                       window.location.href = "/";
                     }
                   }}
-                  className="h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-medium tracking-tight text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground"
+                  className="h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center">
                     <Plus className="size-4 text-foreground" weight="regular" />
@@ -121,82 +141,34 @@ export const UIStructure = () => {
                   {t("nav.newChat")}
                 </Button>
 
-                <div className="w-full">
-                  <Collapsible
-                    open={isAgentModeOpen}
-                    onOpenChange={setIsAgentModeOpen}
-                    className="w-full"
-                  >
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        className={cn(
-                          "h-10 w-full justify-between rounded-lg border border-transparent bg-transparent px-3 text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                          isAgentModeOpen &&
-                            "border-sidebar-border/50 bg-sidebar-accent/80 font-medium text-foreground",
-                        )}
-                        variant="ghost"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="flex size-5 shrink-0 items-center justify-center">
-                            <Code
-                              className={cn(
-                                "size-5 transition-colors",
-                                isAgentModeOpen
-                                  ? "text-primary"
-                                  : "text-foreground",
-                              )}
-                              weight="bold"
-                            />
-                          </span>
-                          <span className="font-medium tracking-tight text-foreground">
-                            {t("nav.agentMode")}
-                          </span>
-                        </div>
-                        <CaretDown
-                          className={cn(
-                            "size-3.5 text-foreground/80 transition-transform duration-300",
-                            isAgentModeOpen ? "rotate-180 text-foreground" : "",
-                          )}
-                          weight="bold"
-                        />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="mt-2 flex flex-col gap-1 px-1">
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "h-9 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                            pathname?.startsWith("/agent/coder") &&
-                              "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
-                          )}
-                          onClick={() => router.push("/agent/coder")}
-                        >
-                          <TerminalWindow
-                            className="size-4 text-foreground"
-                            weight="regular"
-                          />
-                          {t("nav.agent.coder")}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "h-9 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                            pathname?.startsWith("/agent/coach") &&
-                              "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
-                          )}
-                          onClick={() => router.push("/agent/coach")}
-                        >
-                          <SpeakerHigh
-                            className="size-4 text-foreground"
-                            weight="regular"
-                          />
-                          {t("nav.agent.coach")}
-                        </Button>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                    pathname?.startsWith("/agent/coder") &&
+                      "bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
+                  )}
+                  onClick={() => router.push("/agent/coder")}
+                >
+                  <span className="flex size-5 shrink-0 items-center justify-center">
+                    <TerminalWindow className="size-4" weight="regular" />
+                  </span>
+                  {t("nav.agent.coder")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                    pathname?.startsWith("/agent/coach") &&
+                      "bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
+                  )}
+                  onClick={() => router.push("/agent/coach")}
+                >
+                  <span className="flex size-5 shrink-0 items-center justify-center">
+                    <SpeakerHigh className="size-4" weight="regular" />
+                  </span>
+                  {t("nav.agent.coach")}
+                </Button>
               </div>
             </div>
           </SidebarHeader>
@@ -204,26 +176,28 @@ export const UIStructure = () => {
             <SidebarGroupLabel className="h-8 px-3 text-xs font-semibold text-sidebar-foreground/70">
               {t("nav.recentChats")}
             </SidebarGroupLabel>
-            <SidebarMenu className="w-full gap-2 p-0">
+            <SidebarMenu className="w-full gap-1 p-0">
               {loading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <div
                       key={i}
-                      className="h-11 w-full animate-pulse rounded-lg bg-muted"
+                      className="h-10 w-full animate-pulse rounded-lg bg-muted"
                     />
                   ))
                 : [...new Map(executions.map((e) => [e.id, e])).values()].map(
                     (execution: Execution) => (
-                      <SidebarMenuItem key={execution.id}>
+                      <SidebarMenuItem
+                        key={execution.id}
+                        className="group/chat relative"
+                      >
                         <SidebarMenuButton
                           className={cn(
-                            "group relative h-8 w-full rounded-lg px-3 py-1 text-left text-sm transition-colors duration-200",
-                            execution.id === currentConversationId
+                            "relative h-10 w-full rounded-lg px-3 py-1 pr-10 text-left text-sm transition-colors duration-200",
+                            execution.id === currentConversationId ||
+                              execution.id === openChatMenuId
                               ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                               : "hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
                           )}
-                          onMouseEnter={() => setHoverChatId(execution.id)}
-                          onMouseLeave={() => setHoverChatId("")}
                           onClick={() => {
                             if (execution.mode) {
                               setViewMode(execution.mode);
@@ -231,100 +205,65 @@ export const UIStructure = () => {
                             router.push(`/chat/${execution.id}`);
                           }}
                         >
-                          <div className="flex w-full items-center justify-between overflow-hidden">
-                            {editingId === execution.id ? (
-                              <input
-                                type="text"
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                onBlur={() => handleSaveTitle(execution.id)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    handleSaveTitle(execution.id);
-                                  } else if (e.key === "Escape") {
-                                    setEditingId("");
-                                  }
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                autoFocus
-                                className="flex-1 bg-transparent border-b border-primary outline-none pr-6"
-                              />
-                            ) : (
-                              <span className="w-full truncate pr-12">
-                                {execution.title}
-                              </span>
-                            )}
-
-                            {(execution.id === hoverChatId ||
-                              execution.id === currentConversationId) && (
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                {editingId !== execution.id && (
-                                  <IconTooltip
-                                    label={t("nav.editChat")}
-                                    side="top"
-                                    align="end"
-                                  >
-                                    <div
-                                      role="button"
-                                      tabIndex={0}
-                                      aria-label={t("nav.editChat")}
-                                      className="flex cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-muted"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingId(execution.id);
-                                        setEditTitle(execution.title);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (
-                                          e.key === "Enter" ||
-                                          e.key === " "
-                                        ) {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setEditingId(execution.id);
-                                          setEditTitle(execution.title);
-                                        }
-                                      }}
-                                    >
-                                      <PencilSimple
-                                        weight="bold"
-                                        className="size-3.5"
-                                      />
-                                    </div>
-                                  </IconTooltip>
-                                )}
-                                <IconTooltip
-                                  label={t("nav.deleteChat")}
-                                  side="top"
-                                  align="start"
-                                >
-                                  <div
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={t("nav.deleteChat")}
-                                    className="flex cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteExecution(execution.id);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleDeleteExecution(execution.id);
-                                      }
-                                    }}
-                                  >
-                                    <TrashIcon
-                                      weight="bold"
-                                      className="size-3.5"
-                                    />
-                                  </div>
-                                </IconTooltip>
-                              </div>
-                            )}
-                          </div>
+                          <span className="w-full truncate">
+                            {execution.title}
+                          </span>
                         </SidebarMenuButton>
+                        <DropdownMenu
+                          open={openChatMenuId === execution.id}
+                          onOpenChange={(open) =>
+                            setOpenChatMenuId(open ? execution.id : null)
+                          }
+                        >
+                          <IconTooltip
+                            label={t("nav.chatOptions")}
+                            side="right"
+                            align="center"
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                aria-label={t("nav.chatOptions")}
+                                className={cn(
+                                  "absolute right-1 top-1/2 z-10 size-8 -translate-y-1/2 rounded-md bg-sidebar text-sidebar-foreground/70 shadow-none transition-opacity hover:bg-sidebar-accent hover:text-sidebar-foreground group-hover/chat:opacity-100 group-focus-within/chat:opacity-100 focus-visible:opacity-100",
+                                  openChatMenuId === execution.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              >
+                                <DotsThreeVertical
+                                  className="size-4"
+                                  weight="bold"
+                                />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </IconTooltip>
+                          <DropdownMenuContent
+                            side="bottom"
+                            align="start"
+                            sideOffset={4}
+                            className="w-56"
+                          >
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setEditTitle(execution.title);
+                                setExecutionToRename(execution);
+                              }}
+                            >
+                              <PencilSimple weight="regular" />
+                              {t("nav.editChat")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => setExecutionToDelete(execution)}
+                            >
+                              <TrashIcon weight="regular" />
+                              {t("nav.deleteChat")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </SidebarMenuItem>
                     ),
                   )}
@@ -354,6 +293,89 @@ export const UIStructure = () => {
           </p>
         </div>
       </SidebarFooter>
+      <Dialog
+        open={executionToRename !== null}
+        onOpenChange={(open) => {
+          if (!open) setExecutionToRename(null);
+        }}
+      >
+        <DialogContent className="max-w-md gap-5 border-border/80 bg-popover p-6">
+          <DialogHeader className="gap-2 text-left">
+            <DialogTitle className="text-xl">{t("nav.editChat")}</DialogTitle>
+            <DialogDescription className="text-base leading-relaxed">
+              {t("nav.renameDialogDescription", {
+                chatTitle: executionToRename?.title ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            autoFocus
+            type="text"
+            value={editTitle}
+            onChange={(event) => setEditTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && editTitle.trim()) {
+                event.preventDefault();
+                handleSaveTitle();
+              }
+            }}
+            aria-label={t("nav.editChat")}
+            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <DialogFooter className="flex-row justify-end gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setExecutionToRename(null)}
+            >
+              {t("nav.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveTitle}
+              disabled={!editTitle.trim()}
+            >
+              {t("nav.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={executionToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setExecutionToDelete(null);
+        }}
+      >
+        <DialogContent className="max-w-md gap-5 border-border/80 bg-popover p-6">
+          <DialogHeader className="gap-2 text-left">
+            <DialogTitle className="text-xl">
+              {t("nav.confirmDeleteTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-base leading-relaxed">
+              {t("nav.confirmDeleteDescription", {
+                chatTitle: executionToDelete?.title ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-end gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setExecutionToDelete(null)}
+            >
+              {t("nav.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteExecution}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("nav.deleteChat")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sidebar>
   );
 };

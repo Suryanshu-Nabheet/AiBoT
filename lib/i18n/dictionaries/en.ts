@@ -150,6 +150,13 @@ export const en = {
   "nav.chatDeleted": "Chat deleted",
   "nav.editChat": "Rename chat",
   "nav.deleteChat": "Delete chat",
+  "nav.chatOptions": "Chat options",
+  "nav.confirmDeleteTitle": "Delete chat?",
+  "nav.confirmDeleteDescription":
+    "This will permanently delete {chatTitle}. This can't be undone.",
+  "nav.renameDialogDescription": "Choose a new name for {chatTitle}.",
+  "nav.cancel": "Cancel",
+  "nav.save": "Save",
   "nav.titleUpdated": "Title updated",
 
   // Header / mode switcher
