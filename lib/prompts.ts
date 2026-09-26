@@ -26,7 +26,7 @@ export {
   type ModelRef,
 } from "@/lib/prompts/identity";
 
-export { COACH_VOICE_ROLE, CODER_AGENT_ROLE } from "@/lib/prompts/agents";
+export { VOICE_AGENT_ROLE, CODER_AGENT_ROLE } from "@/lib/prompts/agents";
 
 /**
  * Shared stack for every chat/agent call:

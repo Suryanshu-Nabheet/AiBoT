@@ -159,15 +159,15 @@ export const UIStructure = () => {
                   variant="ghost"
                   className={cn(
                     "h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    pathname?.startsWith("/agent/coach") &&
+                    pathname?.startsWith("/agent/voice") &&
                       "bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
                   )}
-                  onClick={() => router.push("/agent/coach")}
+                  onClick={() => router.push("/agent/voice")}
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center">
                     <SpeakerHigh className="size-4" weight="regular" />
                   </span>
-                  {t("nav.agent.coach")}
+                  {t("nav.agent.voice")}
                 </Button>
               </div>
             </div>

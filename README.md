@@ -23,7 +23,7 @@ Unified interface for over 20 Large Language Models, integrated development envi
 
 ## Architecture Overview
 
-AiBoT combines streaming chat, document analysis, and specialized coding and coaching workflows in one interface.
+AiBoT combines streaming chat, document analysis, and specialized coding and voice conversation workflows in one interface.
 
 ```mermaid
 graph TB

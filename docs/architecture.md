@@ -4,7 +4,7 @@ This document provides a technical overview of the AiBoT platform architecture, 
 
 ## System Overview
 
-AiBoT is built as a modern web application using the Next.js 15 framework. The regular chat interface handles conversational and document work; specialized agents handle coding and coaching workflows.
+AiBoT is built as a modern web application using the Next.js 15 framework. The regular chat interface handles conversational and document work; specialized agents handle coding and voice conversations.
 
 ```mermaid
 graph TB

@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Message, Role } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
-import "regenerator-runtime/runtime";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -26,35 +25,54 @@ import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
+import { useTranslation } from "@/hooks/use-translation";
 
-export default function CoachAgentPage() {
+export default function VoiceAgentPage() {
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [showTranscript, setShowTranscript] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const { t } = useTranslation();
   const { apiKeys } = useSettings();
   const { modelId } = useModel({
-    storageKey: AGENT_MODEL_STORAGE.coach,
+    storageKey: AGENT_MODEL_STORAGE.voice,
   });
 
   // Session Storage Persistence
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedMessages = sessionStorage.getItem("coach-messages");
-      if (savedMessages) {
-        try {
-          setMessages(JSON.parse(savedMessages));
-        } catch (e) {
-          console.error("Failed to parse saved coach messages", e);
-        }
+    try {
+      const savedMessages = window.sessionStorage.getItem("voice-messages");
+      if (!savedMessages) return;
+
+      const parsed: unknown = JSON.parse(savedMessages);
+      if (
+        Array.isArray(parsed) &&
+        parsed.every(
+          (message) =>
+            message &&
+            typeof message === "object" &&
+            (message.role === Role.User || message.role === Role.Agent) &&
+            typeof message.content === "string",
+        )
+      ) {
+        setMessages(parsed as Message[]);
+      } else {
+        window.sessionStorage.removeItem("voice-messages");
       }
+    } catch (error) {
+      // Storage may be unavailable in private browsing or restricted contexts.
+      console.warn("Could not restore saved voice messages", error);
     }
   }, []);
 
   useEffect(() => {
-    if (messages.length > 0 && typeof window !== "undefined") {
-      sessionStorage.setItem("coach-messages", JSON.stringify(messages));
+    if (messages.length === 0) return;
+    try {
+      window.sessionStorage.setItem("voice-messages", JSON.stringify(messages));
+    } catch (error) {
+      // Keep the conversation usable when browser storage is full or disabled.
+      console.warn("Could not save voice messages", error);
     }
   }, [messages]);
 
@@ -72,9 +90,13 @@ export default function CoachAgentPage() {
 
   // Initialize
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      synthRef.current = window.speechSynthesis;
-    }
+    if (typeof window === "undefined") return;
+    synthRef.current = window.speechSynthesis ?? null;
+
+    return () => {
+      void SpeechRecognition.abortListening().catch(() => {});
+      synthRef.current?.cancel();
+    };
   }, []);
 
   // Update State based on listening
@@ -119,21 +141,25 @@ export default function CoachAgentPage() {
 
   // Process User Message
   const processUserMessage = async (text: string) => {
+    const normalizedText = text.trim();
+    if (!normalizedText) return;
+
     setIsProcessing(true);
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: Role.User,
-      content: text,
+      content: normalizedText,
     };
     setMessages((prev) => [...prev, userMsg]);
 
     try {
-      const res = await fetch("/api/agent/coach", {
+      const conversation = [...messages, userMsg].slice(-30);
+      const res = await fetch("/api/agent/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMsg].map((m) => ({
+          messages: conversation.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -154,7 +180,10 @@ export default function CoachAgentPage() {
       }
 
       const data = await res.json();
-      const aiResponse = data.content;
+      if (typeof data.content !== "string" || !data.content.trim()) {
+        throw new Error("The voice service returned an empty response.");
+      }
+      const aiResponse = data.content.trim();
 
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -165,7 +194,7 @@ export default function CoachAgentPage() {
       setMessages((prev) => [...prev, aiMsg]);
       speakResponse(aiResponse);
     } catch (error) {
-      console.error("Coach error:", error);
+      console.error("Voice mode error:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to get response.",
       );
@@ -221,7 +250,8 @@ export default function CoachAgentPage() {
           <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             <SpeakerHigh className="size-6 text-blue-600" weight="bold" />
             <span>
-              Ai <span className="text-blue-600">Coach</span>
+              Ai{" "}
+              <span className="text-blue-600">{t("models.agents.voice")}</span>
             </span>
           </h1>
         </div>
@@ -234,7 +264,8 @@ export default function CoachAgentPage() {
               showTranscript ? "bg-blue-100 text-blue-600" : "hover:bg-muted",
             )}
             onClick={() => setShowTranscript(!showTranscript)}
-            title="Toggle Transcript"
+            title={t("agent.voice.toggleTranscript")}
+            aria-label={t("agent.voice.toggleTranscript")}
           >
             <TextT className="size-5" />
           </Button>
@@ -310,7 +341,7 @@ export default function CoachAgentPage() {
           >
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-semibold text-lg text-foreground">
-                Transcript
+                {t("agent.voice.transcript")}
               </h3>
               <Button
                 variant="ghost"

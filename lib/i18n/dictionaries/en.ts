@@ -50,11 +50,11 @@ export const en = {
   "models.platformOptimized": "Platform Optimized",
   "models.agents": "Agents",
   "models.agents.desc":
-    "Default model for Coder and Coach. Uses the same BYOK keys as chat.",
+    "Default model for Coder and Voice. Uses the same BYOK keys as chat.",
   "models.agents.coder": "Coder",
   "models.agents.coder.desc": "Website generation agent",
-  "models.agents.coach": "Coach",
-  "models.agents.coach.desc": "Voice coaching agent",
+  "models.agents.voice": "Voice",
+  "models.agents.voice.desc": "Voice conversation agent",
   "models.external": "External Provider Models",
   "models.externalDesc": "Models unlocked via your custom API configurations.",
   "models.ecosystem": "Ecosystem",
@@ -144,7 +144,7 @@ export const en = {
   "nav.agentMode": "Agent Mode",
   "nav.recentChats": "Recent",
   "nav.agent.coder": "Coder",
-  "nav.agent.coach": "Coach",
+  "nav.agent.voice": "Voice",
   "nav.madeBy": "Made by Suryanshu Nabheet",
   "nav.toggleSidebar": "Toggle Sidebar",
   "nav.chatDeleted": "Chat deleted",
@@ -312,10 +312,9 @@ export const en = {
   "agent.coder.disclaimer":
     "Generated code runs in your browser preview. Review before shipping.",
 
-  // Agents — coach
-  "agent.coach.title": "AI Coach",
-  "agent.coach.transcript": "Transcript",
-  "agent.coach.toggleTranscript": "Toggle transcript",
+  // Agents — voice
+  "agent.voice.transcript": "Transcript",
+  "agent.voice.toggleTranscript": "Toggle transcript",
 
   // Overlay
   "overlay.coder.creating": "AI is Creating",

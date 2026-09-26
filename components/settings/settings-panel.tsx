@@ -459,11 +459,11 @@ export function SettingsPanel({
                     />
                   </SettingsRow>
                   <SettingsRow
-                    label={t("models.agents.coach")}
-                    description={t("models.agents.coach.desc")}
+                    label={t("models.agents.voice")}
+                    description={t("models.agents.voice.desc")}
                   >
                     <ModelSelector
-                      modelStorageKey={AGENT_MODEL_STORAGE.coach}
+                      modelStorageKey={AGENT_MODEL_STORAGE.voice}
                       triggerVariant="compact"
                       triggerClassName="h-8 max-w-[11rem]"
                     />

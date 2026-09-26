@@ -8,7 +8,7 @@
 /** localStorage keys shared by agent pages + Settings. */
 export const AGENT_MODEL_STORAGE = {
   coder: "agent-coder-model",
-  coach: "agent-coach-model",
+  voice: "agent-voice-model",
 } as const;
 
 export type AgentModelSurface = keyof typeof AGENT_MODEL_STORAGE;

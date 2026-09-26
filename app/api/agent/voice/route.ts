@@ -6,28 +6,28 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { COACH_VOICE_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
+import { VOICE_AGENT_ROLE, composeAgentSystemPrompt } from "@/lib/prompts";
 import {
   buildMultimodalUserContent,
   normalizeLegacyAttachment,
 } from "@/lib/chat/attachments";
 import { completeAgentChat } from "@/lib/server/agent-completion";
 import { protectApiRequest } from "@/lib/server/request-security";
-import { coachRequestSchema } from "@/lib/server/request-schemas";
+import { voiceRequestSchema } from "@/lib/server/request-schemas";
 
 export async function POST(req: NextRequest) {
   const blocked = protectApiRequest(req, {
-    scope: "coach",
+    scope: "voice",
     limit: 15,
     windowMs: 60_000,
   });
   if (blocked) return blocked;
 
   try {
-    const parsed = coachRequestSchema.safeParse(await req.json());
+    const parsed = voiceRequestSchema.safeParse(await req.json());
     if (!parsed.success)
       return NextResponse.json(
-        { message: "Invalid coach request" },
+        { message: "Invalid voice request" },
         { status: 400 },
       );
     const { messages, attachments, model, customKeys } = parsed.data;
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const lastText =
       typeof lastUser?.content === "string"
         ? lastUser.content
-        : "Continue the coaching conversation.";
+        : "Continue the voice conversation.";
 
     const historyBlock =
       prior.length > 0
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
                 typeof m.content === "string"
                   ? m.content
                   : "[multimodal message]";
-              return `${m.role === "assistant" ? "Coach" : "User"}: ${text}`;
+              return `${m.role === "assistant" ? "Assistant" : "User"}: ${text}`;
             })
             .join("\n")
         : "";
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     const userContent = buildMultimodalUserContent(promptText, normalized);
 
-    const systemPrompt = composeAgentSystemPrompt(COACH_VOICE_ROLE, {
+    const systemPrompt = composeAgentSystemPrompt(VOICE_AGENT_ROLE, {
       id: model,
       name: model,
     });

@@ -152,6 +152,7 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const modelSearchRef = useRef<HTMLInputElement>(null);
+  const focusSearchOnOpenRef = useRef(false);
   const { t } = useTranslation();
   const { availableModels, enabledModels } = useSettings();
 
@@ -190,7 +191,8 @@ export function ModelSelector({
   }, []);
 
   useEffect(() => {
-    if (open && showModelList) {
+    if (open && showModelList && focusSearchOnOpenRef.current) {
+      focusSearchOnOpenRef.current = false;
       focusModelSearch();
     }
   }, [open, showModelList, focusModelSearch]);
@@ -202,8 +204,8 @@ export function ModelSelector({
       if (!(event.metaKey || event.ctrlKey)) return;
       if (event.key !== "/" && event.code !== "Slash") return;
       event.preventDefault();
+      focusSearchOnOpenRef.current = true;
       setOpen(true);
-      focusModelSearch();
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -293,7 +295,6 @@ export function ModelSelector({
               ref={modelSearchRef}
               placeholder={t("model.search")}
               className="h-10 border-0 border-b border-border/50 text-sm"
-              autoFocus
             />
             {showThinking && onThinkingChange && (
               <ThinkingMenuRow

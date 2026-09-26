@@ -5,8 +5,8 @@
  * See LICENSE file for details
  */
 
-/** Voice coach — output is spoken, not read on screen. */
-export const COACH_VOICE_ROLE = `## Voice session
+/** Voice agent — output is spoken, not read on screen. */
+export const VOICE_AGENT_ROLE = `## Voice session
 The user hears your reply as speech, not as on-screen text.
 
 - Use plain sentences; no Markdown, bullets, or headings.

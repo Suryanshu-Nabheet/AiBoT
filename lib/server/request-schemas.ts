@@ -70,7 +70,7 @@ const agentModelFields = {
   customKeys: customKeysSchema,
 };
 
-export const coachRequestSchema = z.object({
+export const voiceRequestSchema = z.object({
   messages: z
     .array(
       z.object({
@@ -82,7 +82,10 @@ export const coachRequestSchema = z.object({
       }),
     )
     .min(1)
-    .max(30),
+    .max(30)
+    .refine((messages) => messages.some((message) => message.role === "user"), {
+      message: "At least one user message is required",
+    }),
   attachments: z.array(agentAttachmentSchema).max(8).optional(),
   ...agentModelFields,
 });
