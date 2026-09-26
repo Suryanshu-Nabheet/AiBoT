@@ -55,6 +55,58 @@ const PROVIDER_ICONS: Record<string, string> = {
   ollama: "/icons/ollama.svg",
 };
 
+const ENABLED_MODELS_KEY = "aibot_enabled_models";
+const PLATFORM_MODEL_CATALOG_KEY = "aibot_platform_model_catalog";
+
+/** Keep newly added `MODELS` entries visible when enabled list was saved earlier. */
+function loadEnabledModelsFromStorage(): string[] {
+  const platformIds = MODELS.map((m) => m.id);
+
+  let stored: string[] = [];
+  try {
+    const raw = localStorage.getItem(ENABLED_MODELS_KEY);
+    if (raw) stored = JSON.parse(raw) as string[];
+  } catch {
+    stored = [];
+  }
+
+  let catalog: string[] = [];
+  try {
+    const raw = localStorage.getItem(PLATFORM_MODEL_CATALOG_KEY);
+    if (raw) catalog = JSON.parse(raw) as string[];
+  } catch {
+    catalog = [];
+  }
+
+  if (!stored.length) {
+    localStorage.setItem(
+      PLATFORM_MODEL_CATALOG_KEY,
+      JSON.stringify(platformIds),
+    );
+    return platformIds;
+  }
+
+  let enabled = stored;
+
+  if (catalog.length === 0) {
+    const legacyMissing = platformIds.filter((id) => !enabled.includes(id));
+    enabled = legacyMissing.length ? [...enabled, ...legacyMissing] : enabled;
+    localStorage.setItem(
+      PLATFORM_MODEL_CATALOG_KEY,
+      JSON.stringify(platformIds),
+    );
+    return enabled;
+  }
+
+  const brandNew = platformIds.filter((id) => !catalog.includes(id));
+  localStorage.setItem(PLATFORM_MODEL_CATALOG_KEY, JSON.stringify(platformIds));
+
+  if (brandNew.length === 0) return enabled;
+
+  const toEnable = brandNew.filter((id) => !enabled.includes(id));
+  return toEnable.length ? [...enabled, ...toEnable] : enabled;
+}
+
 interface SettingsContextType {
   apiKeys: ApiKeys;
   setApiKey: (provider: keyof ApiKeys, key: string) => void;
@@ -148,12 +200,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setOllamaStatus("unknown");
       }
 
-      const storedModels = localStorage.getItem("aibot_enabled_models");
-      if (storedModels) {
-        setEnabledModels(JSON.parse(storedModels));
-      } else {
-        setEnabledModels(MODELS.map((m) => m.id));
-      }
+      setEnabledModels(loadEnabledModelsFromStorage());
 
       const storedGeneral = localStorage.getItem("aibot_general");
       if (storedGeneral) {
@@ -180,7 +227,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("aibot_ollama_url", ollamaUrl);
     localStorage.setItem("aibot_ollama_models", JSON.stringify(ollamaModels));
     localStorage.setItem("aibot_ollama_status", ollamaStatus);
-    localStorage.setItem("aibot_enabled_models", JSON.stringify(enabledModels));
+    localStorage.setItem(ENABLED_MODELS_KEY, JSON.stringify(enabledModels));
     localStorage.setItem(
       "aibot_general",
       JSON.stringify({

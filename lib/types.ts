@@ -171,6 +171,13 @@ export const MODELS: ModelFull[] = [
     summary: "Specialized model for rapid code completion and generation",
     logo: "/icons/ai.svg",
   },
+  {
+    id: "stealth/space-bunny-alpha",
+    name: "Alpha Space Bunny",
+    isPremium: false,
+    summary: "Alpha Model for Space Bunny",
+    logo: "/icons/ai.svg",
+  },
 ];
 
 export const SUPPORTER_MODELS = MODELS.map((model) => model.id) as [

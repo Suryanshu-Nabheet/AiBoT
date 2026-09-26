@@ -36,8 +36,9 @@ import {
   reconcileTwoStageThinking,
   sanitizeAssistantStreamField,
   shouldSkipThinkingForTurn,
-  shouldRetryThinkingNotes,
+  resolveThinkingPanelNotes,
   shouldRetryThinkingAnswer,
+  shouldRetryThinkingNotes,
   thinkingPanelPreview,
   type ThinkingStage,
 } from "@/lib/chat/thinking-mode";
@@ -238,11 +239,11 @@ export function useChatSession({
     const streamField = options?.streamField ?? "content";
 
     const pushContentToUi = () => {
-      const live = sanitizeAssistantStreamField(
-        streamField,
-        accumulated,
-        false,
-      );
+      let live = sanitizeAssistantStreamField(streamField, accumulated, false);
+      if (streamField === "thinkingText") {
+        const preview = thinkingPanelPreview(live);
+        live = preview || (live.length > 0 && live.length < 280 ? live : "");
+      }
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
@@ -517,6 +518,7 @@ export function useChatSession({
     const runTwoStageThinking = async (
       tempId: string,
       isOllama: boolean,
+      userQuery: string,
       requestStage: (
         stage: ThinkingStage,
         priorReasoning?: string,
@@ -535,6 +537,82 @@ export function useChatSession({
               : m,
           ),
         );
+      };
+
+      const commitThinkingReconciled = (reconciled: {
+        thinkingText: string;
+        content: string;
+      }) => {
+        setMessages((prev) => {
+          const updatedMessages = prev.map((m) => {
+            if (m.id !== tempId) return m;
+            if (!reconciled.content.trim()) {
+              const err = agentErrorFields(
+                locale,
+                0,
+                model,
+                apiKeys,
+                undefined,
+                "network",
+              );
+              return {
+                ...m,
+                thinkingText: reconciled.thinkingText,
+                content: err.content,
+                errorTitle: err.errorTitle,
+                errorType: err.errorType,
+                isThinkingRequested: true,
+                isError: true,
+              };
+            }
+            return {
+              ...m,
+              thinkingText: reconciled.thinkingText,
+              content: reconciled.content,
+              isThinkingRequested: true,
+              isError: false,
+            };
+          });
+
+          if (conversationPersistId && reconciled.content.trim()) {
+            saveConversation({
+              id: conversationPersistId,
+              title:
+                updatedMessages
+                  .find((msg) => msg.role === Role.User)
+                  ?.content.substring(0, 50) ||
+                translate(locale, "chat.defaultTitle"),
+              createdAt: new Date().toISOString(),
+              messages: updatedMessages,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+          return updatedMessages;
+        });
+
+        setIsLoading(false);
+        refreshExecutions();
+
+        const wasAborted = abortControllerRef.current?.signal.aborted;
+        const startedAt = requestStartedAtRef.current;
+        const elapsed = startedAt ? Date.now() - startedAt : 0;
+        const wasLong = thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
+
+        if (!wasAborted && wasLong) {
+          if (desktopNotifications) {
+            showDesktopNotification({
+              title: translate(locale, "notify.thinking.title"),
+              body: translate(locale, "notify.thinking.body"),
+              tag: `aibot-${conversationId || "chat"}`,
+            });
+          }
+          if (completionSound) {
+            playCompletionChime();
+          }
+        }
+
+        requestStartedAtRef.current = null;
+        thinkingRequestedRef.current = false;
       };
 
       const streamThinkingAttempt = async (
@@ -561,7 +639,7 @@ export function useChatSession({
       const first = await streamThinkingAttempt();
       if (first === null) return;
       attempts.push(first);
-      applyThinkingPreview(thinkingPanelPreview(first));
+      applyThinkingPreview(resolveThinkingPanelNotes(first, userQuery));
 
       let current = first;
       let repairs = 0;
@@ -569,17 +647,17 @@ export function useChatSession({
         shouldRetryThinkingNotes(current) &&
         repairs < MAX_THINKING_NOTE_RETRIES
       ) {
-        applyThinkingPreview("");
         const repaired = await streamThinkingAttempt(current);
         if (repaired === null) break;
         attempts.push(repaired);
         current = repaired;
         repairs += 1;
-        applyThinkingPreview(thinkingPanelPreview(current));
       }
 
-      const stage1 = finalizeStage1Attempts(attempts);
-      applyThinkingPreview(stage1.notes);
+      const stage1 = finalizeStage1Attempts(attempts, { userQuery });
+      applyThinkingPreview(
+        stage1.notes || resolveThinkingPanelNotes(current, userQuery),
+      );
 
       const stage2Prior = buildStage2PriorReasoning(
         stage1.notes,
@@ -591,21 +669,7 @@ export function useChatSession({
           answerDraft: stage1.answerDraft,
         });
         if (fallback.content.trim()) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId
-                ? {
-                    ...m,
-                    thinkingText: fallback.thinkingText,
-                    content: fallback.content,
-                    isThinkingRequested: true,
-                    isError: false,
-                  }
-                : m,
-            ),
-          );
-          setIsLoading(false);
-          refreshExecutions();
+          commitThinkingReconciled(fallback);
           return;
         }
         const errorText = await res2.text();
@@ -641,80 +705,11 @@ export function useChatSession({
         answerRepairs += 1;
       }
 
-      const reconciled = reconcileTwoStageThinking(stage1.notes, stage2Raw, {
-        answerDraft: stage1.answerDraft,
-      });
-
-      setMessages((prev) => {
-        const updatedMessages = prev.map((m) => {
-          if (m.id !== tempId) return m;
-          if (!reconciled.content.trim()) {
-            const err = agentErrorFields(
-              locale,
-              0,
-              model,
-              apiKeys,
-              undefined,
-              "network",
-            );
-            return {
-              ...m,
-              thinkingText: reconciled.thinkingText,
-              content: err.content,
-              errorTitle: err.errorTitle,
-              errorType: err.errorType,
-              isThinkingRequested: true,
-              isError: true,
-            };
-          }
-          return {
-            ...m,
-            thinkingText: reconciled.thinkingText,
-            content: reconciled.content,
-            isThinkingRequested: true,
-            isError: false,
-          };
-        });
-
-        if (conversationPersistId && reconciled.content.trim()) {
-          saveConversation({
-            id: conversationPersistId,
-            title:
-              updatedMessages
-                .find((msg) => msg.role === Role.User)
-                ?.content.substring(0, 50) ||
-              translate(locale, "chat.defaultTitle"),
-            createdAt: new Date().toISOString(),
-            messages: updatedMessages,
-            updatedAt: new Date().toISOString(),
-          });
-        }
-        return updatedMessages;
-      });
-
-      setIsLoading(false);
-      refreshExecutions();
-
-      const wasAborted = abortControllerRef.current?.signal.aborted;
-      const startedAt = requestStartedAtRef.current;
-      const elapsed = startedAt ? Date.now() - startedAt : 0;
-      const wasLong = thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
-
-      if (!wasAborted && wasLong) {
-        if (desktopNotifications) {
-          showDesktopNotification({
-            title: translate(locale, "notify.thinking.title"),
-            body: translate(locale, "notify.thinking.body"),
-            tag: `aibot-${conversationId || "chat"}`,
-          });
-        }
-        if (completionSound) {
-          playCompletionChime();
-        }
-      }
-
-      requestStartedAtRef.current = null;
-      thinkingRequestedRef.current = false;
+      commitThinkingReconciled(
+        reconcileTwoStageThinking(stage1.notes, stage2Raw, {
+          answerDraft: stage1.answerDraft,
+        }),
+      );
     };
 
     try {
@@ -782,12 +777,16 @@ export function useChatSession({
             },
           ]);
 
-          await runTwoStageThinking(tempId, true, (stage, prior) =>
-            postOllamaChat(
-              ollamaUrl,
-              buildOllamaPayload(stage, prior),
-              abortControllerRef.current!.signal,
-            ),
+          await runTwoStageThinking(
+            tempId,
+            true,
+            currentQuery,
+            (stage, prior) =>
+              postOllamaChat(
+                ollamaUrl,
+                buildOllamaPayload(stage, prior),
+                abortControllerRef.current!.signal,
+              ),
           );
           return;
         }
@@ -862,7 +861,7 @@ export function useChatSession({
           },
         ]);
 
-        await runTwoStageThinking(tempId, false, (stage, prior) =>
+        await runTwoStageThinking(tempId, false, currentQuery, (stage, prior) =>
           fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

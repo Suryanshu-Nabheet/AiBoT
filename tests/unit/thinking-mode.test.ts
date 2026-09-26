@@ -19,14 +19,17 @@ import {
   finalizeStage1Attempts,
   normalizeAssistantMessageContent,
   isSubstantiveThinkingContent,
+  isGoodEnoughThinkingNotes,
   isValidThinkingNotes,
   mergeThinkingAndAnswerForHistory,
   parseLegacyThinkingContent,
+  looksLikeAnswerLeakInNotes,
   looksLikeFinalAnswer,
   reconcileTwoStageThinking,
   shouldRetryThinkingNotes,
   shouldRetryThinkingAnswer,
   shouldSkipThinkingForQuery,
+  extractOutlineLabelsFromDraft,
   shouldSkipThinkingForTurn,
   synthesizePlanningNotesFromDump,
   THINKING_CLOSE_TAG,
@@ -46,7 +49,7 @@ describe("thinking system prompt stack", () => {
     expect(prompt).toContain("Suryanshu Nabheet");
     expect(prompt).toContain("## Active model");
     expect(prompt).toContain("## Thinking");
-    expect(prompt).toContain("high-level reasoning summary");
+    expect(prompt).toContain("internal self-talk");
     expect(prompt).not.toContain("## Chat");
     expect(prompt).toContain(THINKING_NOTES_ROLE.slice(0, 20));
   });
@@ -114,13 +117,21 @@ describe("normalizeAssistantMessageContent", () => {
 });
 
 describe("reconcileTwoStageThinking", () => {
-  it("uses stage-1 text when stage-2 is empty", () => {
+  it("uses stage-1 text when stage-2 is empty and stage-1 is answer-like", () => {
     const result = reconcileTwoStageThinking(
       "Full reply the small model wrote in stage 1 only.",
       "",
     );
     expect(result.thinkingText).toBe("");
     expect(result.content).toContain("stage 1");
+  });
+
+  it("does not promote valid planning notes into the answer when stage-2 is empty", () => {
+    const notes =
+      "The user asked what AI is. I should define it plainly, give examples, and mention one limitation.";
+    const result = reconcileTwoStageThinking(notes, "");
+    expect(result.thinkingText).toBe(notes);
+    expect(result.content).toBe("");
   });
 
   it("keeps both when stage-2 succeeds with brief notes", () => {
@@ -261,7 +272,7 @@ describe("reconcileTwoStageThinking", () => {
 });
 
 describe("stage1 deep loop", () => {
-  it("retries until notes are valid", () => {
+  it("does not run a second thinking API call (retries disabled)", () => {
     expect(
       shouldRetryThinkingNotes(
         [
@@ -274,7 +285,12 @@ describe("stage1 deep loop", () => {
           "Paragraph two continues the essay so the validator rejects it as notes.",
         ].join("\n"),
       ),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      shouldRetryThinkingNotes(
+        "Could you please provide more details about what you need?",
+      ),
+    ).toBe(false);
     expect(
       isValidThinkingNotes(
         "I should explain what AI is, cover a plain definition, and give everyday examples.",
@@ -323,7 +339,7 @@ describe("stage1 deep loop", () => {
     });
     expect(msgs).toHaveLength(3);
     expect(msgs[1]?.role).toBe("assistant");
-    expect(msgs[2]?.content).toContain("planning summary");
+    expect(msgs[2]?.content).toContain("internal self-talk");
   });
 
   it("packs draft into stage-2 prior for rewrite", () => {
@@ -362,20 +378,20 @@ describe("stage2 protocol boundary", () => {
       ),
     });
     expect(msgs[1]?.content).toContain("<aibot-untrusted-draft>");
-    expect(msgs[2]?.content).toContain("original user request");
+    expect(msgs[2]?.content).toContain("user-facing answer");
   });
 
   it("rejects short clarification answers that escaped from planning", () => {
     expect(
-      shouldRetryThinkingNotes(
+      isValidThinkingNotes(
         "The user asked for help with an incomplete message. Could you please provide more details or clarify your question?",
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
-      shouldRetryThinkingNotes(
+      isValidThinkingNotes(
         "Reinforcement learning trains an agent with rewards and penalties.",
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       shouldRetryThinkingAnswer(
         "The user is asking for help. Intent is to understand their needs fully. Points to cover include context and relevant details.",
@@ -397,11 +413,83 @@ describe("stage2 protocol boundary", () => {
   });
 
   it("defines thinking as concise first-person internal planning", () => {
-    expect(THINKING_NOTES_ROLE).toContain("high-level reasoning summary");
-    expect(THINKING_NOTES_ROLE).toContain("first-person planning language");
+    expect(THINKING_NOTES_ROLE).toContain("internal self-talk");
+    expect(THINKING_NOTES_ROLE).toContain("planning language");
     expect(THINKING_NOTES_ROLE).not.toContain(
       "Speak in third-person planning language",
     );
+  });
+
+  it("rejects answer leaks in the thinking channel", () => {
+    expect(
+      looksLikeAnswerLeakInNotes(
+        "Reinforcement learning trains an agent with rewards. Policies optimize expected return. Deep RL scales this to complex environments.",
+      ),
+    ).toBe(true);
+    expect(
+      isValidThinkingNotes(
+        "The user asked me to pick a number. I should choose one and state it clearly in my reply—but not reveal it here.",
+      ),
+    ).toBe(true);
+    expect(
+      isValidThinkingNotes("I pick 7 because it is my favorite number."),
+    ).toBe(false);
+  });
+
+  it("accepts good-enough planning without a repair pass", () => {
+    const plan = [
+      "The user asked what AI is.",
+      "I should give a concise, beginner-friendly explanation without assuming advanced knowledge.",
+      "I should distinguish AI from machine learning and generative AI.",
+      "The response can cover: Definition; How AI Works; Common Types; Examples; Limitations.",
+    ].join(" ");
+    expect(isGoodEnoughThinkingNotes(plan)).toBe(true);
+    expect(shouldRetryThinkingNotes(plan)).toBe(false);
+  });
+
+  it("synthesizes useful follow-up planning for go deeper prompts", () => {
+    const notes = synthesizePlanningNotesFromDump(
+      "",
+      "i want you to go even more deep",
+    );
+    expect(notes).toContain("more depth");
+    expect(notes).not.toContain("I should define i want you");
+  });
+
+  it("retries stage-2 when the model only repeats planning monologue", () => {
+    expect(
+      shouldRetryThinkingAnswer(
+        "The user asked what AI is. I should define it plainly, give examples, and mention one limitation.",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not retry stage-2 for a substantive answer that opens with I'll", () => {
+    expect(
+      shouldRetryThinkingAnswer(
+        "I'll keep this concise. Reinforcement learning trains an agent using rewards and penalties to improve its policy over time.",
+      ),
+    ).toBe(false);
+  });
+
+  it("builds topic-specific planning notes from the user question and draft outline", () => {
+    const dump = [
+      "**Core pieces**",
+      "RTCPeerConnection, ICE, STUN/TURN.",
+      "**How it works**",
+      "Signaling then media.",
+      "**Common uses**",
+      "Video calls.",
+    ].join("\n");
+    expect(extractOutlineLabelsFromDraft(dump)).toEqual([
+      "Core pieces",
+      "How it works",
+      "Common uses",
+    ]);
+    const notes = synthesizePlanningNotesFromDump(dump, "what is webrtc");
+    expect(notes).toContain("what is webrtc");
+    expect(notes).toContain("Core pieces");
+    expect(notes).not.toContain("substantive request");
   });
 
   it("requires first-person planning instead of accepting concise answer prose", () => {
@@ -424,10 +512,10 @@ describe("stage2 protocol boundary", () => {
       ),
     ).toBe(false);
     expect(
-      shouldRetryThinkingNotes(
+      isValidThinkingNotes(
         "I can't share hidden chain-of-thought, but I can answer your question.",
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("rejects model identity dumps from the final answer channel", () => {

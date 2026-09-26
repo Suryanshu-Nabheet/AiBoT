@@ -142,7 +142,8 @@ export const ChatMessage = memo(
     useEffect(() => {
       if (
         userToggledThinkingRef.current ||
-        didAutoCollapseThinkingRef.current
+        didAutoCollapseThinkingRef.current ||
+        isStreaming
       ) {
         return;
       }
@@ -150,7 +151,7 @@ export const ChatMessage = memo(
         didAutoCollapseThinkingRef.current = true;
         setIsThinkingExpanded(false);
       }
-    }, [thinkingContent, mainResponse]);
+    }, [thinkingContent, mainResponse, isStreaming]);
 
     const handleThinkingToggle = useCallback(() => {
       userToggledThinkingRef.current = true;

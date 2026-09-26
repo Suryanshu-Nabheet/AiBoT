@@ -38,14 +38,30 @@ const PRIVATE_NOTES_HEADER =
  * Stage-1 role — stacked by buildChatSystemPrompt with platform + model identity.
  * Replaces Chat behavior so the model does not answer yet.
  */
-export const THINKING_NOTES_ROLE = `## Thinking
-Before answering, write a brief high-level reasoning summary for the Thinking panel. This is not raw chain-of-thought: think through the task first, then summarize the intent, approach, and any caveat.
-Write 2–4 short sentences covering the user's intent, key points, approach, and any caveat.
-Use concise first-person planning language (for example: "I should explain…"). Do not greet, address the user, give the final answer, citations, safety metadata, or a refusal about discussing reasoning. Return the summary only.`;
+export const THINKING_NOTES_ROLE = `## Thinking (internal — not the user reply)
+You are in the **planning** phase only. Write **internal self-talk** that analyzes the user's request. The user will never see this text as your answer.
+
+Follow this flow in 4–8 short sentences or numbered steps:
+1. Restate what the user is asking (name the topic—e.g. "The user asked what WebRTC is").
+2. Note constraints, ambiguity, or what you may need to assume.
+3. List the sections or angles you will cover in the reply (definitions, how it works, components, examples, caveats)—by title only, not the facts themselves.
+4. Stop before delivering definitions, conclusions, chosen options, code, markdown headings, or bullet lists meant for the user.
+
+Example (planning only): "The user asked what WebRTC is. I should explain the problem it solves, the main browser APIs, how a peer connection is set up at a high level, and typical apps—without stating technical details here."
+
+Rules:
+- Use planning language ("The user asked…", "I should…", "I need to verify…").
+- Do **not** greet the user, say "here is…", state the final answer, pick a number, define terms, or paste encyclopedia-style explanations.
+- Do **not** invent specific facts during planning—only analyze the task.
+- Return **only** this internal monologue.`;
 
 /** Stage-2 addon — Chat role stays; this closes the loop after notes. */
-export const THINKING_ANSWER_ADDON = `## Answer
-Answer the original user request directly and naturally. Use the planning summary only as guidance; verify it, do not mention it, and do not invent unsupported facts.`;
+export const THINKING_ANSWER_ADDON = `## Answer (user-facing)
+You are in the **response** phase. Write the complete answer for the user now.
+
+- Treat internal planning as a private checklist—do **not** quote, paraphrase, or mention it.
+- Put all facts, numbers, code, definitions, and choices **here**, not in planning.
+- Answer directly and naturally; verify claims; do not invent unsupported facts.`;
 
 const THINKING_CONTEXT_START = "<aibot-planning-context>";
 const THINKING_CONTEXT_END = "</aibot-planning-context>";
@@ -151,6 +167,33 @@ export function looksLikeFinalAnswer(text: string): boolean {
   return false;
 }
 
+/** Stage-1 text that already contains answer payload (facts, picks, code). */
+export function looksLikeAnswerLeakInNotes(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/```/.test(t)) return true;
+  if (
+    /\b(?:the answer is|here(?:'|’)s (?:the|my) answer|I (?:pick|choose|select|went with)\b|my (?:choice|pick) is)\b/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  if (/\b(?:in conclusion|therefore|thus),?\s/i.test(t) && t.length > 100) {
+    return true;
+  }
+  const sentences = t.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
+  if (sentences.length >= 3) {
+    const planningish = sentences.filter((s) =>
+      /^(?:I (?:should|need|will|must|plan to|'ll)|The user|The request|My (?:goal|plan)|First,?\s+I|Next,?\s+I)/i.test(
+        s.trim(),
+      ),
+    ).length;
+    if (planningish / sentences.length < 0.34) return true;
+  }
+  return false;
+}
+
 /** Stage-1 text that is already speaking to the user (not a plan). */
 export function looksLikeUserDirectedReply(text: string): boolean {
   const t = text.trim();
@@ -194,8 +237,8 @@ function isThinRelativeToThinking(content: string, thinking: string): boolean {
   return false;
 }
 
-/** One repair attempt — keeps latency and cost bounded for production. */
-export const MAX_THINKING_NOTE_RETRIES = 1;
+/** No second thinking API call — repair caused visible flicker and duplicate work. */
+export const MAX_THINKING_NOTE_RETRIES = 0;
 /** One bounded answer rewrite for protocol leakage or an unusable coda. */
 export const MAX_THINKING_ANSWER_RETRIES = 1;
 
@@ -205,7 +248,11 @@ export const MAX_THINKING_ANSWER_RETRIES = 1;
 export function isValidThinkingNotes(text: string): boolean {
   const notes = cleanThinkingText(stripThinkingProtocol(text));
   if (notes.length < 8) return false;
-  if (looksLikeFinalAnswer(notes) || looksLikeUserDirectedReply(notes)) {
+  if (
+    looksLikeFinalAnswer(notes) ||
+    looksLikeUserDirectedReply(notes) ||
+    looksLikeAnswerLeakInNotes(notes)
+  ) {
     return false;
   }
   if (
@@ -231,8 +278,55 @@ export function isValidThinkingNotes(text: string): boolean {
   return true;
 }
 
+/** Validators miss good plans with section lists; accept them without a repair pass. */
+export function isGoodEnoughThinkingNotes(text: string): boolean {
+  const notes = cleanThinkingText(stripThinkingProtocol(text));
+  if (notes.length < 32) return false;
+  if (looksLikeFinalAnswer(notes) || looksLikeUserDirectedReply(notes)) {
+    return false;
+  }
+  if (
+    !/\bI(?:'|’)?(?:ll| will| should| need to| must)\b/i.test(notes) &&
+    !/\bthe user\b/i.test(notes)
+  ) {
+    return false;
+  }
+  if (looksLikeAnswerLeakInNotes(notes) && !/\bI should\b/i.test(notes)) {
+    return false;
+  }
+  return true;
+}
+
+/** One bounded repair when stage 1 was not usable planning (including answer dumps). */
 export function shouldRetryThinkingNotes(text: string): boolean {
-  return !isValidThinkingNotes(text);
+  if (isValidThinkingNotes(text) || isGoodEnoughThinkingNotes(text)) {
+    return false;
+  }
+  return MAX_THINKING_NOTE_RETRIES > 0;
+}
+
+/** Stage-2 body that is planning monologue, not a delivered answer. */
+export function looksLikePlanningOnlyReply(text: string): boolean {
+  const t = cleanThinkingText(text);
+  if (!isValidThinkingNotes(t)) return false;
+  if (looksLikeFinalAnswer(t)) return false;
+  if (t.length > 360) return false;
+
+  const sentences = t
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const planningOpener =
+    /^(?:I (?:should|need|will|must|plan to|'ll)|The user|The request|My (?:goal|plan))/i;
+
+  if (sentences.length <= 2) {
+    return sentences.every((s) => planningOpener.test(s));
+  }
+
+  const expository = sentences.filter(
+    (s) => s.length > 20 && !planningOpener.test(s),
+  ).length;
+  return expository === 0;
 }
 
 /**
@@ -243,6 +337,7 @@ export function shouldRetryThinkingNotes(text: string): boolean {
 export function shouldRetryThinkingAnswer(text: string): boolean {
   const answer = text.trim();
   if (!answer) return true;
+  if (looksLikePlanningOnlyReply(answer)) return true;
   return (
     /<\/?(?:thinking|aibot-[^>]+)>|private planning notes|planning context|untrusted draft|now give your full answer|do not mention planning/i.test(
       answer,
@@ -297,26 +392,91 @@ export function shouldSkipThinkingForTurn({
 
 export function getStage1RepairUserPrompt(): string {
   return (
-    "That output was a draft answer, not a planning summary. " +
-    "Rewrite it as 2–4 short first-person planning sentences about intent, " +
-    "points to cover, and approach. Do not write the final answer."
+    "That output was a user-facing answer (or facts), not internal planning. " +
+    "Rewrite as internal self-talk only: what the user wants, constraints, and how you will answer—" +
+    "without stating the answer, picking a number, or defining terms. " +
+    'Example: "The user asked me to pick a number. I should choose one and state it clearly in my reply—but I must not reveal the number here."'
   );
 }
 
+export function formatUserRequestForPlanning(userQuery: string): string {
+  const q = userQuery.trim().replace(/\s+/g, " ");
+  if (!q) return "the user's question";
+  if (q.length <= 140) return `"${q}"`;
+  return `"${q.slice(0, 137)}..."`;
+}
+
+function planningIntentFromUserQuery(userQuery: string): string | null {
+  const q = userQuery.trim().toLowerCase();
+  if (
+    /\b(?:go\s+(?:even\s+)?(?:more\s+)?deep|deeper|in\s+depth|more\s+detail|elaborate|expand on)\b/.test(
+      q,
+    )
+  ) {
+    return `The user wants more depth on the current topic (${formatUserRequestForPlanning(userQuery)}). I should add technical detail, clearer structure, and concrete examples in the reply—not restate the shallow overview.`;
+  }
+  if (/\b(?:what is|what's|define|explain)\b/.test(q)) {
+    return `The user asked ${formatUserRequestForPlanning(userQuery)}. I should cover definition, how it works, main components, and practical examples in the reply.`;
+  }
+  if (q.length > 48 || /\b(?:want you to|can you|please)\b/.test(q)) {
+    return `The user said ${formatUserRequestForPlanning(userQuery)}. I should infer their goal, match depth to the request, and organize an accurate reply with clear sections.`;
+  }
+  return null;
+}
+
+/** Section titles from an early answer dump — used to build readable planning notes. */
+export function extractOutlineLabelsFromDraft(draft: string): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  const push = (raw: string) => {
+    const label = raw.trim();
+    const key = label.toLowerCase();
+    if (label.length < 2 || label.length > 80 || seen.has(key)) return;
+    seen.add(key);
+    labels.push(label);
+  };
+
+  for (const match of draft.matchAll(/^#{1,6}\s+(.+)$/gm)) {
+    push(match[1] ?? "");
+  }
+  for (const line of draft.split("\n")) {
+    const bold = line.match(/^\*\*([^*]{2,80})\*\*\s*$/);
+    if (bold) push(bold[1] ?? "");
+  }
+  return labels.slice(0, 6);
+}
+
 /**
- * When the model never produces valid notes, keep a short plan visible in
- * Thinking so the panel still feels purposeful.
+ * When stage 1 never produced valid notes, derive a topic-specific plan from the
+ * user question and any outline visible in an early answer dump.
  */
-export function synthesizePlanningNotesFromDump(dump: string): string {
+export function synthesizePlanningNotesFromDump(
+  dump: string,
+  userQuery = "",
+): string {
   const text = cleanThinkingText(dump);
-  if (!text) return "Planning the reply from the user's request.";
+  const ask = formatUserRequestForPlanning(userQuery);
+  const intent = planningIntentFromUserQuery(userQuery);
+  const outline = extractOutlineLabelsFromDraft(text);
+
+  if (outline.length >= 2) {
+    const lead = intent ?? `The user asked ${ask}.`;
+    return `${lead} I should structure the reply around ${outline.join(", ")}, stay accurate, and keep the explanation practical.`;
+  }
+  if (outline.length === 1) {
+    const lead = intent ?? `The user asked ${ask}.`;
+    return `${lead} I should lead with "${outline[0]}", then cover how it works, key parts, and one real-world use case in the reply.`;
+  }
 
   const heading = text.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim();
   if (heading && heading.length <= 100) {
-    return `I should explain ${heading} clearly, then cover practical examples and one useful caveat.`;
+    const lead = intent ?? `The user asked ${ask}.`;
+    return `${lead} I should center the reply on ${heading}, with a clear definition, how it works, and examples.`;
   }
 
-  return "I should use the early draft as untrusted material, verify its key points, and answer the original request directly.";
+  if (intent) return intent;
+
+  return `The user asked ${ask}. I should answer with a clear structure, verified facts, and depth matched to what they asked for—all in the final reply, not here.`;
 }
 
 export type Stage1LoopResult = {
@@ -330,19 +490,23 @@ export type Stage1LoopResult = {
  * Resolve stage-1 attempts after the validate/repair loop.
  * Prefer the latest valid notes; otherwise synthesize notes and keep the dump.
  */
-export function finalizeStage1Attempts(attempts: string[]): Stage1LoopResult {
+export function finalizeStage1Attempts(
+  attempts: string[],
+  options?: { userQuery?: string },
+): Stage1LoopResult {
   const cleaned = attempts.map((a) => cleanThinkingText(a)).filter(Boolean);
+  const userQuery = options?.userQuery ?? "";
 
   for (let i = cleaned.length - 1; i >= 0; i--) {
     const notes = cleaned[i] ?? "";
-    if (isValidThinkingNotes(notes)) {
+    if (isValidThinkingNotes(notes) || isGoodEnoughThinkingNotes(notes)) {
       return { notes, answerDraft: "" };
     }
   }
 
   const dump = cleaned[cleaned.length - 1] ?? "";
   return {
-    notes: synthesizePlanningNotesFromDump(dump),
+    notes: synthesizePlanningNotesFromDump(dump, userQuery),
     answerDraft: dump,
   };
 }
@@ -451,8 +615,26 @@ export function reconcileTwoStageThinking(
     };
   }
 
-  // No answer channel → promote whatever stage 1 produced; clear Thinking.
+  // No answer channel — never promote valid planning notes as the user reply.
   if (!content && thinking) {
+    if (draft) {
+      return {
+        thinkingText: isValidThinkingNotes(thinking)
+          ? thinking
+          : synthesizePlanningNotesFromDump(draft),
+        content: draft,
+      };
+    }
+    if (
+      looksLikeFinalAnswer(thinking) ||
+      looksLikeUserDirectedReply(thinking) ||
+      looksLikeAnswerLeakInNotes(thinking)
+    ) {
+      return { thinkingText: "", content: thinking };
+    }
+    if (isValidThinkingNotes(thinking)) {
+      return { thinkingText: thinking, content: "" };
+    }
     return { thinkingText: "", content: thinking };
   }
 
@@ -509,10 +691,28 @@ export function displayThinkingFields(
 export function thinkingPanelPreview(stage1Notes: string): string {
   const notes = cleanThinkingText(stage1Notes);
   if (!notes) return "";
-  if (looksLikeFinalAnswer(notes) || looksLikeUserDirectedReply(notes)) {
+  if (isValidThinkingNotes(notes) || isGoodEnoughThinkingNotes(notes)) {
+    return notes;
+  }
+  if (
+    looksLikeFinalAnswer(notes) ||
+    looksLikeUserDirectedReply(notes) ||
+    looksLikeAnswerLeakInNotes(notes)
+  ) {
     return "";
   }
   return notes;
+}
+
+/** Stable Thinking panel text after stage 1 (never blank when we can derive a plan). */
+export function resolveThinkingPanelNotes(raw: string, userQuery = ""): string {
+  const cleaned = cleanThinkingText(raw);
+  const preview = thinkingPanelPreview(cleaned);
+  if (preview) return preview;
+  if (cleaned) {
+    return synthesizePlanningNotesFromDump(cleaned, userQuery);
+  }
+  return synthesizePlanningNotesFromDump("", userQuery);
 }
 
 export function wrapThinkingForContext(notes: string): string {
@@ -522,7 +722,10 @@ export function wrapThinkingForContext(notes: string): string {
 }
 
 export function getStage2ContinuationUserPrompt(): string {
-  return "Answer the original user request now. Return only the final answer; do not mention planning, drafts, or this instruction.";
+  return (
+    "Write your complete user-facing answer now. Include every fact, number, definition, " +
+    "and choice the user asked for. Do not mention planning, thinking, drafts, or this instruction."
+  );
 }
 
 export function buildChatMessagesForThinkingStage(params: {

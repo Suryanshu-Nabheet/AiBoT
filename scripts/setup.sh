@@ -41,6 +41,20 @@ echo -e "${BLUE}${BOLD}====================================================${NC}
 echo ""
 status_log "Step 1: Analyzing system environment..."
 
+# Bash does not load zsh lazy nvm hooks; bootstrap common Node installs.
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    # shellcheck source=/dev/null
+    . "$NVM_DIR/nvm.sh"
+elif command -v fnm &> /dev/null; then
+    eval "$(fnm env)"
+elif [[ -x /opt/homebrew/bin/brew ]]; then
+    brew_node_prefix="$(/opt/homebrew/bin/brew --prefix node 2>/dev/null || true)"
+    if [[ -n "$brew_node_prefix" && -d "$brew_node_prefix/bin" ]]; then
+        PATH="$brew_node_prefix/bin:$PATH"
+    fi
+fi
+
 # Check Node.js
 if ! command -v node &> /dev/null; then
     error_log "Node.js is not installed. Please install Node.js (>=18.17.0)."
