@@ -49,6 +49,7 @@ export const chatRequestSchema = z.object({
     .max(MAX_HISTORY_MESSAGES),
   model: z.string().trim().min(1).max(200),
   isThinking: z.boolean().optional(),
+  documentWork: z.boolean().optional(),
   thinkingStage: z.enum(["thinking", "final"]).optional(),
   /** Normalized stage-1 reasoning block; required for grounded stage-2 answers. */
   priorReasoning: z.string().max(48_000).optional(),
@@ -91,49 +92,6 @@ export const coderRequestSchema = z.object({
   attachments: z.array(agentAttachmentSchema).max(8).optional(),
   ...agentModelFields,
 });
-
-export const summarizeRequestSchema = z
-  .object({
-    task: z.string().trim().min(1).max(8_000),
-    filesData: z
-      .array(
-        z.object({
-          name: z.string().trim().min(1).max(255),
-          content: z.string().max(80_000),
-        }),
-      )
-      .max(8)
-      .optional()
-      .default([]),
-    attachments: z.array(agentAttachmentSchema).max(12).optional(),
-    ...agentModelFields,
-  })
-  .superRefine(({ filesData, attachments }, ctx) => {
-    const textBytes = filesData.reduce(
-      (total, file) =>
-        total + new TextEncoder().encode(file.content).byteLength,
-      0,
-    );
-    const attachmentTextBytes = (attachments ?? [])
-      .filter((a) => a.kind === "document" || a.kind === "text")
-      .reduce(
-        (total, file) =>
-          total + new TextEncoder().encode(file.content).byteLength,
-        0,
-      );
-    if (textBytes + attachmentTextBytes > 200_000) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Combined file content exceeds 200 KB",
-      });
-    }
-    if (filesData.length === 0 && (attachments?.length ?? 0) === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "At least one file or attachment is required",
-      });
-    }
-  });
 
 export const keyVerificationSchema = z.object({
   provider: z.enum(["openai", "anthropic", "google", "deepseek", "openrouter"]),

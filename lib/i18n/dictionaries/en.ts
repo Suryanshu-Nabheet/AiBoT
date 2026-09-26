@@ -50,11 +50,9 @@ export const en = {
   "models.platformOptimized": "Platform Optimized",
   "models.agents": "Agents",
   "models.agents.desc":
-    "Default model for Coder, Summarizer, and Coach. Uses the same BYOK keys as chat.",
+    "Default model for Coder and Coach. Uses the same BYOK keys as chat.",
   "models.agents.coder": "Coder",
   "models.agents.coder.desc": "Website generation agent",
-  "models.agents.summarizer": "Summarizer",
-  "models.agents.summarizer.desc": "Document and file analysis",
   "models.agents.coach": "Coach",
   "models.agents.coach.desc": "Voice coaching agent",
   "models.external": "External Provider Models",
@@ -145,7 +143,6 @@ export const en = {
   "nav.newChat": "New Chat",
   "nav.agentMode": "Agent Mode",
   "nav.recentChats": "Recent",
-  "nav.agent.summarizer": "Summarizer",
   "nav.agent.coder": "Coder",
   "nav.agent.coach": "Coach",
   "nav.madeBy": "Made by Suryanshu Nabheet",
@@ -183,6 +180,9 @@ export const en = {
   "chat.defaultTitle": "New Chat",
   "chat.message.copy": "Copy message",
   "chat.message.downloadPdf": "Download as PDF",
+  "chat.message.documentAnalysis": "Document analysis",
+  "chat.message.listen": "Listen to response",
+  "chat.message.stopListening": "Stop listening",
   "chat.thinking.label": "Thinking",
   "chat.thinking.inProgress": "Thinking…",
   "chat.status.thinking": "AiBoT is thinking...",
@@ -233,6 +233,9 @@ export const en = {
   "toast.pdf.fail": "Failed to generate PDF",
   "toast.speech.unsupported":
     "Speech recognition is not supported in this browser.",
+  "toast.speech.playbackUnsupported":
+    "Speech playback is not supported in this browser.",
+  "toast.speech.playbackFail": "Speech playback failed.",
   "toast.speech.listening": "Listening...",
   "toast.file.extracted": "Extracted text from {name}",
   "toast.file.readFail": "Failed to read {name}",
@@ -288,14 +291,6 @@ export const en = {
   "voice.ready": "AI Ready",
   "voice.aria.start": "Start voice input",
   "voice.aria.stop": "Stop voice input",
-
-  // Agents — summarizer
-  "agent.summarizer.title": "Document Summarizer",
-  "agent.summarizer.subtitle":
-    "Upload documents for research-grade synthesis and insights.",
-  "agent.summarizer.dropHint": "Drop files here or click to upload",
-  "agent.summarizer.start": "Start Analysis",
-  "agent.summarizer.processing": "Processing document...",
 
   // Agents — coder
   "agent.coder.title": "AI Coder",

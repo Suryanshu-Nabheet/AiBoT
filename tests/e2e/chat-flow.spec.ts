@@ -123,15 +123,20 @@ test.describe("Chat layout after first message", () => {
     page,
   }) => {
     await page.goto("/");
-    let postedBody: { messages: { content: unknown }[] } | undefined;
+    const response =
+      "Here is the research synthesis.\n\n[[DOCUMENT_ANALYSIS]]\n## Key findings\nFiles received\n[[/DOCUMENT_ANALYSIS]]\n\nTaken together, these findings point to a consistent pattern.";
+    let postedBody:
+      | { messages: { content: unknown }[]; documentWork?: boolean }
+      | undefined;
     await page.route("**/api/chat", async (route) => {
       postedBody = route.request().postDataJSON() as {
         messages: { content: unknown }[];
+        documentWork?: boolean;
       };
       await route.fulfill({
         status: 200,
         contentType: "text/event-stream",
-        body: 'data: {"choices":[{"delta":{"content":"Files received"}}]}\n\ndata: [DONE]\n\n',
+        body: `data: ${JSON.stringify({ choices: [{ delta: { content: response } }] })}\n\ndata: [DONE]\n\n`,
       });
     });
 
@@ -173,11 +178,27 @@ test.describe("Chat layout after first message", () => {
     await expect(page.getByRole("img", { name: "pixel.jpg" })).toBeVisible();
     await page.getByPlaceholder(/message aibot/i).fill("Summarize these files");
     await page.getByRole("button", { name: /send message/i }).click();
-    await expect(page.getByText("Files received", { exact: true })).toBeVisible(
-      {
-        timeout: 15_000,
-      },
-    );
+    const documentCard = page.locator('[data-document-response="true"]');
+    await expect(documentCard).toBeVisible({ timeout: 15_000 });
+    await expect(documentCard.getByText("Key findings")).toBeVisible();
+    await expect(documentCard.getByText("Files received")).toBeVisible();
+    await expect(
+      documentCard.getByText("Here is the research synthesis."),
+    ).toHaveCount(0);
+    await expect(
+      documentCard.getByText(
+        "Taken together, these findings point to a consistent pattern.",
+      ),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("Here is the research synthesis.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Taken together, these findings point to a consistent pattern.",
+        { exact: true },
+      ),
+    ).toBeVisible();
 
     expect(postedBody).toBeDefined();
     const payload = JSON.stringify(postedBody ?? {});
@@ -185,6 +206,55 @@ test.describe("Chat layout after first message", () => {
     expect(payload).toContain("Slide fixture text");
     expect(payload).toContain("Spreadsheet fixture text");
     expect(payload).toContain("image_url");
+    expect(postedBody?.documentWork).toBe(true);
+    await expect(
+      page.getByRole("button", { name: "Listen to response" }),
+    ).toBeVisible();
+    const downloadButton = page.getByRole("button", {
+      name: "Download as PDF",
+    });
+    await expect(downloadButton).toBeVisible();
+    const downloadPromise = page.waitForEvent("download");
+    await downloadButton.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("document-analysis.pdf");
+  });
+
+  test("keeps a conversational answer about an attachment outside the card", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.route("**/api/chat", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `data: ${JSON.stringify({ choices: [{ delta: { content: "The scan shows a receipt dated Tuesday." } }] })}\n\ndata: [DONE]\n\n`,
+      });
+    });
+    await page
+      .locator('input[type="file"]')
+      .first()
+      .setInputFiles({
+        name: "receipt.pdf",
+        mimeType: "application/pdf",
+        buffer: makePdf("BT /F1 18 Tf 72 720 Td (Receipt) Tj ET"),
+      });
+    await expect(page.getByText("receipt.pdf", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page
+      .getByPlaceholder(/message aibot/i)
+      .fill("What does this scan show?");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    await expect(
+      page.getByText("The scan shows a receipt dated Tuesday.", {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-document-response="true"]')).toHaveCount(
+      0,
+    );
   });
 });
 

@@ -459,16 +459,6 @@ export function SettingsPanel({
                     />
                   </SettingsRow>
                   <SettingsRow
-                    label={t("models.agents.summarizer")}
-                    description={t("models.agents.summarizer.desc")}
-                  >
-                    <ModelSelector
-                      modelStorageKey={AGENT_MODEL_STORAGE.summarizer}
-                      triggerVariant="compact"
-                      triggerClassName="h-8 max-w-[11rem]"
-                    />
-                  </SettingsRow>
-                  <SettingsRow
                     label={t("models.agents.coach")}
                     description={t("models.agents.coach.desc")}
                   >

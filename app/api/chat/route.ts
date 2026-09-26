@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
     customKeys,
     thinkingStage,
     priorReasoning,
+    documentWork,
     locale: rawLocale,
   } = parsed.data;
 
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
       messages,
       thinkingStage: stage,
       priorReasoning,
+      documentWork,
       locale,
       customKeys,
       openRouterKey: OPENROUTER_KEY,

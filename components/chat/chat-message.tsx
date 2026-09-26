@@ -15,7 +15,10 @@ import {
   CheckIcon,
   CopyIcon,
   DownloadSimple as DownloadIcon,
+  FileText as FileTextIcon,
   PaperclipIcon,
+  SpeakerHigh as SpeakerIcon,
+  Stop as StopIcon,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -38,6 +41,7 @@ import {
   isSubstantiveThinkingContent,
   parseLegacyThinkingContent,
 } from "@/lib/chat/thinking-mode";
+import { splitDocumentResponse } from "@/lib/chat/document-work";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
 
@@ -70,6 +74,7 @@ export const ChatMessage = memo(
   }) => {
     const { t } = useTranslation();
     const [isCopied, setIsCopied] = useState(false);
+    const [speakingSegment, setSpeakingSegment] = useState<string | null>(null);
 
     const handleMessageCopy = useCallback(
       async (content?: string) => {
@@ -80,6 +85,39 @@ export const ChatMessage = memo(
         setTimeout(() => setIsCopied(false), 2000);
       },
       [onCopy, message.content],
+    );
+
+    const handleSpeak = useCallback(
+      (content: string, segmentId: string) => {
+        if (typeof window === "undefined" || !window.speechSynthesis) {
+          toast.error(t("toast.speech.playbackUnsupported"));
+          return;
+        }
+        if (speakingSegment === segmentId) {
+          window.speechSynthesis.cancel();
+          setSpeakingSegment(null);
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(content);
+        utterance.rate = 0.95;
+        utterance.onend = () => setSpeakingSegment(null);
+        utterance.onerror = () => {
+          setSpeakingSegment(null);
+          toast.error(t("toast.speech.playbackFail"));
+        };
+        window.speechSynthesis.speak(utterance);
+        setSpeakingSegment(segmentId);
+      },
+      [speakingSegment, t],
+    );
+
+    useEffect(
+      () => () => {
+        if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+      },
+      [],
     );
 
     const {
@@ -138,6 +176,13 @@ export const ChatMessage = memo(
         ? liveFields.content
         : (legacyParsed?.mainResponse ??
           (isStreaming ? message.content : displayedContent));
+    const responseSegments = isUser
+      ? [{ kind: "conversation" as const, text: mainResponse }]
+      : splitDocumentResponse(mainResponse);
+    const documentSegments = responseSegments.filter(
+      (segment) => segment.kind === "document",
+    );
+    const hasDocumentSegments = documentSegments.length > 0;
 
     useEffect(() => {
       if (
@@ -228,112 +273,268 @@ export const ChatMessage = memo(
                 )}
 
                 {(isUser || showAnswer) && (
-                  <div
-                    className={cn(
-                      "w-full max-w-full overflow-hidden break-words",
-                      isUser
-                        ? "px-0 py-1.5 text-sm text-foreground md:py-2"
-                        : isAgentError
-                          ? "py-1"
-                          : cn(
-                              compactAgentContentClass,
-                              chatMessageBodyClass,
-                              hasThinkingPanel && showAnswer
-                                ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
-                                : "py-1.5",
-                            ),
-                    )}
-                  >
+                  <div className="w-full">
                     {isUser ? (
-                      <div className="[overflow-wrap:anywhere] whitespace-pre-wrap break-words text-left text-[15px] font-medium leading-relaxed">
-                        {mainResponse}
+                      <div className="w-full max-w-full overflow-hidden break-words px-0 py-1.5 text-sm text-foreground md:py-2">
+                        <div className="[overflow-wrap:anywhere] whitespace-pre-wrap break-words text-left text-[15px] font-medium leading-relaxed">
+                          {mainResponse}
+                        </div>
                       </div>
                     ) : isAgentError ? (
-                      <ChatErrorBanner
-                        body={message.content}
-                        code={message.errorType}
-                      />
+                      <div className="w-full max-w-full overflow-hidden break-words py-1">
+                        <ChatErrorBanner
+                          body={message.content}
+                          code={message.errorType}
+                        />
+                      </div>
                     ) : (
-                      <AssistantMarkdown
-                        content={mainResponse}
-                        variant="answer"
-                        remarkPlugins={remarkPlugins}
-                        rehypePlugins={rehypePlugins}
-                        components={markdownComponents}
-                        preprocess={preprocessMarkdown}
-                      />
+                      responseSegments.map((segment, index) => {
+                        const segmentContent = segment.text.trim();
+                        if (!segmentContent) return null;
+                        const isDocument = segment.kind === "document";
+                        const segmentId = `${message.id ?? "message"}-${index}`;
+                        const isSegmentSpeaking = speakingSegment === segmentId;
+                        const body = (
+                          <AssistantMarkdown
+                            content={segmentContent}
+                            variant="answer"
+                            remarkPlugins={remarkPlugins}
+                            rehypePlugins={rehypePlugins}
+                            components={markdownComponents}
+                            preprocess={preprocessMarkdown}
+                          />
+                        );
+
+                        return (
+                          <React.Fragment key={segmentId}>
+                            {isDocument ? (
+                              <section
+                                data-document-response="true"
+                                className="my-3 w-full rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5"
+                              >
+                                <h3 className="mb-3 flex items-center gap-2 border-b border-border/60 pb-2.5 text-xs font-semibold text-muted-foreground">
+                                  <FileTextIcon
+                                    className="size-4"
+                                    weight="duotone"
+                                  />
+                                  <span>
+                                    {t("chat.message.documentAnalysis")}
+                                  </span>
+                                </h3>
+                                <div
+                                  className={cn(
+                                    "w-full max-w-full overflow-hidden break-words py-1.5",
+                                    compactAgentContentClass,
+                                    chatMessageBodyClass,
+                                  )}
+                                >
+                                  {body}
+                                </div>
+                                {!isGenerating && (
+                                  <div className="mt-3 flex items-center gap-1.5 self-start transition-opacity duration-200">
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/50 hover:text-foreground"
+                                            onClick={() =>
+                                              handleMessageCopy(segmentContent)
+                                            }
+                                            aria-label={t("chat.message.copy")}
+                                          >
+                                            {isCopied ? (
+                                              <CheckIcon className="size-4 text-green-500" />
+                                            ) : (
+                                              <CopyIcon className="size-4" />
+                                            )}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="top"
+                                          sideOffset={6}
+                                        >
+                                          {t("chat.message.copy")}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/50 hover:text-foreground"
+                                            onClick={() =>
+                                              handleSpeak(
+                                                segmentContent,
+                                                segmentId,
+                                              )
+                                            }
+                                            aria-label={
+                                              isSegmentSpeaking
+                                                ? t(
+                                                    "chat.message.stopListening",
+                                                  )
+                                                : t("chat.message.listen")
+                                            }
+                                          >
+                                            {isSegmentSpeaking ? (
+                                              <StopIcon
+                                                className="size-4"
+                                                weight="fill"
+                                              />
+                                            ) : (
+                                              <SpeakerIcon
+                                                className="size-4"
+                                                weight="fill"
+                                              />
+                                            )}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="top"
+                                          sideOffset={6}
+                                        >
+                                          {isSegmentSpeaking
+                                            ? t("chat.message.stopListening")
+                                            : t("chat.message.listen")}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/50 hover:text-foreground"
+                                            onClick={async () => {
+                                              try {
+                                                const { generatePDF } =
+                                                  await import("@/lib/pdf-utils");
+                                                await generatePDF(
+                                                  segmentContent,
+                                                  "document-analysis.pdf",
+                                                  t(
+                                                    "chat.message.documentAnalysis",
+                                                  ),
+                                                );
+                                                toast.success(
+                                                  t("toast.pdf.success"),
+                                                );
+                                              } catch (error) {
+                                                console.error(
+                                                  "PDF generation error:",
+                                                  error,
+                                                );
+                                                toast.error(
+                                                  t("toast.pdf.fail"),
+                                                );
+                                              }
+                                            }}
+                                            aria-label={t(
+                                              "chat.message.downloadPdf",
+                                            )}
+                                          >
+                                            <DownloadIcon className="size-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="top"
+                                          sideOffset={6}
+                                        >
+                                          {t("chat.message.downloadPdf")}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </div>
+                                )}
+                              </section>
+                            ) : (
+                              <div
+                                className={cn(
+                                  "w-full max-w-full overflow-hidden break-words",
+                                  compactAgentContentClass,
+                                  chatMessageBodyClass,
+                                  hasThinkingPanel && showAnswer
+                                    ? "mt-0.5 border-t border-border/45 pt-3.5 pb-1.5"
+                                    : "py-1.5",
+                                )}
+                              >
+                                {body}
+                              </div>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
                     )}
+
+                    {!isUser &&
+                      !isAgentError &&
+                      showAnswer &&
+                      mainResponse.trim() &&
+                      !hasDocumentSegments &&
+                      !isGenerating && (
+                        <div className="mt-3 flex items-center gap-1.5 self-start transition-opacity duration-200">
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/50 hover:text-foreground"
+                                  onClick={() =>
+                                    handleMessageCopy(mainResponse)
+                                  }
+                                  aria-label={t("chat.message.copy")}
+                                >
+                                  {isCopied ? (
+                                    <CheckIcon className="size-4 text-green-500" />
+                                  ) : (
+                                    <CopyIcon className="size-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" sideOffset={6}>
+                                {t("chat.message.copy")}
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/50 hover:text-foreground"
+                                  onClick={async () => {
+                                    try {
+                                      const { generatePDF } =
+                                        await import("@/lib/pdf-utils");
+                                      await generatePDF(
+                                        mainResponse,
+                                        pdfFileName,
+                                        pdfTitle,
+                                      );
+                                      toast.success(t("toast.pdf.success"));
+                                    } catch (error) {
+                                      console.error(
+                                        "PDF generation error:",
+                                        error,
+                                      );
+                                      toast.error(t("toast.pdf.fail"));
+                                    }
+                                  }}
+                                  aria-label={t("chat.message.downloadPdf")}
+                                >
+                                  <DownloadIcon className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" sideOffset={6}>
+                                {t("chat.message.downloadPdf")}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      )}
                   </div>
                 )}
-
-                {!isUser &&
-                  !isAgentError &&
-                  showAnswer &&
-                  mainResponse.trim() &&
-                  !isGenerating &&
-                  (!message.isThinkingRequested || mainResponse.trim()) && (
-                    <div className="mt-3 flex items-center gap-1.5 self-start transition-opacity duration-200">
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/50 hover:text-foreground"
-                              onClick={() => handleMessageCopy(mainResponse)}
-                            >
-                              {isCopied ? (
-                                <CheckIcon className="size-4 text-green-500" />
-                              ) : (
-                                <CopyIcon className="size-4" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="top"
-                            sideOffset={6}
-                            className="px-2 py-1 text-[10px] font-bold"
-                          >
-                            {t("chat.message.copy")}
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-full text-muted-foreground transition-all duration-200 hover:bg-muted/50 hover:text-foreground"
-                              onClick={async () => {
-                                try {
-                                  const { generatePDF } =
-                                    await import("@/lib/pdf-utils");
-                                  await generatePDF(
-                                    mainResponse,
-                                    pdfFileName,
-                                    pdfTitle,
-                                  );
-                                  toast.success(t("toast.pdf.success"));
-                                } catch (error) {
-                                  console.error("PDF generation error:", error);
-                                  toast.error(t("toast.pdf.fail"));
-                                }
-                              }}
-                            >
-                              <DownloadIcon className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="top"
-                            sideOffset={6}
-                            className="px-2 py-1 text-[10px] font-bold"
-                          >
-                            {t("chat.message.downloadPdf")}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  )}
               </div>
             </div>
           </div>

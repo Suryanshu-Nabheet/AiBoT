@@ -46,11 +46,9 @@ export const hi = {
   "models.platformOptimized": "प्लेटफ़ॉर्म अनुकूलित",
   "models.agents": "एजेंट",
   "models.agents.desc":
-    "Coder, Summarizer और Coach के लिए डिफ़ॉल्ट मॉडल। चैट जैसी ही BYOK कुंजियाँ उपयोग होती हैं।",
+    "Coder और Coach के लिए डिफ़ॉल्ट मॉडल। चैट जैसी ही BYOK कुंजियाँ उपयोग होती हैं।",
   "models.agents.coder": "Coder",
   "models.agents.coder.desc": "वेबसाइट जनरेशन एजेंट",
-  "models.agents.summarizer": "Summarizer",
-  "models.agents.summarizer.desc": "दस्तावेज़ और फ़ाइल विश्लेषण",
   "models.agents.coach": "Coach",
   "models.agents.coach.desc": "वॉइस कोचिंग एजेंट",
   "models.external": "बाहरी प्रोवाइडर मॉडल",
@@ -129,7 +127,6 @@ export const hi = {
   "nav.newChat": "नई चैट",
   "nav.agentMode": "एजेंट मोड",
   "nav.recentChats": "हाल की चैट",
-  "nav.agent.summarizer": "सारांशक",
   "nav.agent.coder": "कोडर",
   "nav.agent.coach": "कोच",
   "nav.madeBy": "Suryanshu Nabheet द्वारा निर्मित",
@@ -161,6 +158,9 @@ export const hi = {
   "chat.defaultTitle": "नई चैट",
   "chat.message.copy": "संदेश कॉपी करें",
   "chat.message.downloadPdf": "PDF के रूप में डाउनलोड करें",
+  "chat.message.documentAnalysis": "दस्तावेज़ विश्लेषण",
+  "chat.message.listen": "जवाब सुनें",
+  "chat.message.stopListening": "सुनना बंद करें",
   "chat.thinking.label": "थिंकिंग",
   "chat.thinking.inProgress": "थिंकिंग…",
   "chat.status.thinking": "AiBoT सोच रहा है...",
@@ -205,6 +205,9 @@ export const hi = {
   "toast.pdf.fail": "PDF बनाने में विफल",
   "toast.speech.unsupported":
     "इस ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है।",
+  "toast.speech.playbackUnsupported":
+    "इस ब्राउज़र में आवाज़ चलाना समर्थित नहीं है।",
+  "toast.speech.playbackFail": "आवाज़ चलाने में विफल।",
   "toast.speech.listening": "सुन रहा है...",
   "toast.file.extracted": "{name} से टेक्स्ट निकाला गया",
   "toast.file.readFail": "{name} पढ़ने में विफल",
@@ -256,13 +259,6 @@ export const hi = {
   "voice.ready": "AI तैयार",
   "voice.aria.start": "वॉइस इनपुट शुरू करें",
   "voice.aria.stop": "वॉइस इनपुट बंद करें",
-  "agent.summarizer.title": "दस्तावेज़ सारांशक",
-  "agent.summarizer.subtitle":
-    "रिसर्च-ग्रेड संश्लेषण के लिए दस्तावेज़ अपलोड करें।",
-  "agent.summarizer.dropHint":
-    "फ़ाइलें यहाँ छोड़ें या अपलोड करने के लिए क्लिक करें",
-  "agent.summarizer.start": "विश्लेषण शुरू करें",
-  "agent.summarizer.processing": "दस्तावेज़ प्रोसेस हो रहा है...",
   "agent.coder.title": "AI कोडर",
   "agent.coder.placeholder":
     "उस ऐप या कंपोनेंट का वर्णन करें जो आप बनाना चाहते हैं...",

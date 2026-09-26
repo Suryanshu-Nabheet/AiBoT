@@ -23,17 +23,17 @@ Unified interface for over 20 Large Language Models, integrated development envi
 
 ## Architecture Overview
 
-AiBoT is built on a microservices-inspired architecture utilizing specialized agents for distinct AI workflows.
+AiBoT combines streaming chat, document analysis, and specialized coding and coaching workflows in one interface.
 
 ```mermaid
 graph TB
     A[Client Layer] --> B[Next.js 15 App Router]
     B --> C[Chat Agent]
     B --> D[Coder Agent]
-    B --> E[Summarizer Agent]
+    B --> E[Document Processing]
     C --> F[OpenRouter API Gateway]
     D --> G[Code Execution Sandbox]
-    E --> H[Document Processing Pipeline]
+    E --> C
     F --> I[20+ LLM Providers]
 ```
 
@@ -49,19 +49,22 @@ graph TB
 ## Core Capabilities
 
 ### Conversational AI
+
 - **Intelligent Routing**: Automated failover and model selection across multiple frontier LLM providers.
 - **Streaming Response**: High-throughput message delivery using the SSE protocol.
 - **Multimodal Support**: Integrated vision capabilities for image analysis and optical character recognition.
 
 ### Coder Agent
+
 - **Automated Web Prototyping**: Generates complete, functional web applications from natural language descriptions.
 - **Integrated Preview**: Live execution environment for immediate feedback on generated code.
 - **Refinement Pipeline**: Context-aware code modification and bug fixing capabilities.
 
-### Document Intelligence
-- **Deep Synthesis**: Research-grade analysis and summarization of complex documents.
-- **Multi-Format Support**: Native processing of PDF, DOCX, TXT, and Markdown files.
-- **Accessibility Features**: Integrated text-to-speech and professional PDF reporting.
+### Document Work in Chat
+
+- **Multi-Format Support**: Attach PDFs, Office documents, spreadsheets, images, videos, and text files in any regular conversation.
+- **Structured Answers**: Ask for briefs, notes, research synthesis, spreadsheet analysis, or follow-up questions using the same chat history.
+- **Response Actions**: Listen to document answers, copy them, or download them as PDF without leaving the conversation.
 
 ---
 
@@ -93,6 +96,7 @@ cd AiBoT
 ## Security and Compliance
 
 AiBoT implements industry-standard security protocols:
+
 - **Input Validation**: Server-side request schemas and payload limits.
 - **Environment Isolation**: Secure handling of API credentials via server-side execution.
 - **Data Privacy**: Local-first persistence ensuring user conversations remain within the client environment.

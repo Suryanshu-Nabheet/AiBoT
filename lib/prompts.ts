@@ -16,6 +16,7 @@ import {
   resolveModelLabel,
   type ModelRef,
 } from "@/lib/prompts/identity";
+import { DOCUMENT_WORK_INSTRUCTION } from "@/lib/chat/document-work";
 
 export {
   composeSystemPromptWithIdentity,
@@ -25,11 +26,7 @@ export {
   type ModelRef,
 } from "@/lib/prompts/identity";
 
-export {
-  COACH_VOICE_ROLE,
-  CODER_AGENT_ROLE,
-  SUMMARIZER_AGENT_ROLE,
-} from "@/lib/prompts/agents";
+export { COACH_VOICE_ROLE, CODER_AGENT_ROLE } from "@/lib/prompts/agents";
 
 /**
  * Shared stack for every chat/agent call:
@@ -55,6 +52,7 @@ export function buildChatSystemPrompt(options: {
   modelName?: string;
   locale?: Locale;
   thinkingStage?: ThinkingStage;
+  documentWork?: boolean;
 }): string {
   const model: ModelRef = {
     id: options.modelId,
@@ -67,6 +65,9 @@ export function buildChatSystemPrompt(options: {
   const extra: string[] = [];
   if (stage === "final") {
     extra.push(THINKING_ANSWER_ADDON);
+  }
+  if (options.documentWork) {
+    extra.push(DOCUMENT_WORK_INSTRUCTION);
   }
   if (options.locale) {
     extra.push(localeReplyDirective(options.locale));

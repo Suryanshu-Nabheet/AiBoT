@@ -26,7 +26,7 @@ export type AgentCompletionResult =
   | { ok: false; status: number; body: Record<string, unknown> };
 
 /**
- * Non-streaming completion for agent routes (coder / summarizer / coach).
+ * Non-streaming completion for agent routes (coder / coach).
  * Uses the same BYOK + platform routing as chat.
  */
 export async function completeAgentChat(params: {

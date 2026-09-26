@@ -8,7 +8,6 @@
 /** localStorage keys shared by agent pages + Settings. */
 export const AGENT_MODEL_STORAGE = {
   coder: "agent-coder-model",
-  summarizer: "agent-summarizer-model",
   coach: "agent-coach-model",
 } as const;
 

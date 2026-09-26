@@ -21,6 +21,10 @@ import { Message, Role } from "@/lib/types";
 import { buildChatSystemPrompt } from "@/lib/prompts";
 import { mapMessagesForModelHistory } from "@/lib/chat/message-history";
 import {
+  isDocumentWorkRequest,
+  messageStartsDocumentWork,
+} from "@/lib/chat/document-work";
+import {
   buildMultimodalUserContent,
   normalizeLegacyAttachment,
   toOllamaMessage,
@@ -450,7 +454,11 @@ export function useChatSession({
       currentAttachments,
     );
 
-    // Append hidden instruction if provided
+    const documentWorkActive =
+      isDocumentWorkRequest(currentQuery, currentAttachments) ||
+      messages.some(messageStartsDocumentWork);
+
+    // Append task-specific context if provided
     if (systemInstruction) {
       if (typeof apiContent === "string") {
         apiContent = `${systemInstruction}\n\n${apiContent}`;
@@ -736,6 +744,7 @@ export function useChatSession({
             modelId: model,
             locale,
             thinkingStage: stage,
+            documentWork: documentWorkActive,
           });
           const chatMessages = buildChatMessagesForThinkingStage({
             history: historyForOllama.map((m) => ({
@@ -797,7 +806,11 @@ export function useChatSession({
           messages: [
             {
               role: "system",
-              content: buildChatSystemPrompt({ modelId: model, locale }),
+              content: buildChatSystemPrompt({
+                modelId: model,
+                locale,
+                documentWork: documentWorkActive,
+              }),
             },
             ...historyForOllama,
             {
@@ -871,6 +884,7 @@ export function useChatSession({
               conversationId: conversationPersistId ?? conversationId,
               thinkingStage: stage,
               priorReasoning: prior,
+              documentWork: documentWorkActive,
               customKeys: sanitizeCustomKeysForRequest(apiKeys),
               locale,
             }),
@@ -889,6 +903,7 @@ export function useChatSession({
           model,
           conversationId: conversationPersistId ?? conversationId,
           isThinking: false,
+          documentWork: documentWorkActive,
           customKeys: sanitizeCustomKeysForRequest(apiKeys),
           locale,
         }),

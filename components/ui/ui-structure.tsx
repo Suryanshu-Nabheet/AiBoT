@@ -32,7 +32,6 @@ import {
   Trash as TrashIcon,
   PencilSimple,
   Code,
-  FileText,
   TerminalWindow,
   CaretDown,
   SpeakerHigh,
@@ -164,21 +163,6 @@ export const UIStructure = () => {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="mt-2 flex flex-col gap-1 px-1">
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "h-9 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                            pathname?.startsWith("/agent/summarizer") &&
-                              "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
-                          )}
-                          onClick={() => router.push("/agent/summarizer")}
-                        >
-                          <FileText
-                            className="size-4 text-foreground"
-                            weight="regular"
-                          />
-                          {t("nav.agent.summarizer")}
-                        </Button>
                         <Button
                           variant="ghost"
                           className={cn(
