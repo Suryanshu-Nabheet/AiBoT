@@ -290,7 +290,8 @@ export const ChatMessage = memo(
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent
-                            side="bottom"
+                            side="top"
+                            sideOffset={6}
                             className="px-2 py-1 text-[10px] font-bold"
                           >
                             {t("chat.message.copy")}
@@ -323,7 +324,8 @@ export const ChatMessage = memo(
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent
-                            side="bottom"
+                            side="top"
+                            sideOffset={6}
                             className="px-2 py-1 text-[10px] font-bold"
                           >
                             {t("chat.message.downloadPdf")}

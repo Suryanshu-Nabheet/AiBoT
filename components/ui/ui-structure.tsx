@@ -16,7 +16,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  SidebarInput,
   Sidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -25,12 +24,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { Execution } from "@/hooks/useExecution";
 import {
   Trash as TrashIcon,
   PencilSimple,
-  MagnifyingGlass,
   Code,
   FileText,
   TerminalWindow,
@@ -52,7 +51,6 @@ export const UIStructure = () => {
   const [hoverChatId, setHoverChatId] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editTitle, setEditTitle] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [isAgentModeOpen, setIsAgentModeOpen] = useState(false);
 
   const router = useRouter();
@@ -81,38 +79,31 @@ export const UIStructure = () => {
   return (
     <Sidebar className="border-r border-sidebar-border/50 bg-sidebar">
       <SidebarContent className="w-full">
-        <SidebarGroup>
-          <SidebarHeader className="border-b border-sidebar-border/50 px-2 pb-3">
-            <div className="flex w-full flex-col items-center gap-4 rounded-xl p-2">
-              <div
-                className="flex w-full items-center justify-center py-2 cursor-pointer transition-all duration-300 group"
-                onClick={() => {
-                  if (typeof window !== "undefined") {
-                    sessionStorage.removeItem("session-directModel");
-                    sessionStorage.removeItem("session-arena-a");
-                    sessionStorage.removeItem("session-arena-b");
-                    window.location.href = "/";
-                  }
-                }}
-              >
-                <h1 className="text-3xl font-bold text-foreground tracking-tight group-hover:scale-105 transition-transform duration-300">
-                  Ai<span className="text-primary">BoT</span>
-                </h1>
+        <SidebarGroup className="p-0">
+          <SidebarHeader className="border-b border-sidebar-border/50 px-4 pb-4 pt-0">
+            <div className="flex w-full flex-col items-center gap-5">
+              <div className="relative top-2 flex w-full items-center justify-center">
+                <button
+                  type="button"
+                  aria-label="AiBoT home"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      sessionStorage.removeItem("session-directModel");
+                      sessionStorage.removeItem("session-arena-a");
+                      sessionStorage.removeItem("session-arena-b");
+                      window.location.href = "/";
+                    }
+                  }}
+                >
+                  <h1 className="text-[2rem] font-bold tracking-tight text-foreground">
+                    Ai<span className="text-primary">BoT</span>
+                  </h1>
+                </button>
               </div>
-              <div className="relative w-full">
-                <MagnifyingGlass className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <SidebarInput
-                  placeholder={t("nav.search.placeholder")}
-                  className="pl-9 h-10 bg-background/50 border-sidebar-border/50 focus-visible:ring-0 focus-visible:ring-offset-0"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus={false}
-                  tabIndex={0}
-                  enterKeyHint="search"
-                />
-              </div>
-              <div className="w-full flex flex-col gap-2">
+              <div className="w-full flex flex-col gap-3">
                 <Button
+                  variant="ghost"
                   onClick={(e) => {
                     e.preventDefault();
                     if (typeof window !== "undefined") {
@@ -122,11 +113,9 @@ export const UIStructure = () => {
                       window.location.href = "/";
                     }
                   }}
-                  className="w-full justify-start gap-3 h-11 px-4 bg-background text-foreground border border-sidebar-border shadow-sm hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-300 font-bold tracking-tight rounded-xl group"
+                  className="mx-auto h-10 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-medium tracking-tight text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground"
                 >
-                  <div className="flex items-center justify-center size-5 rounded-lg bg-sidebar-accent border border-sidebar-border/50 group-hover:bg-background transition-colors">
-                    <Plus className="size-3.5 text-primary" weight="bold" />
-                  </div>
+                  <Plus className="size-4 text-foreground" weight="regular" />
                   {t("nav.newChat")}
                 </Button>
 
@@ -139,32 +128,30 @@ export const UIStructure = () => {
                     <CollapsibleTrigger asChild>
                       <Button
                         className={cn(
-                          "w-full justify-between h-11 px-3 bg-background hover:bg-sidebar-accent border border-sidebar-border shadow-sm transition-all text-foreground rounded-xl",
+                          "mx-auto h-10 w-[calc(100%-0.5rem)] justify-between rounded-lg border border-transparent bg-transparent px-3 text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
                           isAgentModeOpen &&
-                            "bg-sidebar-accent font-bold text-primary border-sidebar-border",
+                            "border-sidebar-border/50 bg-sidebar-accent/80 font-medium text-foreground",
                         )}
                         variant="ghost"
                       >
                         <div className="flex items-center gap-2.5">
                           <Code
                             className={cn(
-                              "size-5 transition-colors",
+                              "size-5 text-foreground transition-colors",
                               isAgentModeOpen
                                 ? "text-primary"
-                                : "text-muted-foreground",
+                                : "text-foreground",
                             )}
                             weight="bold"
                           />
-                          <span className="font-bold tracking-tight">
+                          <span className="font-medium tracking-tight text-foreground">
                             {t("nav.agentMode")}
                           </span>
                         </div>
                         <CaretDown
                           className={cn(
-                            "size-3.5 transition-transform duration-300",
-                            isAgentModeOpen
-                              ? "rotate-180 text-primary"
-                              : "text-muted-foreground",
+                            "size-3.5 text-foreground/80 transition-transform duration-300",
+                            isAgentModeOpen ? "rotate-180 text-foreground" : "",
                           )}
                           weight="bold"
                         />
@@ -174,34 +161,46 @@ export const UIStructure = () => {
                       <div className="flex flex-col gap-2 mt-3 px-1">
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
+                          className={cn(
+                            "mx-auto h-9 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                            pathname?.startsWith("/agent/summarizer") &&
+                              "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
+                          )}
                           onClick={() => router.push("/agent/summarizer")}
                         >
                           <FileText
-                            className="size-4.5 text-primary"
-                            weight="bold"
+                            className="size-4 text-foreground"
+                            weight="regular"
                           />
                           {t("nav.agent.summarizer")}
                         </Button>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
+                          className={cn(
+                            "mx-auto h-9 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                            pathname?.startsWith("/agent/coder") &&
+                              "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
+                          )}
                           onClick={() => router.push("/agent/coder")}
                         >
                           <TerminalWindow
-                            className="size-4.5 text-primary"
-                            weight="bold"
+                            className="size-4 text-foreground"
+                            weight="regular"
                           />
                           {t("nav.agent.coder")}
                         </Button>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-3 h-10 bg-background text-foreground border border-sidebar-border/50 shadow-sm font-bold tracking-tight hover:bg-sidebar-accent hover:border-sidebar-border/80 transition-all duration-200 rounded-xl"
+                          className={cn(
+                            "mx-auto h-9 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                            pathname?.startsWith("/agent/coach") &&
+                              "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
+                          )}
                           onClick={() => router.push("/agent/coach")}
                         >
                           <SpeakerHigh
-                            className="size-4.5 text-primary"
-                            weight="bold"
+                            className="size-4 text-foreground"
+                            weight="regular"
                           />
                           {t("nav.agent.coach")}
                         </Button>
@@ -221,13 +220,8 @@ export const UIStructure = () => {
                       className="bg-muted h-9 w-full animate-pulse rounded-md"
                     />
                   ))
-                : [...new Map(executions.map((e) => [e.id, e])).values()]
-                    .filter((execution) =>
-                      execution.title
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()),
-                    )
-                    .map((execution: Execution) => (
+                : [...new Map(executions.map((e) => [e.id, e])).values()].map(
+                    (execution: Execution) => (
                       <SidebarMenuItem key={execution.id}>
                         <SidebarMenuButton
                           className={cn(
@@ -276,38 +270,75 @@ export const UIStructure = () => {
                               execution.id === currentConversationId) && (
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                 {editingId !== execution.id && (
+                                  <IconTooltip
+                                    label={t("nav.editChat")}
+                                    side="top"
+                                    align="end"
+                                  >
+                                    <div
+                                      role="button"
+                                      tabIndex={0}
+                                      aria-label={t("nav.editChat")}
+                                      className="flex cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-muted"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingId(execution.id);
+                                        setEditTitle(execution.title);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (
+                                          e.key === "Enter" ||
+                                          e.key === " "
+                                        ) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setEditingId(execution.id);
+                                          setEditTitle(execution.title);
+                                        }
+                                      }}
+                                    >
+                                      <PencilSimple
+                                        weight="bold"
+                                        className="size-3.5"
+                                      />
+                                    </div>
+                                  </IconTooltip>
+                                )}
+                                <IconTooltip
+                                  label={t("nav.deleteChat")}
+                                  side="top"
+                                  align="start"
+                                >
                                   <div
-                                    className="flex items-center justify-center rounded-md p-1 hover:bg-muted transition-colors cursor-pointer"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={t("nav.deleteChat")}
+                                    className="flex cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-destructive/10 hover:text-destructive"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEditingId(execution.id);
-                                      setEditTitle(execution.title);
+                                      handleDeleteExecution(execution.id);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleDeleteExecution(execution.id);
+                                      }
                                     }}
                                   >
-                                    <PencilSimple
+                                    <TrashIcon
                                       weight="bold"
                                       className="size-3.5"
                                     />
                                   </div>
-                                )}
-                                <div
-                                  className="flex items-center justify-center rounded-md p-1 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteExecution(execution.id);
-                                  }}
-                                >
-                                  <TrashIcon
-                                    weight="bold"
-                                    className="size-3.5"
-                                  />
-                                </div>
+                                </IconTooltip>
                               </div>
                             )}
                           </div>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    ))}
+                    ),
+                  )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

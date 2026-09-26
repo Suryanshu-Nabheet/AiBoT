@@ -16,11 +16,13 @@ import {
   PaperPlaneRightIcon,
   StopIcon,
   PaperclipIcon,
+  PlusIcon,
   MicrophoneIcon,
   X as XIcon,
 } from "@phosphor-icons/react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { toast } from "sonner";
@@ -100,7 +102,9 @@ export function ChatInput({
   const hasDraft = Boolean(query.trim()) || attachments.length > 0;
   const useVoiceAction =
     !isLoading &&
-    (isListening || voiceModifierHeld || (!query.trim() && !attachments.length));
+    (isListening ||
+      voiceModifierHeld ||
+      (!query.trim() && !attachments.length));
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
@@ -190,13 +194,20 @@ export function ChatInput({
                       </span>
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(i)}
-                    className="absolute top-0.5 right-0.5 rounded-full bg-black/50 p-0.5 text-white opacity-0 backdrop-blur-sm transition-all hover:bg-red-500 group-hover:opacity-100"
+                  <IconTooltip
+                    label={t("composer.removeAttachment", { name: att.name })}
                   >
-                    <XIcon className="size-3" />
-                  </button>
+                    <button
+                      type="button"
+                      aria-label={t("composer.removeAttachment", {
+                        name: att.name,
+                      })}
+                      onClick={() => removeAttachment(i)}
+                      className="absolute top-0.5 right-0.5 rounded-full bg-black/50 p-0.5 text-white opacity-0 backdrop-blur-sm transition-all hover:bg-red-500 group-hover:opacity-100"
+                    >
+                      <XIcon className="size-3" />
+                    </button>
+                  </IconTooltip>
                 </motion.div>
               ))}
             </div>
@@ -217,20 +228,7 @@ export function ChatInput({
           />
 
           <div className="flex min-w-0 items-center gap-1 px-2 pb-2 pt-0 sm:gap-2 sm:px-3 sm:pb-3">
-            {showComposerModel && (
-              <ModelSelector
-                value={model}
-                onValueChange={onModelChange}
-                modelStorageKey={modelStorageKey}
-                thinkingEnabled={isThinking}
-                onThinkingChange={onThinkingChange}
-                showModelList={showModelSelector}
-                triggerVariant="compact"
-                enablePickerShortcut={Boolean(showComposerModel)}
-              />
-            )}
-
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 overflow-x-auto overscroll-x-contain scrollbar-none [-webkit-overflow-scrolling:touch] sm:justify-start sm:gap-1">
+            <div className="flex min-w-0 flex-1 items-center justify-start gap-0.5 overflow-x-auto overscroll-x-contain scrollbar-none [-webkit-overflow-scrolling:touch] sm:gap-1">
               <input
                 type="file"
                 multiple
@@ -240,66 +238,94 @@ export function ChatInput({
                 onChange={handleFileSelect}
               />
 
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="size-9 shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground sm:size-8"
-                onClick={() => fileInputRef.current?.click()}
-                title={t("composer.attach")}
-              >
-                <PaperclipIcon className="size-[18px]" />
-              </Button>
+              <IconTooltip label={t("composer.attach")}>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={t("composer.attach")}
+                  className="size-9 shrink-0 rounded-full border border-border/50 bg-muted/70 text-muted-foreground transition-[background-color,border-color,box-shadow,color] duration-200 hover:border-foreground/20 hover:bg-muted hover:text-foreground hover:shadow-[0_1px_4px_rgb(0_0_0/0.12)] sm:size-8 dark:hover:shadow-[0_1px_4px_rgb(0_0_0/0.3)]"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <PlusIcon className="size-[18px]" />
+                </Button>
+              </IconTooltip>
+
+              {showComposerModel && (
+                <ModelSelector
+                  value={model}
+                  onValueChange={onModelChange}
+                  modelStorageKey={modelStorageKey}
+                  thinkingEnabled={isThinking}
+                  onThinkingChange={onThinkingChange}
+                  showModelList={showModelSelector}
+                  triggerVariant="compact"
+                  enablePickerShortcut={Boolean(showComposerModel)}
+                />
+              )}
             </div>
 
             <div className="flex shrink-0 items-center">
               {isLoading ? (
-                <Button
-                  type="button"
-                  size="icon"
-                  className="size-9 rounded-full border border-red-500/20 bg-red-500/10 p-0 text-red-500 shadow-none hover:bg-red-500/20 sm:size-8"
-                  onClick={onStop}
-                  aria-label={t("composer.stop")}
-                >
-                  <StopIcon weight="fill" className="size-[14px]" />
-                </Button>
+                <IconTooltip label={t("composer.stop")}>
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="size-9 rounded-full border border-red-500/20 bg-red-500/10 p-0 text-red-500 shadow-none hover:bg-red-500/20 sm:size-8"
+                    onClick={onStop}
+                    aria-label={t("composer.stop")}
+                  >
+                    <StopIcon weight="fill" className="size-[14px]" />
+                  </Button>
+                </IconTooltip>
               ) : useVoiceAction ? (
-                <Button
-                  type="button"
-                  size="icon"
-                  className={cn(
-                    "size-9 rounded-full p-0 sm:size-8",
-                    isListening &&
-                      "animate-pulse border border-red-500/20 bg-red-500/10 text-red-500 shadow-none hover:bg-red-500/20",
-                  )}
-                  onClick={onSpeechToggle}
-                  aria-label={
-                    isListening
-                      ? t("composer.voice.stop")
-                      : t("composer.voice")
-                  }
-                  title={
+                <IconTooltip
+                  label={
                     voiceModifierHeld && hasDraft
                       ? t("composer.voice.modifierHint")
-                      : t("composer.voice")
+                      : isListening
+                        ? t("composer.voice.stop")
+                        : t("composer.voice")
                   }
                 >
-                  {isListening ? (
-                    <StopIcon weight="fill" className="size-[14px]" />
-                  ) : (
-                    <MicrophoneIcon className="size-[18px]" />
-                  )}
-                </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    className={cn(
+                      "size-9 rounded-full p-0 sm:size-8",
+                      isListening &&
+                        "animate-pulse border border-red-500/20 bg-red-500/10 text-red-500 shadow-none hover:bg-red-500/20",
+                    )}
+                    onClick={onSpeechToggle}
+                    aria-label={
+                      isListening
+                        ? t("composer.voice.stop")
+                        : t("composer.voice")
+                    }
+                  >
+                    {isListening ? (
+                      <StopIcon weight="fill" className="size-[14px]" />
+                    ) : (
+                      <MicrophoneIcon className="size-[18px]" />
+                    )}
+                  </Button>
+                </IconTooltip>
               ) : (
-                <Button
-                  type="submit"
-                  size="icon"
-                  className="size-9 rounded-full p-0 sm:size-8"
-                  aria-label={t("composer.send")}
-                  title={t("composer.voice.modifierHint")}
+                <IconTooltip
+                  label={`${t("composer.send")} · ${t("composer.voice.modifierHint")}`}
                 >
-                  <PaperPlaneRightIcon weight="fill" className="size-[14px]" />
-                </Button>
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="size-9 rounded-full p-0 sm:size-8"
+                    aria-label={t("composer.send")}
+                  >
+                    <PaperPlaneRightIcon
+                      weight="fill"
+                      className="size-[14px]"
+                    />
+                  </Button>
+                </IconTooltip>
               )}
             </div>
           </div>

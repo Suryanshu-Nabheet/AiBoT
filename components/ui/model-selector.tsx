@@ -13,6 +13,7 @@ import { useSettings } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
 import { Check, ChevronDown, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import {
   Command,
   CommandEmpty,
@@ -223,54 +224,53 @@ export function ModelSelector({
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          role="combobox"
-          aria-expanded={open}
-          aria-label={triggerLabel}
-          title={
-            enablePickerShortcut
-              ? t("shortcut.toggleModel")
-              : showModelList && selectedModelObj
-                ? selectedModelObj.name.replace(" (Free)", "")
-                : undefined
-          }
-          disabled={disabled}
-          className={cn(
-            "h-9 min-w-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 sm:h-8",
-            triggerVariant === "compact"
-              ? "max-w-[min(62vw,14rem)] shrink-0 justify-start sm:max-w-[12rem]"
-              : "w-fit max-w-none shrink-0 justify-start",
-            triggerClassName,
-          )}
-        >
-          <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-            {showModelList && selectedModelObj && (
-              <BrandIcon
-                src={selectedModelObj.logo || "/icons/ai.svg"}
-                alt=""
-                className="size-4 shrink-0 opacity-90"
-              />
+      <IconTooltip
+        label={enablePickerShortcut ? t("shortcut.toggleModel") : triggerLabel}
+      >
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            role="combobox"
+            aria-expanded={open}
+            aria-label={triggerLabel}
+            disabled={disabled}
+            className={cn(
+              "h-9 min-w-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 sm:h-8",
+              triggerVariant === "compact"
+                ? "max-w-[min(62vw,14rem)] shrink-0 justify-start sm:max-w-[12rem]"
+                : "w-fit max-w-none shrink-0 justify-start",
+              triggerClassName,
             )}
-            {showModelList ? (
-              <span
-                className={cn(
-                  "min-w-0 truncate text-left text-sm font-medium",
-                  thinkingEnabled ? thinkingAccentTextClass : "text-foreground",
-                )}
-              >
-                {fullModelLabel}
-              </span>
-            ) : (
-              <span className="truncate text-left text-sm font-medium text-foreground">
-                {t("model.thinkingMenu")}
-              </span>
-            )}
-          </span>
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/60" />
-        </Button>
-      </DropdownMenuTrigger>
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+              {showModelList && selectedModelObj && (
+                <BrandIcon
+                  src={selectedModelObj.logo || "/icons/ai.svg"}
+                  alt=""
+                  className="size-4 shrink-0 opacity-90"
+                />
+              )}
+              {showModelList ? (
+                <span
+                  className={cn(
+                    "min-w-0 truncate text-left text-sm font-medium",
+                    thinkingEnabled
+                      ? thinkingAccentTextClass
+                      : "text-foreground",
+                  )}
+                >
+                  {fullModelLabel}
+                </span>
+              ) : (
+                <span className="truncate text-left text-sm font-medium text-foreground">
+                  {t("model.thinkingMenu")}
+                </span>
+              )}
+            </span>
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/60" />
+          </Button>
+        </DropdownMenuTrigger>
+      </IconTooltip>
       <DropdownMenuContent
         className="w-[min(calc(100vw-1.5rem),300px)] overflow-hidden rounded-xl border border-border/80 p-0 shadow-lg"
         align="start"

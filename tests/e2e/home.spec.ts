@@ -20,12 +20,23 @@ test.describe("Home / empty chat", () => {
     await expect(composer).toBeEditable();
   });
 
-  test("model selector and send affordances are present", async ({ page }) => {
+  test("model selector and composer actions follow the draft state", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     await expect(page.getByRole("combobox").first()).toBeVisible();
     await expect(
+      page.getByRole("button", { name: /attach files/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /voice input/i }),
+    ).toBeVisible();
+
+    const composer = page.getByPlaceholder(/message aibot/i);
+    await composer.fill("A draft message");
+    await expect(
       page.getByRole("button", { name: /send message/i }),
-    ).toBeDisabled();
+    ).toBeVisible();
   });
 });

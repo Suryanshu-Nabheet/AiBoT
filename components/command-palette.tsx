@@ -66,6 +66,13 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    const openPalette = () => setOpen(true);
+    window.addEventListener("open-command-palette", openPalette);
+    return () =>
+      window.removeEventListener("open-command-palette", openPalette);
+  }, []);
+
   const recentChats = useMemo(() => {
     const unique = [...new Map(executions.map((e) => [e.id, e])).values()];
     return unique.slice(0, HISTORY_LIMIT);

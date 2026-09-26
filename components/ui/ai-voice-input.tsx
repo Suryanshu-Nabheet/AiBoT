@@ -10,6 +10,7 @@
 import { Microphone, Pause, SpeakerHigh } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 
 interface AIVoiceInputProps {
   onStart: () => void;
@@ -59,40 +60,45 @@ export function AIVoiceInput({
   return (
     <div className="flex w-full max-w-full flex-col items-center justify-center px-2 py-2 sm:py-4">
       <div className="relative mx-auto flex w-full max-w-xl flex-col items-center gap-4">
-        <button
-          className={cn(
-            "group flex size-20 sm:size-24 items-center justify-center rounded-2xl transition-all z-50 shadow-sm",
-            isActive
-              ? "bg-transparent cursor-default shadow-none"
-              : "bg-white hover:bg-slate-50 border border-slate-200 cursor-pointer shadow-md",
-          )}
-          type="button"
-          onClick={handleClick}
-          disabled={isProcessing}
-          aria-label={isActive ? "Stop" : "Start Microphone"}
-        >
-          {isActive ? (
-            <div className="relative flex items-center justify-center">
-              {/* Stop Icon for active state - Blue Background */}
-              <div
-                className={cn(
-                  "w-14 h-14 rounded-full flex items-center justify-center transition-colors bg-blue-100 text-blue-600",
-                )}
-              >
-                {isModeSpeaking ? (
-                  <SpeakerHigh className="size-8 animate-pulse" weight="fill" />
-                ) : (
-                  <Pause className="size-6" weight="fill" />
-                )}
+        <IconTooltip label={statusText}>
+          <button
+            className={cn(
+              "group flex size-20 sm:size-24 items-center justify-center rounded-2xl transition-all z-50 shadow-sm",
+              isActive
+                ? "bg-transparent cursor-default shadow-none"
+                : "bg-white hover:bg-slate-50 border border-slate-200 cursor-pointer shadow-md",
+            )}
+            type="button"
+            onClick={handleClick}
+            disabled={isProcessing}
+            aria-label={isActive ? "Stop" : "Start Microphone"}
+          >
+            {isActive ? (
+              <div className="relative flex items-center justify-center">
+                {/* Stop Icon for active state - Blue Background */}
+                <div
+                  className={cn(
+                    "w-14 h-14 rounded-full flex items-center justify-center transition-colors bg-blue-100 text-blue-600",
+                  )}
+                >
+                  {isModeSpeaking ? (
+                    <SpeakerHigh
+                      className="size-8 animate-pulse"
+                      weight="fill"
+                    />
+                  ) : (
+                    <Pause className="size-6" weight="fill" />
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <Microphone
-              className="w-10 h-10 text-slate-800 transition-colors"
-              weight="fill"
-            />
-          )}
-        </button>
+            ) : (
+              <Microphone
+                className="w-10 h-10 text-slate-800 transition-colors"
+                weight="fill"
+              />
+            )}
+          </button>
+        </IconTooltip>
 
         {/* Bars Visualizer */}
         <div className="h-12 w-64 flex items-center justify-center gap-1.5">

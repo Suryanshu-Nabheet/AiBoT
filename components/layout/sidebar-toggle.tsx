@@ -11,6 +11,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
 import { SidebarSimple } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 
 import {
   Tooltip,
@@ -25,26 +26,26 @@ export function SidebarToggle({ className }: { className?: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div
-          role="button"
-          tabIndex={0}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           aria-label={t("nav.toggleSidebar")}
           className={cn(
-            "p-2 rounded-lg bg-background border border-sidebar-border text-sidebar-foreground/80 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200 shadow-sm hover:shadow-md ring-1 ring-black/5",
+            "size-9 rounded-lg border border-sidebar-border bg-background p-0 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
             className,
           )}
           onClick={toggleSidebar}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              toggleSidebar();
-            }
-          }}
         >
           <SidebarSimple className="size-4" weight="bold" />
-        </div>
+        </Button>
       </TooltipTrigger>
-      <TooltipContent side="right" className="text-[10px] px-2 py-1 font-bold">
+      <TooltipContent
+        side="bottom"
+        align="end"
+        sideOffset={8}
+        className="max-w-48 whitespace-normal px-2 py-1 text-center text-[10px] font-bold leading-snug"
+      >
         {t("shortcut.toggleSidebar")}
       </TooltipContent>
     </Tooltip>

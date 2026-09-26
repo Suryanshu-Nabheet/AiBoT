@@ -15,10 +15,15 @@ import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { HeaderModeToggle } from "@/components/home/header-mode-toggle";
 import { CommandPalette } from "@/components/command-palette";
 import { SettingsModal } from "@/components/settings/settings-modal";
+import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === "/" || pathname?.startsWith("/chat/");
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-app max-h-app w-full max-w-full min-h-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]">
@@ -31,7 +36,28 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
             <header className="flex h-12 w-full shrink-0 items-center gap-0 overflow-hidden select-none z-10">
               {/* Left and Center of Header - White Background */}
               <div className="flex h-full min-w-0 flex-1 items-center gap-3 border-b border-sidebar-border/30 bg-background px-3 sm:px-4">
-                <SidebarToggle />
+                <div className="flex items-center gap-2">
+                  <SidebarToggle />
+                  <IconTooltip
+                    label={t("nav.search.placeholder")}
+                    side="bottom"
+                    align="start"
+                    sideOffset={8}
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("nav.search.placeholder")}
+                      className="size-9 rounded-lg border border-sidebar-border bg-background p-0 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() =>
+                        window.dispatchEvent(new Event("open-command-palette"))
+                      }
+                    >
+                      <MagnifyingGlass className="size-4" weight="bold" />
+                    </Button>
+                  </IconTooltip>
+                </div>
                 <div className="flex-1" />
               </div>
 

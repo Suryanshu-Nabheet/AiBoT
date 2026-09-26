@@ -150,6 +150,8 @@ export const en = {
   "nav.madeBy": "Made by Suryanshu Nabheet",
   "nav.toggleSidebar": "Toggle Sidebar",
   "nav.chatDeleted": "Chat deleted",
+  "nav.editChat": "Rename chat",
+  "nav.deleteChat": "Delete chat",
   "nav.titleUpdated": "Title updated",
 
   // Header / mode switcher
@@ -197,6 +199,7 @@ export const en = {
   "composer.placeholder.listening": "Listening...",
   "composer.placeholder.arena": "Message both models...",
   "composer.attach": "Attach files",
+  "composer.removeAttachment": "Remove {name}",
   "composer.voice": "Voice input",
   "composer.voice.stop": "Stop voice input",
   "composer.voice.modifierHint":
@@ -207,6 +210,7 @@ export const en = {
   "shortcut.toggleModel": "Search models (⌘/)",
   "composer.send": "Send message",
   "composer.stop": "Stop generating",
+  "composer.stopSpeaking": "Stop speaking",
 
   // Model selector
   "model.select": "Select model",

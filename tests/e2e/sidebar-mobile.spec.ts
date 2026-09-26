@@ -10,17 +10,16 @@ import { test, expect } from "@playwright/test";
 test.describe("Mobile sidebar", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("opening sidebar does not focus the search field", async ({ page }) => {
+  test("opening the sidebar does not open the chat search palette", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     await page.getByRole("button", { name: /toggle sidebar/i }).click();
 
-    const search = page.getByPlaceholder(/search chats/i);
-    await expect(search).toBeVisible();
-
-    const searchFocused = await search.evaluate(
-      (el) => el === document.activeElement,
-    );
-    expect(searchFocused).toBe(false);
+    await expect(page.getByPlaceholder(/search chats/i)).toHaveCount(0);
+    await expect(
+      page.getByRole("dialog", { name: /command palette/i }),
+    ).toHaveCount(0);
   });
 });

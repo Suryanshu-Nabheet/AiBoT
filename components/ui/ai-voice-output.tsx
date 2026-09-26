@@ -10,6 +10,8 @@
 import { SpeakerHigh } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface AIVoiceOutputProps {
   onStop: () => void;
@@ -21,6 +23,7 @@ export default function AIVoiceOutput({
   isSpeaking,
 }: AIVoiceOutputProps) {
   const [isClient, setIsClient] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setIsClient(true);
@@ -29,34 +32,39 @@ export default function AIVoiceOutput({
   return (
     <div className="w-full py-4 flex flex-col items-center justify-center">
       <div className="relative max-w-xl w-full mx-auto flex items-center flex-col gap-4">
-        <button
-          className={cn(
-            "group w-24 h-24 rounded-2xl flex items-center justify-center transition-all z-50 shadow-sm",
-            "bg-transparent cursor-default shadow-none",
-          )}
-          type="button"
-          onClick={onStop}
-        >
-          <div className="relative flex items-center justify-center">
-            {/* Spinning Square - Advanced Polish */}
-            <div
-              className={cn(
-                "w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-500 cursor-pointer",
-                isSpeaking
-                  ? "animate-spin bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 ring-4 ring-blue-50"
-                  : "text-blue-600 bg-blue-50 hover:bg-blue-100",
-              )}
-              style={isSpeaking ? { animationDuration: "3s" } : undefined}
-            >
-              {!isSpeaking && <SpeakerHigh className="size-7" weight="bold" />}
-            </div>
-
-            {/* Decorative background glow when speaking */}
-            {isSpeaking && (
-              <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse z-[-1]" />
+        <IconTooltip label={t("composer.stopSpeaking")}>
+          <button
+            className={cn(
+              "group w-24 h-24 rounded-2xl flex items-center justify-center transition-all z-50 shadow-sm",
+              "bg-transparent cursor-default shadow-none",
             )}
-          </div>
-        </button>
+            type="button"
+            aria-label={t("composer.stopSpeaking")}
+            onClick={onStop}
+          >
+            <div className="relative flex items-center justify-center">
+              {/* Spinning Square - Advanced Polish */}
+              <div
+                className={cn(
+                  "w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-500 cursor-pointer",
+                  isSpeaking
+                    ? "animate-spin bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 ring-4 ring-blue-50"
+                    : "text-blue-600 bg-blue-50 hover:bg-blue-100",
+                )}
+                style={isSpeaking ? { animationDuration: "3s" } : undefined}
+              >
+                {!isSpeaking && (
+                  <SpeakerHigh className="size-7" weight="bold" />
+                )}
+              </div>
+
+              {/* Decorative background glow when speaking */}
+              {isSpeaking && (
+                <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse z-[-1]" />
+              )}
+            </div>
+          </button>
+        </IconTooltip>
 
         {/* Bars - Polished Blue */}
         <div className="h-12 w-64 flex items-center justify-center gap-0.5">

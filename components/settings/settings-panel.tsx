@@ -33,6 +33,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { useSettings, ApiKeys } from "@/contexts/settings-context";
@@ -97,17 +98,19 @@ function CopyableCommand({
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-3 py-2 font-mono text-[11px] text-foreground">
       <span className="min-w-0 break-all">{value}</span>
-      <button
-        type="button"
-        onClick={() => {
-          void navigator.clipboard.writeText(value);
-          onCopied();
-        }}
-        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        aria-label="Copy"
-      >
-        <Copy className="size-3.5" />
-      </button>
+      <IconTooltip label="Copy command">
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard.writeText(value);
+            onCopied();
+          }}
+          className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="Copy command"
+        >
+          <Copy className="size-3.5" />
+        </button>
+      </IconTooltip>
     </div>
   );
 }
@@ -977,14 +980,16 @@ export function SettingsPanel({
   };
 
   const renderCloseButton = () => (
-    <button
-      type="button"
-      aria-label="Close settings"
-      onClick={onClose}
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-    >
-      <X className="size-4" weight="bold" />
-    </button>
+    <IconTooltip label="Close settings" side="bottom" align="end">
+      <button
+        type="button"
+        aria-label="Close settings"
+        onClick={onClose}
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <X className="size-4" weight="bold" />
+      </button>
+    </IconTooltip>
   );
 
   const isModal = variant === "modal";
