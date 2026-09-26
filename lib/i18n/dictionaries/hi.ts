@@ -174,11 +174,13 @@ export const hi = {
   "composer.placeholder.arena": "दोनों मॉडल को संदेश भेजें...",
   "composer.attach": "फ़ाइलें संलग्न करें",
   "composer.voice": "वॉइस इनपुट",
+  "composer.voice.stop": "वॉइस इनपुट रोकें",
+  "composer.voice.modifierHint":
+    "बोलकर लिखने के लिए Mac पर ⌘ या अन्य डिवाइस पर Ctrl दबाकर क्लिक करें",
   "composer.thinking": "थिंकिंग मोड",
 
   "shortcut.toggleSidebar": "साइडबार टॉगल (⌘B)",
   "shortcut.toggleModel": "मॉडल बदलें (⌘/)",
-  "composer.enhance": "प्रॉम्प्ट बेहतर बनाएँ",
   "composer.send": "संदेश भेजें",
   "composer.stop": "जनरेशन रोकें",
   "model.select": "मॉडल चुनें",
@@ -197,10 +199,6 @@ export const hi = {
   "toast.speech.unsupported":
     "इस ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है।",
   "toast.speech.listening": "सुन रहा है...",
-  "toast.enhance.empty": "पहले कुछ टाइप करें जिसे बेहतर बनाना है।",
-  "toast.enhance.fail": "प्रॉम्प्ट बेहतर बनाने में विफल। फिर कोशिश करें।",
-  "toast.enhance.success": "प्रॉम्प्ट बेहतर हो गया!",
-  "toast.enhance.none": "कोई सुधार नहीं मिला। फिर कोशिश करें।",
   "toast.file.extracted": "{name} से टेक्स्ट निकाला गया",
   "toast.file.readFail": "{name} पढ़ने में विफल",
   "toast.file.extractFail":

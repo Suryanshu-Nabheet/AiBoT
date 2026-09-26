@@ -198,11 +198,13 @@ export const en = {
   "composer.placeholder.arena": "Message both models...",
   "composer.attach": "Attach files",
   "composer.voice": "Voice input",
+  "composer.voice.stop": "Stop voice input",
+  "composer.voice.modifierHint":
+    "Hold ⌘ on Mac or Ctrl elsewhere and click to dictate",
   "composer.thinking": "Thinking mode",
 
   "shortcut.toggleSidebar": "Toggle sidebar (⌘B)",
   "shortcut.toggleModel": "Search models (⌘/)",
-  "composer.enhance": "Enhance prompt",
   "composer.send": "Send message",
   "composer.stop": "Stop generating",
 
@@ -225,10 +227,6 @@ export const en = {
   "toast.speech.unsupported":
     "Speech recognition is not supported in this browser.",
   "toast.speech.listening": "Listening...",
-  "toast.enhance.empty": "Please type something to enhance first.",
-  "toast.enhance.fail": "Failed to enhance prompt. Please try again.",
-  "toast.enhance.success": "Prompt enhanced!",
-  "toast.enhance.none": "No enhancement received. Please try again.",
   "toast.file.extracted": "Extracted text from {name}",
   "toast.file.readFail": "Failed to read {name}",
   "toast.file.extractFail":

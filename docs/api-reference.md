@@ -75,22 +75,6 @@ Returns a JSON object containing the synthesized result.
 
 ---
 
-### 4. Text Enhancement
-**Endpoint:** `/api/enhance`  
-**Method:** `POST`  
-**Description:** Refines or expands user input for better AI performance.
-
-**Request Body:**
-```json
-{
-  "text": "Draft an email",
-  "context": "Professional"
-}
-```
-
-**Response:**
-Returns the enhanced text string.
-
 ## External Integrations
 
 ### OpenRouter API

@@ -56,11 +56,6 @@ export const chatRequestSchema = z.object({
   customKeys: customKeysSchema,
 });
 
-export const enhanceRequestSchema = z.object({
-  prompt: z.string().trim().min(1).max(12_000),
-  locale: z.string().max(10).optional(),
-});
-
 const agentAttachmentSchema = z.object({
   name: z.string().trim().min(1).max(255),
   type: z.string().trim().min(1).max(120),

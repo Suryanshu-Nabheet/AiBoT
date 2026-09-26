@@ -28,7 +28,6 @@ export {
 export {
   COACH_VOICE_ROLE,
   CODER_AGENT_ROLE,
-  PROMPT_ENHANCE_ROLE,
   SUMMARIZER_AGENT_ROLE,
 } from "@/lib/prompts/agents";
 
@@ -81,7 +80,7 @@ export function buildChatSystemPrompt(options: {
   );
 }
 
-/** Agents and enhance — same platform + model + role stacking as chat. */
+/** Agents use the same platform + model + role stacking as chat. */
 export function composeAgentSystemPrompt(
   rolePrompt: string,
   model: ModelRef,

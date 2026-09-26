@@ -23,7 +23,6 @@ import { useThinkingMode } from "@/hooks/use-thinking-mode";
 import { useRotatingChatStatus } from "@/hooks/use-rotating-chat-status";
 import {
   useChatComposerClipboard,
-  useChatComposerEnhance,
   useChatComposerSpeech,
 } from "@/hooks/use-chat-composer";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
@@ -140,7 +139,6 @@ export default function ArenaInterface({
     t,
     locale,
   );
-  const { isEnhancing, onEnhance } = useChatComposerEnhance(query, setQuery, t);
   const handleCopy = useChatComposerClipboard();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -209,8 +207,6 @@ export default function ArenaInterface({
       setAttachments={setAttachments}
       isListening={isListening}
       onSpeechToggle={onSpeechToggle}
-      isEnhancing={isEnhancing}
-      onEnhance={onEnhance}
       textareaRef={textareaRef}
       showModelSelector={false}
       placeholder={

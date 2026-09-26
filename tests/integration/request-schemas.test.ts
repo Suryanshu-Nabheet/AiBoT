@@ -7,10 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 import { createChatRequestBody } from "../helpers/factories";
-import {
-  chatRequestSchema,
-  enhanceRequestSchema,
-} from "@/lib/server/request-schemas";
+import { chatRequestSchema } from "@/lib/server/request-schemas";
 
 describe("chatRequestSchema", () => {
   it("accepts a minimal valid payload", () => {
@@ -73,14 +70,5 @@ describe("chatRequestSchema", () => {
     const { model: _removed, ...rest } = body as { model: string };
     const result = chatRequestSchema.safeParse(rest);
     expect(result.success).toBe(false);
-  });
-});
-
-describe("enhanceRequestSchema", () => {
-  it("requires non-empty prompt", () => {
-    expect(enhanceRequestSchema.safeParse({ prompt: "" }).success).toBe(false);
-    expect(
-      enhanceRequestSchema.safeParse({ prompt: "improve this" }).success,
-    ).toBe(true);
   });
 });

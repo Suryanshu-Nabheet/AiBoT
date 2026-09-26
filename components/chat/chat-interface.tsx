@@ -22,7 +22,6 @@ import { PageShell } from "@/components/layout/page-shell";
 import { useRotatingChatStatus } from "@/hooks/use-rotating-chat-status";
 import {
   useChatComposerClipboard,
-  useChatComposerEnhance,
   useChatComposerSpeech,
 } from "@/hooks/use-chat-composer";
 
@@ -63,7 +62,6 @@ export default function ChatInterface({
     t,
     locale,
   );
-  const { isEnhancing, onEnhance } = useChatComposerEnhance(query, setQuery, t);
   const handleCopy = useChatComposerClipboard();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -156,8 +154,6 @@ export default function ChatInterface({
     setAttachments,
     isListening,
     onSpeechToggle,
-    isEnhancing,
-    onEnhance,
     isThinking,
     onThinkingChange: setIsThinking,
     model,

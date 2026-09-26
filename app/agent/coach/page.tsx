@@ -23,7 +23,6 @@ import AITextLoading from "@/components/ui/ai-text-loading";
 import AIVoiceOutput from "@/components/ui/ai-voice-output";
 import { PageShell } from "@/components/layout/page-shell";
 import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
-import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
@@ -35,7 +34,7 @@ export default function CoachAgentPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const { apiKeys } = useSettings();
-  const { modelId, setModelId } = useModel({
+  const { modelId } = useModel({
     storageKey: AGENT_MODEL_STORAGE.coach,
   });
 
@@ -227,14 +226,6 @@ export default function CoachAgentPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <ModelSelector
-            value={modelId}
-            onValueChange={setModelId}
-            modelStorageKey={AGENT_MODEL_STORAGE.coach}
-            triggerVariant="compact"
-            triggerClassName="h-8 max-w-[min(42vw,180px)]"
-            enablePickerShortcut
-          />
           <Button
             variant="ghost"
             size="icon"

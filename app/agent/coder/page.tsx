@@ -30,7 +30,6 @@ import { PageShell } from "@/components/layout/page-shell";
 import { ATTACH_ACCEPT, type ChatAttachment } from "@/lib/chat/attachments";
 import { processFilesForChat } from "@/lib/chat/process-files";
 import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
-import { ModelSelector } from "@/components/ui/model-selector";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
@@ -90,7 +89,7 @@ export default function CoderAgentPage() {
   const [code, setCode] = useState(EMPTY_HTML);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { apiKeys } = useSettings();
-  const { modelId, setModelId } = useModel({
+  const { modelId } = useModel({
     storageKey: AGENT_MODEL_STORAGE.coder,
   });
 
@@ -313,7 +312,7 @@ Then provide the COMPLETE HTML code.`;
       {/* Left: Chat Interface - 50% on desktop */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col border-b bg-background basis-0 xl:h-full xl:w-1/2 xl:flex-none xl:border-b-0 xl:border-r">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b p-3 sm:p-4">
+        <div className="flex shrink-0 items-center gap-3 border-b p-3 sm:p-4">
           <div className="flex min-w-0 items-center gap-3">
             <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               <Code className="size-6 text-blue-600" weight="bold" />
@@ -322,14 +321,6 @@ Then provide the COMPLETE HTML code.`;
               </span>
             </h1>
           </div>
-          <ModelSelector
-            value={modelId}
-            onValueChange={setModelId}
-            modelStorageKey={AGENT_MODEL_STORAGE.coder}
-            triggerVariant="compact"
-            triggerClassName="h-8 max-w-[min(48vw,200px)]"
-            enablePickerShortcut
-          />
         </div>
 
         {/* Chat Messages */}

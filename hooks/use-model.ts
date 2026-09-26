@@ -32,6 +32,32 @@ export function useModel({
   }, [persistToLocalStorage, storageKey]);
 
   useEffect(() => {
+    if (!persistToLocalStorage || typeof window === "undefined") return;
+
+    const syncModel = (event: Event) => {
+      const nextModel =
+        event instanceof StorageEvent
+          ? event.key === storageKey
+            ? event.newValue
+            : null
+          : (event as CustomEvent<{ key: string; value: string }>).detail
+              ?.key === storageKey
+            ? (event as CustomEvent<{ key: string; value: string }>).detail
+                .value
+            : null;
+
+      if (nextModel) setModelId(nextModel);
+    };
+
+    window.addEventListener("storage", syncModel);
+    window.addEventListener("aibot:model-change", syncModel);
+    return () => {
+      window.removeEventListener("storage", syncModel);
+      window.removeEventListener("aibot:model-change", syncModel);
+    };
+  }, [persistToLocalStorage, storageKey]);
+
+  useEffect(() => {
     if (persistToLocalStorage && typeof window !== "undefined") {
       localStorage.setItem(storageKey, modelId);
     }
@@ -39,7 +65,14 @@ export function useModel({
 
   const setModelById = useCallback((id: string) => {
     setModelId(id);
-  }, []);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("aibot:model-change", {
+          detail: { key: storageKey, value: id },
+        }),
+      );
+    }
+  }, [storageKey]);
 
   return {
     modelId,

@@ -10,13 +10,12 @@
 
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   PaperPlaneRightIcon,
   StopIcon,
   PaperclipIcon,
-  MagicWandIcon,
   MicrophoneIcon,
   X as XIcon,
 } from "@phosphor-icons/react";
@@ -39,8 +38,6 @@ interface ChatInputProps {
   setAttachments: React.Dispatch<React.SetStateAction<ChatAttachment[]>>;
   isListening?: boolean;
   onSpeechToggle?: () => void;
-  isEnhancing?: boolean;
-  onEnhance?: () => void;
   isThinking?: boolean;
   onThinkingChange?: (enabled: boolean) => void;
   model?: string;
@@ -65,8 +62,6 @@ export function ChatInput({
   setAttachments,
   isListening = false,
   onSpeechToggle,
-  isEnhancing = false,
-  onEnhance,
   isThinking = false,
   onThinkingChange,
   model,
@@ -83,8 +78,29 @@ export function ChatInput({
   const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = textareaRefProp ?? internalTextareaRef;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [voiceModifierHeld, setVoiceModifierHeld] = useState(false);
+
+  useEffect(() => {
+    const handleModifier = (event: KeyboardEvent) => {
+      setVoiceModifierHeld(event.metaKey || event.ctrlKey);
+    };
+    const clearModifier = () => setVoiceModifierHeld(false);
+
+    window.addEventListener("keydown", handleModifier);
+    window.addEventListener("keyup", handleModifier);
+    window.addEventListener("blur", clearModifier);
+    return () => {
+      window.removeEventListener("keydown", handleModifier);
+      window.removeEventListener("keyup", handleModifier);
+      window.removeEventListener("blur", clearModifier);
+    };
+  }, []);
 
   const showComposerModel = showModelSelector && model && onModelChange;
+  const hasDraft = Boolean(query.trim()) || attachments.length > 0;
+  const useVoiceAction =
+    !isLoading &&
+    (isListening || voiceModifierHeld || (!query.trim() && !attachments.length));
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
@@ -234,45 +250,6 @@ export function ChatInput({
               >
                 <PaperclipIcon className="size-[18px]" />
               </Button>
-
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className={cn(
-                  "size-9 shrink-0 rounded-full sm:size-8",
-                  isListening
-                    ? "animate-pulse bg-red-500/10 text-red-500"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-                onClick={onSpeechToggle}
-                title={t("composer.voice")}
-              >
-                {isListening ? (
-                  <StopIcon weight="fill" className="size-[18px]" />
-                ) : (
-                  <MicrophoneIcon className="size-[18px]" />
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className={cn(
-                  "size-9 shrink-0 rounded-full max-[360px]:hidden sm:size-8",
-                  isEnhancing
-                    ? "bg-purple-400/10 text-purple-400"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-                onClick={onEnhance}
-                disabled={isEnhancing || !query.trim()}
-                title={t("composer.enhance")}
-              >
-                <MagicWandIcon
-                  className={cn("size-[18px]", isEnhancing && "animate-pulse")}
-                />
-              </Button>
             </div>
 
             <div className="flex shrink-0 items-center">
@@ -286,13 +263,40 @@ export function ChatInput({
                 >
                   <StopIcon weight="fill" className="size-[14px]" />
                 </Button>
+              ) : useVoiceAction ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  className={cn(
+                    "size-9 rounded-full p-0 sm:size-8",
+                    isListening &&
+                      "animate-pulse border border-red-500/20 bg-red-500/10 text-red-500 shadow-none hover:bg-red-500/20",
+                  )}
+                  onClick={onSpeechToggle}
+                  aria-label={
+                    isListening
+                      ? t("composer.voice.stop")
+                      : t("composer.voice")
+                  }
+                  title={
+                    voiceModifierHeld && hasDraft
+                      ? t("composer.voice.modifierHint")
+                      : t("composer.voice")
+                  }
+                >
+                  {isListening ? (
+                    <StopIcon weight="fill" className="size-[14px]" />
+                  ) : (
+                    <MicrophoneIcon className="size-[18px]" />
+                  )}
+                </Button>
               ) : (
                 <Button
                   type="submit"
                   size="icon"
                   className="size-9 rounded-full p-0 sm:size-8"
-                  disabled={!query.trim() && attachments.length === 0}
                   aria-label={t("composer.send")}
+                  title={t("composer.voice.modifierHint")}
                 >
                   <PaperPlaneRightIcon weight="fill" className="size-[14px]" />
                 </Button>
