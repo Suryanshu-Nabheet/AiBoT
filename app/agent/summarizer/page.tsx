@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { ATTACH_ACCEPT } from "@/lib/chat/attachments";
+import { ATTACH_ACCEPT, ATTACHMENT_LIMITS } from "@/lib/chat/attachments";
 import { processFilesForChat } from "@/lib/chat/process-files";
 import { AGENT_MODEL_STORAGE } from "@/lib/chat/agent-models";
 import { useModel } from "@/hooks/use-model";
@@ -81,10 +81,28 @@ export default function AssignmentSummarizerPage() {
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFiles((prev) => [...prev, ...newFiles]);
-      toast.success(`${newFiles.length} file(s) added`);
+    const input = e.target;
+    const newFiles = Array.from(input.files ?? []);
+    input.value = "";
+    if (!newFiles.length || isProcessing) return;
+
+    setFiles((prev) => {
+      const knownFiles = new Set(
+        prev.map((file) => `${file.name}:${file.size}:${file.lastModified}`),
+      );
+      const uniqueFiles = newFiles.filter((file) => {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        if (knownFiles.has(key)) return false;
+        knownFiles.add(key);
+        return true;
+      });
+      const remaining = Math.max(0, ATTACHMENT_LIMITS.maxFiles - prev.length);
+      const accepted = uniqueFiles.slice(0, remaining);
+      return [...prev, ...accepted];
+    });
+    toast.success(`${newFiles.length} file(s) selected`);
+    if (files.length + newFiles.length > ATTACHMENT_LIMITS.maxFiles) {
+      toast.error(`You can attach up to ${ATTACHMENT_LIMITS.maxFiles} files`);
     }
   };
 
@@ -117,6 +135,7 @@ export default function AssignmentSummarizerPage() {
   };
 
   const handleSummarize = async () => {
+    if (isProcessing) return;
     if (files.length === 0) {
       toast.error("Please upload at least one file");
       return;
@@ -126,10 +145,11 @@ export default function AssignmentSummarizerPage() {
       return;
     }
 
+    const selectedFiles = [...files];
     setIsProcessing(true);
 
     try {
-      const { attachments, errors } = await processFilesForChat(files);
+      const { attachments, errors } = await processFilesForChat(selectedFiles);
       for (const err of errors) toast.error(err);
 
       if (attachments.length === 0) {
@@ -208,6 +228,7 @@ export default function AssignmentSummarizerPage() {
               <Input
                 type="file"
                 multiple
+                disabled={isProcessing}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 onChange={handleFileChange}
                 accept={ATTACH_ACCEPT}
@@ -251,6 +272,7 @@ export default function AssignmentSummarizerPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      disabled={isProcessing}
                       className="text-muted-foreground hover:text-destructive shrink-0"
                       onClick={() => removeFile(index)}
                     >

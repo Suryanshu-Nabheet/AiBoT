@@ -29,18 +29,19 @@ export type OpenAIContentPart =
 
 export const ATTACHMENT_LIMITS = {
   maxFiles: 8,
-  maxImages: 6,
+  maxImages: 4,
   maxVideoFrames: 6,
   maxDocCharsPerFile: 60_000,
   maxDocCharsTotal: 120_000,
   maxImageEdge: 1536,
   jpegQuality: 0.72,
+  maxImageDataUrlChars: 450_000,
   maxVideoDurationSec: 120,
   maxRawFileBytes: 40 * 1024 * 1024,
 } as const;
 
 export const ATTACH_ACCEPT =
-  "image/*,video/*,.pdf,.docx,.doc,.txt,.md,.markdown,.json,.csv,.pptx,.xlsx,.xls,.ts,.tsx,.js,.jsx,.py,.java,.go,.rs,.html,.css,.xml,.yaml,.yml";
+  "image/*,video/*,text/*,application/json,application/xml,application/javascript,application/x-yaml,.pdf,.docx,.doc,.txt,.md,.markdown,.json,.csv,.pptx,.xlsx,.xls,.ts,.tsx,.js,.jsx,.py,.java,.go,.rs,.html,.css,.xml,.yaml,.yml";
 
 export function isImageAttachment(a: ChatAttachment) {
   return a.kind === "image" || a.kind === "video_frame";

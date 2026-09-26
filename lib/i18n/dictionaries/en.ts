@@ -144,6 +144,7 @@ export const en = {
   "nav.search.placeholder": "Search chats...",
   "nav.newChat": "New Chat",
   "nav.agentMode": "Agent Mode",
+  "nav.recentChats": "Recent",
   "nav.agent.summarizer": "Summarizer",
   "nav.agent.coder": "Coder",
   "nav.agent.coach": "Coach",
@@ -196,9 +197,11 @@ export const en = {
 
   // Composer
   "composer.placeholder": "Message AiBoT...",
+  "composer.placeholder.followup": "Send follow-up",
   "composer.placeholder.listening": "Listening...",
   "composer.placeholder.arena": "Message both models...",
   "composer.attach": "Attach files",
+  "composer.files.processing": "Preparing files...",
   "composer.removeAttachment": "Remove {name}",
   "composer.voice": "Voice input",
   "composer.voice.stop": "Stop voice input",

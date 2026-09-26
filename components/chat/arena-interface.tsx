@@ -214,9 +214,10 @@ export default function ArenaInterface({
           ? t("composer.placeholder.listening")
           : isEmptyArena
             ? t("composer.placeholder")
-            : t("composer.placeholder.arena")
+            : t("composer.placeholder.followup")
       }
       dock={isEmptyArena ? "center" : "bottom"}
+      compact={!isEmptyArena}
       className={isEmptyArena ? "w-full" : "shrink-0"}
     />
   );

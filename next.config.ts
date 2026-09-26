@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* https://openrouter.ai https://api.openai.com https://api.anthropic.com https://api.deepseek.com https://generativelanguage.googleapis.com; media-src 'self' blob:; worker-src 'self' blob: https://unpkg.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'`,
+            value: `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* https://openrouter.ai https://api.openai.com https://api.anthropic.com https://api.deepseek.com https://generativelanguage.googleapis.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'`,
           },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Content-Type-Options", value: "nosniff" },

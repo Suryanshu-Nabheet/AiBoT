@@ -162,7 +162,9 @@ export default function ChatInterface({
     showModelSelector: true as const,
     placeholder: isListening
       ? t("composer.placeholder.listening")
-      : t("composer.placeholder"),
+      : isEmptyChat
+        ? t("composer.placeholder")
+        : t("composer.placeholder.followup"),
   };
 
   return (
@@ -218,7 +220,12 @@ export default function ChatInterface({
             )}
           </AnimatePresence>
 
-          <ChatInput {...chatInputProps} dock="bottom" className="shrink-0" />
+          <ChatInput
+            {...chatInputProps}
+            dock="bottom"
+            compact
+            className="shrink-0"
+          />
         </>
       )}
     </PageShell>

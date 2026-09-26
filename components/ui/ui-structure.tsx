@@ -12,6 +12,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -101,7 +102,7 @@ export const UIStructure = () => {
                   </h1>
                 </button>
               </div>
-              <div className="w-full flex flex-col gap-3">
+              <div className="flex w-full flex-col gap-2">
                 <Button
                   variant="ghost"
                   onClick={(e) => {
@@ -113,9 +114,11 @@ export const UIStructure = () => {
                       window.location.href = "/";
                     }
                   }}
-                  className="mx-auto h-10 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-medium tracking-tight text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground"
+                  className="h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-medium tracking-tight text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground"
                 >
-                  <Plus className="size-4 text-foreground" weight="regular" />
+                  <span className="flex size-5 shrink-0 items-center justify-center">
+                    <Plus className="size-4 text-foreground" weight="regular" />
+                  </span>
                   {t("nav.newChat")}
                 </Button>
 
@@ -128,22 +131,24 @@ export const UIStructure = () => {
                     <CollapsibleTrigger asChild>
                       <Button
                         className={cn(
-                          "mx-auto h-10 w-[calc(100%-0.5rem)] justify-between rounded-lg border border-transparent bg-transparent px-3 text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                          "h-10 w-full justify-between rounded-lg border border-transparent bg-transparent px-3 text-foreground shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
                           isAgentModeOpen &&
                             "border-sidebar-border/50 bg-sidebar-accent/80 font-medium text-foreground",
                         )}
                         variant="ghost"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <Code
-                            className={cn(
-                              "size-5 text-foreground transition-colors",
-                              isAgentModeOpen
-                                ? "text-primary"
-                                : "text-foreground",
-                            )}
-                            weight="bold"
-                          />
+                        <div className="flex items-center gap-3">
+                          <span className="flex size-5 shrink-0 items-center justify-center">
+                            <Code
+                              className={cn(
+                                "size-5 transition-colors",
+                                isAgentModeOpen
+                                  ? "text-primary"
+                                  : "text-foreground",
+                              )}
+                              weight="bold"
+                            />
+                          </span>
                           <span className="font-medium tracking-tight text-foreground">
                             {t("nav.agentMode")}
                           </span>
@@ -158,11 +163,11 @@ export const UIStructure = () => {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="flex flex-col gap-2 mt-3 px-1">
+                      <div className="mt-2 flex flex-col gap-1 px-1">
                         <Button
                           variant="ghost"
                           className={cn(
-                            "mx-auto h-9 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                            "h-9 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
                             pathname?.startsWith("/agent/summarizer") &&
                               "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
                           )}
@@ -177,7 +182,7 @@ export const UIStructure = () => {
                         <Button
                           variant="ghost"
                           className={cn(
-                            "mx-auto h-9 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                            "h-9 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
                             pathname?.startsWith("/agent/coder") &&
                               "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
                           )}
@@ -192,7 +197,7 @@ export const UIStructure = () => {
                         <Button
                           variant="ghost"
                           className={cn(
-                            "mx-auto h-9 w-[calc(100%-0.5rem)] justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                            "h-9 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 font-normal tracking-tight text-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-foreground",
                             pathname?.startsWith("/agent/coach") &&
                               "border-sidebar-border/50 bg-sidebar-accent font-medium text-foreground",
                           )}
@@ -211,13 +216,16 @@ export const UIStructure = () => {
               </div>
             </div>
           </SidebarHeader>
-          <SidebarGroupContent className="px-3">
-            <SidebarMenu className="w-full p-0 gap-1">
+          <SidebarGroupContent className="px-3 pt-2">
+            <SidebarGroupLabel className="h-8 px-3 text-xs font-semibold text-sidebar-foreground/70">
+              {t("nav.recentChats")}
+            </SidebarGroupLabel>
+            <SidebarMenu className="w-full gap-2 p-0">
               {loading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <div
                       key={i}
-                      className="bg-muted h-9 w-full animate-pulse rounded-md"
+                      className="h-11 w-full animate-pulse rounded-lg bg-muted"
                     />
                   ))
                 : [...new Map(executions.map((e) => [e.id, e])).values()].map(
@@ -225,7 +233,7 @@ export const UIStructure = () => {
                       <SidebarMenuItem key={execution.id}>
                         <SidebarMenuButton
                           className={cn(
-                            "group relative w-full text-left transition-all duration-200 rounded-lg px-3 py-2 h-auto text-sm",
+                            "group relative h-8 w-full rounded-lg px-3 py-1 text-left text-sm transition-colors duration-200",
                             execution.id === currentConversationId
                               ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                               : "hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
@@ -258,10 +266,7 @@ export const UIStructure = () => {
                                 className="flex-1 bg-transparent border-b border-primary outline-none pr-6"
                               />
                             ) : (
-                              <span
-                                className="truncate w-full pr-12"
-                                title={execution.title}
-                              >
+                              <span className="w-full truncate pr-12">
                                 {execution.title}
                               </span>
                             )}

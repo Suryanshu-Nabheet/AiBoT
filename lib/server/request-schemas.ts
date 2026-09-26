@@ -9,9 +9,9 @@ import "server-only";
 
 import { z } from "zod";
 
-const MAX_MESSAGE_LENGTH = 120_000;
+const MAX_MESSAGE_LENGTH = 200_000;
 const MAX_HISTORY_MESSAGES = 50;
-const MAX_IMAGE_URL_LENGTH = 2_500_000;
+const MAX_IMAGE_URL_LENGTH = 500_000;
 const apiKey = z.preprocess((val) => {
   if (val === undefined || val === null) return undefined;
   const s = String(val).trim();

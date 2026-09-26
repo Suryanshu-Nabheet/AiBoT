@@ -85,6 +85,7 @@ export default function CoderAgentPage() {
   const [prompt, setPrompt] = useState("");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [code, setCode] = useState(EMPTY_HTML);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +136,7 @@ export default function CoderAgentPage() {
   }, [messages]);
 
   const handleGenerate = async () => {
+    if (isProcessingFiles || isGenerating) return;
     if (!prompt.trim() && attachments.length === 0) return;
 
     const userMsg: Message = {
@@ -390,17 +392,27 @@ Then provide the COMPLETE HTML code.`;
               type="file"
               multiple
               accept={ATTACH_ACCEPT}
+              disabled={isProcessingFiles}
               className="hidden"
               onChange={async (e) => {
                 const list = e.target.files;
                 if (!list?.length) return;
-                const { attachments: next, errors } = await processFilesForChat(
-                  Array.from(list),
-                  attachments.length,
-                );
-                if (next.length) setAttachments((prev) => [...prev, ...next]);
-                for (const err of errors) toast.error(err);
-                e.target.value = "";
+                setIsProcessingFiles(true);
+                try {
+                  const { attachments: next, errors } =
+                    await processFilesForChat(Array.from(list), attachments);
+                  if (next.length) setAttachments((prev) => [...prev, ...next]);
+                  for (const err of errors) toast.error(err);
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not process selected files",
+                  );
+                } finally {
+                  e.target.value = "";
+                  setIsProcessingFiles(false);
+                }
               }}
             />
             <Button
@@ -409,9 +421,14 @@ Then provide the COMPLETE HTML code.`;
               variant="ghost"
               className="absolute bottom-2 right-11 h-8 w-8 text-muted-foreground sm:bottom-3 sm:right-12"
               onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessingFiles || isGenerating}
               title="Attach context"
             >
-              <Paperclip className="size-4" />
+              {isProcessingFiles ? (
+                <ArrowsClockwise className="size-4 animate-spin" />
+              ) : (
+                <Paperclip className="size-4" />
+              )}
             </Button>
             <Button
               size="icon"
@@ -421,7 +438,11 @@ Then provide the COMPLETE HTML code.`;
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-muted text-muted-foreground hover:bg-muted",
               )}
-              disabled={(!prompt && attachments.length === 0) || isGenerating}
+              disabled={
+                (!prompt && attachments.length === 0) ||
+                isGenerating ||
+                isProcessingFiles
+              }
               onClick={handleGenerate}
             >
               {isGenerating ? (
