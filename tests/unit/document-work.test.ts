@@ -28,6 +28,15 @@ describe("document work chat", () => {
   });
 
   it("marks only explicit deliverable requests for the document card", () => {
+    expect(isExplicitDocumentDeliverableRequest("Summarize these files")).toBe(
+      true,
+    );
+    expect(isExplicitDocumentDeliverableRequest("Give me a summary")).toBe(
+      true,
+    );
+    expect(
+      isExplicitDocumentDeliverableRequest("Extract all dates and deadlines"),
+    ).toBe(true);
     expect(
       isExplicitDocumentDeliverableRequest("Do research on this topic"),
     ).toBe(true);
