@@ -60,7 +60,6 @@ export const ChatMessage = memo(
     onCopy,
     onModelSelect,
     isGenerating,
-    isDocumentRequest = false,
     layout = "thread",
     pdfFileName = "ai-response.pdf",
     pdfTitle = "AI Response",
@@ -69,7 +68,6 @@ export const ChatMessage = memo(
     onCopy: (content: string) => void;
     onModelSelect?: (modelId: string) => void;
     isGenerating?: boolean;
-    isDocumentRequest?: boolean;
     layout?: ChatMessageLayout;
     pdfFileName?: string;
     pdfTitle?: string;
@@ -181,16 +179,7 @@ export const ChatMessage = memo(
     const parsedResponseSegments = isUser
       ? [{ kind: "conversation" as const, text: mainResponse }]
       : splitDocumentResponse(mainResponse);
-    const hasMarkedDocumentSegment = parsedResponseSegments.some(
-      (segment) => segment.kind === "document",
-    );
-    const responseSegments =
-      !isUser &&
-      isDocumentRequest &&
-      !hasMarkedDocumentSegment &&
-      mainResponse.trim()
-        ? [{ kind: "document" as const, text: mainResponse }]
-        : parsedResponseSegments;
+    const responseSegments = parsedResponseSegments;
     const documentSegments = responseSegments.filter(
       (segment) => segment.kind === "document",
     );
@@ -330,7 +319,8 @@ export const ChatMessage = memo(
                                     weight="duotone"
                                   />
                                   <span>
-                                    {t("chat.message.documentAnalysis")}
+                                    {segment.title ||
+                                      t("chat.message.documentAnalysis")}
                                   </span>
                                 </h3>
                                 <div
@@ -422,12 +412,21 @@ export const ChatMessage = memo(
                                               try {
                                                 const { generatePDF } =
                                                   await import("@/lib/pdf-utils");
-                                                await generatePDF(
-                                                  segmentContent,
-                                                  "document-analysis.pdf",
+                                                const title =
+                                                  segment.title ||
                                                   t(
                                                     "chat.message.documentAnalysis",
-                                                  ),
+                                                  );
+                                                const filename =
+                                                  title
+                                                    .toLowerCase()
+                                                    .replace(/[^a-z0-9]+/g, "-")
+                                                    .replace(/^-|-$/g, "") ||
+                                                  "document";
+                                                await generatePDF(
+                                                  segmentContent,
+                                                  `${filename}.pdf`,
+                                                  title,
                                                 );
                                                 toast.success(
                                                   t("toast.pdf.success"),

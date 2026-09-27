@@ -14,22 +14,27 @@ export const DOCUMENT_ANALYSIS_END = "[[/DOCUMENT_ANALYSIS]]";
 export type DocumentResponseSegment = {
   kind: "conversation" | "document";
   text: string;
+  title?: string;
   inProgress?: boolean;
 };
 
-/** Split explicit deliverable boundaries while keeping unfinished stream markers hidden. */
+const DOCUMENT_ANALYSIS_OPEN_PREFIX = "[[DOCUMENT_ANALYSIS";
+const DOCUMENT_ANALYSIS_TITLE_PREFIX = "[[DOCUMENT_ANALYSIS:";
+
+/** Find an opening marker before rendering, including markers still arriving in a stream. */
 export function splitDocumentResponse(
   content: string,
 ): DocumentResponseSegment[] {
   const segments: DocumentResponseSegment[] = [];
   let cursor = 0;
   let inDocument = false;
+  let documentTitle: string | undefined;
 
   while (cursor < content.length) {
     const marker = inDocument ? DOCUMENT_ANALYSIS_END : DOCUMENT_ANALYSIS_START;
     const markerIndex = content.indexOf(marker, cursor);
 
-    if (markerIndex === -1) {
+    if (inDocument && markerIndex === -1) {
       let visibleEnd = content.length;
       for (
         let size = Math.min(marker.length - 1, content.length - cursor);
@@ -46,18 +51,78 @@ export function splitDocumentResponse(
         segments.push({
           kind: inDocument ? "document" : "conversation",
           text,
+          ...(documentTitle ? { title: documentTitle } : {}),
           ...(inDocument ? { inProgress: true } : {}),
         });
       }
       break;
     }
 
+    if (!inDocument) {
+      const legacyStartIndex = content.indexOf(DOCUMENT_ANALYSIS_START, cursor);
+      const titledStartIndex = content.indexOf(
+        DOCUMENT_ANALYSIS_TITLE_PREFIX,
+        cursor,
+      );
+      const startIndex = [legacyStartIndex, titledStartIndex]
+        .filter((index) => index >= 0)
+        .sort((left, right) => left - right)[0];
+
+      if (startIndex === undefined) {
+        let visibleEnd = content.length;
+        for (
+          let size = Math.min(
+            DOCUMENT_ANALYSIS_OPEN_PREFIX.length - 1,
+            content.length - cursor,
+          );
+          size > 0;
+          size -= 1
+        ) {
+          if (
+            DOCUMENT_ANALYSIS_OPEN_PREFIX.startsWith(
+              content.slice(content.length - size),
+            )
+          ) {
+            visibleEnd -= size;
+            break;
+          }
+        }
+        const text = content.slice(cursor, visibleEnd);
+        if (text) segments.push({ kind: "conversation", text });
+        break;
+      }
+
+      const beforeMarker = content.slice(cursor, startIndex);
+      if (beforeMarker) {
+        segments.push({ kind: "conversation", text: beforeMarker });
+      }
+
+      if (startIndex === titledStartIndex) {
+        const titleStart = startIndex + DOCUMENT_ANALYSIS_TITLE_PREFIX.length;
+        const markerEnd = content.indexOf("]]", titleStart);
+        if (markerEnd === -1) break;
+        documentTitle =
+          content.slice(titleStart, markerEnd).trim() || undefined;
+        cursor = markerEnd + 2;
+      } else {
+        documentTitle = undefined;
+        cursor = startIndex + DOCUMENT_ANALYSIS_START.length;
+      }
+      inDocument = true;
+      continue;
+    }
+
     const text = content.slice(cursor, markerIndex);
     if (text) {
-      segments.push({ kind: inDocument ? "document" : "conversation", text });
+      segments.push({
+        kind: "document",
+        text,
+        ...(documentTitle ? { title: documentTitle } : {}),
+      });
     }
     cursor = markerIndex + marker.length;
-    inDocument = !inDocument;
+    inDocument = false;
+    documentTitle = undefined;
   }
 
   return segments;
@@ -67,7 +132,7 @@ export const DOCUMENT_WORK_INSTRUCTION = `Analyze supplied material carefully an
 
 Deliverable formatting:
 - Use a Document analysis card only when the user explicitly asks you to create a deliverable such as a research report or paper, brief, summary, study notes, spreadsheet-style analysis, memo, guide, or plan. Requests to do research or prepare a report count. Merely attaching a file, asking a question about it, or asking for a conversational explanation does not.
-- For a requested deliverable, wrap only the complete deliverable in the exact markers ${DOCUMENT_ANALYSIS_START} and ${DOCUMENT_ANALYSIS_END}, each on its own line. These markers are display controls and must never be shown as part of the prose.
+- For a requested deliverable, choose a concise, specific title that names the actual deliverable (for example, Research Brief, Study Notes, or Findings and Recommendations). Wrap only the complete deliverable in the opening marker "[[DOCUMENT_ANALYSIS: your title]]" and ${DOCUMENT_ANALYSIS_END}, each on its own line. Do not use "Document analysis" as the title. These markers are display controls and must never be shown as part of the prose.
 - Put any short conversational introduction before the opening marker. Put conversational context, caveats, or a closing thought after the closing marker. The deliverable can start and end midway through a response.
 - On follow-up turns, emit a card only when the user explicitly requests a new or revised deliverable. Answer ordinary follow-up questions as normal conversation. Never leave a marker open across turns.
 - Do not include the markers for an ordinary answer, even when files are attached.
