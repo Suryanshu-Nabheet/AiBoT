@@ -52,7 +52,10 @@ export const ChatThread = memo(
         latestUserRequestedDocument = isExplicitDocumentDeliverableRequest(
           message.content ?? "",
         );
-      } else if (message.role === Role.Assistant && latestUserRequestedDocument) {
+      } else if (
+        message.role === Role.Assistant &&
+        latestUserRequestedDocument
+      ) {
         documentRequestMessages.add(index);
       }
     });
