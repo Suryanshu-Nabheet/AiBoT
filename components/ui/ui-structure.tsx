@@ -177,7 +177,7 @@ export const UIStructure = () => {
                       >
                         <SidebarMenuButton
                           className={cn(
-                            "relative h-10 w-full rounded-lg px-3 py-1 pr-10 text-left text-sm transition-colors duration-200",
+                            "relative h-9 w-full rounded-lg px-3 py-1 pr-10 text-left text-sm transition-colors duration-200",
                             execution.id === currentConversationId ||
                               execution.id === openChatMenuId
                               ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"

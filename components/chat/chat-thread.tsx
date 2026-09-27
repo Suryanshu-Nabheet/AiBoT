@@ -15,6 +15,7 @@ import {
 } from "@/components/chat/chat-message";
 import { Message, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { isExplicitDocumentDeliverableRequest } from "@/lib/chat/document-work";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
 
 export const ChatThread = memo(
@@ -44,6 +45,17 @@ export const ChatThread = memo(
     endRef?: React.Ref<HTMLDivElement>;
   }) => {
     const statusPadding = CHAT_THREAD_HORIZONTAL_INSET;
+    let latestUserRequestedDocument = false;
+    const documentRequestMessages = new Set<number>();
+    messages.forEach((message, index) => {
+      if (message.role === Role.User) {
+        latestUserRequestedDocument = isExplicitDocumentDeliverableRequest(
+          message.content ?? "",
+        );
+      } else if (message.role === Role.Assistant && latestUserRequestedDocument) {
+        documentRequestMessages.add(index);
+      }
+    });
 
     return (
       <div
@@ -83,6 +95,7 @@ export const ChatThread = memo(
                 layout={layout}
                 pdfFileName={pdfFileName}
                 pdfTitle={pdfTitle}
+                isDocumentRequest={documentRequestMessages.has(i)}
               />
             </React.Fragment>
           );

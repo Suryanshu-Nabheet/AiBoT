@@ -21,7 +21,7 @@ test.describe("Sidebar layout", () => {
     await expect(page.getByText("Recent", { exact: true })).toBeVisible();
 
     const newChat = page.getByRole("button", { name: "New Chat" });
-    const voice = page.getByRole("button", { name: "Voice" });
+    const voice = page.getByRole("button", { name: "Voice", exact: true });
     const [newChatBox, voiceBox] = await Promise.all([
       newChat.boundingBox(),
       voice.boundingBox(),

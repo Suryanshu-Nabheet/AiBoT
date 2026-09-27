@@ -60,6 +60,7 @@ export const ChatMessage = memo(
     onCopy,
     onModelSelect,
     isGenerating,
+    isDocumentRequest = false,
     layout = "thread",
     pdfFileName = "ai-response.pdf",
     pdfTitle = "AI Response",
@@ -68,6 +69,7 @@ export const ChatMessage = memo(
     onCopy: (content: string) => void;
     onModelSelect?: (modelId: string) => void;
     isGenerating?: boolean;
+    isDocumentRequest?: boolean;
     layout?: ChatMessageLayout;
     pdfFileName?: string;
     pdfTitle?: string;
@@ -179,7 +181,30 @@ export const ChatMessage = memo(
     const parsedResponseSegments = isUser
       ? [{ kind: "conversation" as const, text: mainResponse }]
       : splitDocumentResponse(mainResponse);
-    const responseSegments = parsedResponseSegments;
+    const hasMarkedDocumentSegment = parsedResponseSegments.some(
+      (segment) => segment.kind === "document",
+    );
+    const unmarkedDeliverableHeading =
+      !isUser && isDocumentRequest && !hasMarkedDocumentSegment
+        ? mainResponse.match(/^\s{0,3}#{1,3}\s+([^\n]+)\s*\n+/)
+        : null;
+    const responseSegments =
+      !isUser &&
+      isDocumentRequest &&
+      !hasMarkedDocumentSegment &&
+      mainResponse.trim()
+        ? [
+            {
+              kind: "document" as const,
+              text: unmarkedDeliverableHeading
+                ? mainResponse.slice(unmarkedDeliverableHeading[0].length)
+                : mainResponse,
+              ...(unmarkedDeliverableHeading
+                ? { title: unmarkedDeliverableHeading[1].trim() }
+                : {}),
+            },
+          ]
+        : parsedResponseSegments;
     const documentSegments = responseSegments.filter(
       (segment) => segment.kind === "document",
     );
