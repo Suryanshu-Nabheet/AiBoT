@@ -5,81 +5,72 @@
  * See LICENSE file for details
  */
 
-"use client";
-
 import { Button } from "@/components/ui/button";
-import { ChatCircle, HouseLine } from "@phosphor-icons/react";
+import { ChatCircle, HouseLine } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import { motion } from "framer-motion";
 
 export default function NotFound() {
   return (
-    <div className="relative flex min-h-app w-full max-w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-background px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-6">
-      {/* Background decoration */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[120px] size-[500px]" />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative z-10 flex flex-col items-center max-w-lg w-full text-center"
-      >
-        {/* 404 Heading - now a regular heading */}
-        <h1 className="mb-4 text-7xl font-black tracking-tighter text-foreground sm:text-8xl md:text-9xl">
+    <section
+      aria-labelledby="not-found-title"
+      className="flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-10 text-center sm:px-8"
+    >
+      <div className="w-full max-w-md">
+        <p
+          aria-hidden="true"
+          className="text-[clamp(6rem,22vw,10rem)] font-semibold leading-none tracking-[-0.09em] text-muted-foreground/35"
+        >
           404
-        </h1>
+        </p>
 
-        <div className="relative flex flex-col gap-2">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-            Lost in the digital void
-          </h2>
-          <p className="text-muted-foreground font-medium">
-            The page you&apos;re looking for has either drifted away or never
-            existed.
+        <div className="mt-5 space-y-3">
+          <h1
+            id="not-found-title"
+            className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+          >
+            Page not found
+          </h1>
+          <p className="mx-auto max-w-sm text-sm leading-6 text-muted-foreground sm:text-base">
+            We couldn&apos;t find that page. The link may be outdated.
           </p>
         </div>
 
-        {/* Action buttons use the app's shared button styles. */}
-        <div className="mt-8 flex flex-col gap-3 w-full sm:flex-row sm:justify-center">
-          <Button
-            asChild
-            variant="default"
-            size="lg"
-            className="h-11 px-8 rounded-xl font-medium shadow-sm transition-all duration-200"
-          >
-            <Link href="/" className="flex items-center gap-2">
-              <HouseLine weight="bold" size={18} />
-              Back Home
+        <nav
+          aria-label="Helpful links"
+          className="mt-8 flex w-full flex-col justify-center gap-3 sm:flex-row"
+        >
+          <Button asChild size="lg" className="min-h-11 rounded-xl px-5">
+            <Link href="/" className="gap-2">
+              <HouseLine size={18} weight="bold" aria-hidden="true" />
+              Go home
             </Link>
           </Button>
           <Button
             asChild
-            variant="ghost"
+            variant="outline"
             size="lg"
-            className="h-11 px-8 rounded-xl bg-white text-blue-600 border border-blue-100 shadow-sm font-medium hover:bg-blue-50/50 hover:border-blue-200 transition-colors duration-200"
+            className="min-h-11 rounded-xl px-5"
           >
-            <Link href="/chat" className="flex items-center gap-2">
-              <ChatCircle weight="bold" size={18} />
-              Start Chat
+            <Link href="/chat" className="gap-2">
+              <ChatCircle size={18} weight="bold" aria-hidden="true" />
+              Open chat
             </Link>
           </Button>
-        </div>
+        </nav>
 
-        {/* Subtle Footer */}
-        <div className="mt-10 text-sm text-muted-foreground/60 font-medium">
-          Found a bug?{" "}
+        <p className="mt-10 text-sm text-muted-foreground">
+          Think this is a mistake?{" "}
           <a
             href="https://github.com/Suryanshu-Nabheet/AiBoT/issues"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary/70 hover:text-primary transition-colors border-b border-primary/20 hover:border-primary"
+            className="font-medium text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Report an Issue
+            Report an issue
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
-        </div>
-      </motion.div>
-    </div>
+        </p>
+      </div>
+    </section>
   );
 }
