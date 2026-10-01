@@ -111,7 +111,7 @@ export const UIStructure = () => {
                       sessionStorage.removeItem("session-directModel");
                       sessionStorage.removeItem("session-arena-a");
                       sessionStorage.removeItem("session-arena-b");
-                      window.location.href = "/";
+                      router.push("/");
                     }
                   }}
                 >
@@ -129,7 +129,7 @@ export const UIStructure = () => {
                       sessionStorage.removeItem("session-directModel");
                       sessionStorage.removeItem("session-arena-a");
                       sessionStorage.removeItem("session-arena-b");
-                      window.location.href = "/";
+                      router.push("/");
                     }
                   }}
                   className="h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"

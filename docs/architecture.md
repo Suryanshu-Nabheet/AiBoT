@@ -4,7 +4,7 @@ This document provides a technical overview of the AiBoT platform architecture, 
 
 ## System Overview
 
-AiBoT is built as a modern web application using the Next.js 15 framework. Chat, document work, and Voice are independent experiences supported by shared model routing and provider services.
+AiBoT is built as a modern web application using the Next.js 16 framework. Chat, document work, and Voice are independent experiences supported by shared model routing and provider services.
 
 ```mermaid
 graph TB
@@ -44,11 +44,11 @@ graph TB
 
 ## Frontend Architecture
 
-The frontend is developed using React 19 and Next.js 15, focusing on performance and responsiveness.
+The frontend is developed using React 19 and Next.js 16, focusing on performance and responsiveness.
 
 ### Core Technologies
 
-- **Next.js 15 (App Router)**: Enables server-side rendering (SSR), streaming, and optimized client-side navigation.
+- **Next.js 16 (App Router)**: Enables server-side rendering (SSR), streaming, and optimized client-side navigation. AiBoT retains Webpack for its validated local build path.
 - **React 19**: Utilizes concurrent rendering and the latest hook patterns for efficient UI updates.
 - **Tailwind CSS 4.0**: Provides a robust, utility-first styling system for rapid UI development and consistent design language.
 - **Framer Motion**: Manages complex animations and transitions for a premium user experience.

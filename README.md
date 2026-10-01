@@ -7,7 +7,7 @@
 ### Enterprise-Grade AI Orchestration Platform
 
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)](https://github.com/Suryanshu-Nabheet/AiBoT)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
@@ -27,7 +27,7 @@ AiBoT combines streaming chat, document analysis, and voice conversations in one
 
 ```mermaid
 graph TB
-    A[Client Layer] --> B[Next.js 15 App Router]
+    A[Client Layer] --> B[Next.js 16 App Router]
     B --> C[Chat]
     B --> D[Document Processing]
     B --> E[Voice]
@@ -64,7 +64,7 @@ graph TB
 
 ## Technical Stack
 
-- **Framework**: Next.js 15, React 19
+- **Framework**: Next.js 16, React 19
 - **Language**: TypeScript 5.8
 - **AI Gateway**: OpenRouter API
 - **Styling**: Tailwind CSS 4.0, Framer Motion

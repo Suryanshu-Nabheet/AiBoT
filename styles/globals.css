@@ -15,6 +15,26 @@ html {
   scroll-behavior: smooth;
 }
 
+@keyframes diagram-generation-sweep {
+  from {
+    transform: translateX(-150%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+
+.diagram-generation-sweep {
+  animation: diagram-generation-sweep 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diagram-generation-sweep {
+    animation: none;
+    transform: translateX(0);
+  }
+}
+
 .prose .katex-display {
   max-width: 100%;
   overflow-x: auto;

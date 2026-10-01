@@ -30,6 +30,8 @@ import { toast } from "sonner";
 import { useTranslation } from "@/hooks/use-translation";
 import { ATTACH_ACCEPT, type ChatAttachment } from "@/lib/chat/attachments";
 import { processFilesForChat } from "@/lib/chat/process-files";
+import { PromptQueue } from "./prompt-queue";
+import type { QueuedPrompt } from "@/hooks/use-prompt-queue";
 
 interface ChatInputProps {
   query: string;
@@ -37,6 +39,11 @@ interface ChatInputProps {
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   onStop?: () => void;
+  onQueue?: (prompt: string) => void;
+  onSendWhileLoading?: (prompt: string) => void;
+  queuedPrompts?: QueuedPrompt[];
+  onRemoveQueuedPrompt?: (id: string) => void;
+  onSendQueuedPromptNow?: (item: QueuedPrompt) => void;
   attachments: ChatAttachment[];
   setAttachments: React.Dispatch<React.SetStateAction<ChatAttachment[]>>;
   isListening?: boolean;
@@ -63,6 +70,11 @@ export function ChatInput({
   onSubmit,
   isLoading,
   onStop,
+  onQueue,
+  onSendWhileLoading,
+  queuedPrompts = [],
+  onRemoveQueuedPrompt,
+  onSendQueuedPromptNow,
   attachments,
   setAttachments,
   isListening = false,
@@ -112,6 +124,7 @@ export function ChatInput({
       voiceModifierHeld ||
       (!query.trim() && !attachments.length));
   const compactComposer = dock === "bottom" && compact;
+  const hasQueuedCompactComposer = compactComposer && queuedPrompts.length > 0;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -188,16 +201,37 @@ export function ChatInput({
       )}
     >
       <div
+        data-testid="composer-surface"
         className={cn(
           "mx-auto w-full",
           compactComposer ? "max-w-3xl" : "max-w-4xl",
+          hasQueuedCompactComposer &&
+            "overflow-hidden rounded-2xl border border-border/50 bg-muted/40",
         )}
       >
+        {compactComposer && queuedPrompts.length > 0 && (
+          <div className="border-b border-border/50">
+            <PromptQueue
+              items={queuedPrompts}
+              onRemove={onRemoveQueuedPrompt ?? (() => {})}
+              onSendNow={onSendQueuedPromptNow}
+            />
+          </div>
+        )}
         <motion.form
+          data-testid="chat-composer-form"
           initial={dock === "center" ? { opacity: 0 } : { y: 20, opacity: 0 }}
           animate={dock === "center" ? { opacity: 1 } : { y: 0, opacity: 1 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
           onSubmit={(event) => {
+            if (isLoading) {
+              event.preventDefault();
+              if (query.trim()) {
+                onQueue?.(query);
+                if (onQueue) setQuery("");
+              }
+              return;
+            }
             if (isProcessingFiles) {
               event.preventDefault();
               return;
@@ -205,10 +239,15 @@ export function ChatInput({
             onSubmit(event);
           }}
           className={cn(
-            "relative flex w-full max-w-full min-w-0 overflow-hidden border border-border/50 bg-muted/40 shadow-xl ring-1 ring-white/10 backdrop-blur-xl dark:ring-white/5",
+            "relative flex w-full max-w-full min-w-0 overflow-hidden",
             compactComposer
-              ? "flex-col rounded-full transition-[border-radius] duration-200"
-              : "flex-col gap-0 rounded-2xl sm:rounded-3xl",
+              ? cn(
+                  "flex-col transition-[border-radius] duration-200",
+                  hasQueuedCompactComposer
+                    ? "rounded-none border-0 bg-transparent"
+                    : "rounded-full border border-border/50 bg-muted/40",
+                )
+              : "flex-col gap-0 rounded-2xl border border-border/50 bg-muted/40 sm:rounded-3xl",
             compactComposer && attachments.length > 0 && "rounded-3xl",
           )}
         >
@@ -377,7 +416,31 @@ export function ChatInput({
                   />
                 )}
 
-                {isLoading ? (
+                {isLoading && query.trim() && onSendWhileLoading ? (
+                  <IconTooltip label={t("composer.sendNow")}>
+                    <Button
+                      type="button"
+                      size="icon"
+                      onClick={() => {
+                        onSendWhileLoading(query);
+                        setQuery("");
+                      }}
+                      aria-label={t("composer.sendNow")}
+                      title={t("composer.sendNow")}
+                      className={cn(
+                        "rounded-full p-0",
+                        compactComposer
+                          ? "size-8 sm:size-9"
+                          : "size-9 sm:size-8",
+                      )}
+                    >
+                      <PaperPlaneRightIcon
+                        weight="fill"
+                        className="size-[14px]"
+                      />
+                    </Button>
+                  </IconTooltip>
+                ) : isLoading ? (
                   <IconTooltip label={t("composer.stop")}>
                     <Button
                       type="button"

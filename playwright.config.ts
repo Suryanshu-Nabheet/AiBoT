@@ -25,6 +25,9 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     launchOptions: {
+      ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+        : {}),
       // Avoid spawning multiple visible Chromium apps in the macOS Dock.
       args: ["--disable-dev-shm-usage"],
     },

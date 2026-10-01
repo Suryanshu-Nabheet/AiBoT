@@ -188,6 +188,9 @@ export const en = {
   "chat.message.stopListening": "Stop listening",
   "chat.thinking.label": "Thinking",
   "chat.thinking.inProgress": "Thinking…",
+  "chat.diagram.building": "Building diagram…",
+  "chat.diagram.checking": "Checking diagram syntax…",
+  "chat.diagram.failed": "Could not generate diagram.",
   "chat.status.thinking": "AiBoT is thinking...",
   "chat.status.generating": "AiBoT is generating...",
   "chat.status.connecting": "Thinking…",
@@ -216,6 +219,10 @@ export const en = {
   "shortcut.toggleModel": "Search models (⌘/)",
   "composer.send": "Send message",
   "composer.stop": "Stop generating",
+  "composer.queue.title": "Queued messages",
+  "composer.queue.add": "Add to queue",
+  "composer.queue.remove": "Remove queued prompt",
+  "composer.sendNow": "Send now",
   "composer.stopSpeaking": "Stop speaking",
 
   // Model selector
@@ -240,7 +247,7 @@ export const en = {
     "Speech playback is not supported in this browser.",
   "toast.speech.playbackFail": "Speech playback failed.",
   "toast.speech.listening": "Listening...",
-  "toast.file.extracted": "Extracted text from {name}",
+  "toast.file.extracted": "Uploaded file: {name}",
   "toast.file.readFail": "Failed to read {name}",
   "toast.file.extractFail":
     "Could not extract text from {name}. Try another format.",

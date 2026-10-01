@@ -13,6 +13,7 @@ import { ArrowDownIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ChatInput } from "./chat-input";
+import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
@@ -139,8 +140,17 @@ export default function ChatInterface({
     loading: isLoading,
   });
 
+  const promptQueue = usePromptQueue(isLoading, (prompt) =>
+    handleSend(prompt, [], undefined, isThinking),
+  );
+
   const handleCreateChat = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) {
+      promptQueue.enqueue(query);
+      setQuery("");
+      return;
+    }
     handleSend(undefined, undefined, undefined, isThinking);
   };
 
@@ -150,6 +160,9 @@ export default function ChatInterface({
     onSubmit: handleCreateChat,
     isLoading,
     onStop: stopHelpers.stop,
+    onSendWhileLoading: (prompt: string) => {
+      void handleSend(prompt, [], undefined, isThinking, true);
+    },
     attachments,
     setAttachments,
     isListening,
@@ -222,6 +235,13 @@ export default function ChatInterface({
 
           <ChatInput
             {...chatInputProps}
+            onQueue={promptQueue.enqueue}
+            queuedPrompts={promptQueue.queue}
+            onRemoveQueuedPrompt={promptQueue.remove}
+            onSendQueuedPromptNow={(item) => {
+              promptQueue.remove(item.id);
+              void handleSend(item.prompt, [], undefined, isThinking, true);
+            }}
             dock="bottom"
             compact
             className="shrink-0"

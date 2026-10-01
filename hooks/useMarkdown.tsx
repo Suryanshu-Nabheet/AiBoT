@@ -6,6 +6,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @next/next/no-img-element -- Markdown images may use arbitrary assistant or user URLs. */
 
 "use client";
 import {
@@ -45,21 +46,104 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { preprocessAssistantMarkdown } from "@/lib/chat/markdown-preprocess";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { DiagramGenerationProgress } from "@/components/ui/diagram-generation-progress";
+import { buildMermaidRepairCandidates } from "@/lib/chat/mermaid-repair";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface MermaidDiagramProps {
   source: string;
   theme: "dark" | "default";
+  isGenerating: boolean;
 }
 
-function MermaidDiagram({ source, theme }: MermaidDiagramProps) {
+function addFlowchartClass(svgMarkup: string) {
+  return svgMarkup.replace(/<svg\b([^>]*)>/i, (_tag, attributes: string) => {
+    const classAttribute = attributes.match(/\sclass=(["'])(.*?)\1/i);
+    if (!classAttribute) return `<svg class="flowchart"${attributes}>`;
+    const classes = new Set(classAttribute[2].split(/\s+/).filter(Boolean));
+    classes.add("flowchart");
+    const nextAttributes = attributes.replace(
+      classAttribute[0],
+      ` class="${[...classes].join(" ")}"`,
+    );
+    return `<svg${nextAttributes}>`;
+  });
+}
+
+function MermaidDiagram({ source, theme, isGenerating }: MermaidDiagramProps) {
+  const { t } = useTranslation();
   const [fullscreen, setFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("");
   const [zoom, setZoom] = useState(1);
+  const [validatedSource, setValidatedSource] = useState<string | null>(null);
+  const [renderedSvg, setRenderedSvg] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(true);
+  const [validationFailed, setValidationFailed] = useState(false);
   const diagramRef = useRef<HTMLDivElement>(null);
   const fullscreenDiagramRef = useRef<HTMLDivElement>(null);
   const fullscreenViewportRef = useRef<HTMLDivElement>(null);
   const hasAutoFitRef = useRef(false);
+  const displaySource = validatedSource ?? source;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (isGenerating) {
+      setIsValidating(true);
+      setValidationFailed(false);
+      setValidatedSource(null);
+      setRenderedSvg(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setIsValidating(true);
+    setValidationFailed(false);
+    setValidatedSource(null);
+    setRenderedSvg(null);
+    void (async () => {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({
+          securityLevel: "strict",
+          suppressErrorRendering: true,
+          startOnLoad: false,
+          theme,
+          htmlLabels: false,
+          flowchart: { useMaxWidth: true, htmlLabels: false },
+        });
+
+        for (const candidate of buildMermaidRepairCandidates(source)) {
+          try {
+            const rendered = await mermaid.render(
+              `aibot-preview-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              candidate,
+            );
+            if (!rendered.svg) continue;
+            if (!cancelled) {
+              setValidatedSource(candidate);
+              setRenderedSvg(addFlowchartClass(rendered.svg));
+            }
+            return;
+          } catch {
+            // Try the normalized form before showing the preserved source.
+          }
+        }
+        if (!cancelled) setValidationFailed(true);
+      } catch (error) {
+        console.error("Could not validate Mermaid diagram", error);
+        if (!cancelled) setValidationFailed(true);
+      } finally {
+        if (!cancelled) setIsValidating(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isGenerating, source, theme]);
 
   const fitDiagram = useCallback(() => {
     const svg =
@@ -127,10 +211,10 @@ function MermaidDiagram({ source, theme }: MermaidDiagramProps) {
   const copyDiagram = useCallback(async () => {
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(source);
+        await navigator.clipboard.writeText(displaySource);
       } else {
         const textarea = document.createElement("textarea");
-        textarea.value = source;
+        textarea.value = displaySource;
         textarea.setAttribute("readonly", "");
         textarea.style.position = "fixed";
         textarea.style.opacity = "0";
@@ -149,7 +233,7 @@ function MermaidDiagram({ source, theme }: MermaidDiagramProps) {
       setStatus("Could not copy diagram source");
       toast.error("Could not copy diagram source");
     }
-  }, [source]);
+  }, [displaySource]);
 
   const downloadPng = useCallback(async () => {
     const root = fullscreen ? fullscreenDiagramRef.current : diagramRef.current;
@@ -164,6 +248,7 @@ function MermaidDiagram({ source, theme }: MermaidDiagramProps) {
       const mermaid = (await import("mermaid")).default;
       mermaid.initialize({
         securityLevel: "strict",
+        suppressErrorRendering: true,
         startOnLoad: false,
         theme,
         htmlLabels: false,
@@ -171,7 +256,7 @@ function MermaidDiagram({ source, theme }: MermaidDiagramProps) {
       });
       const rendered = await mermaid.render(
         `aibot-diagram-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        source,
+        displaySource,
       );
       if (!rendered.svg) throw new Error("Mermaid did not return an SVG");
 
@@ -230,42 +315,46 @@ function MermaidDiagram({ source, theme }: MermaidDiagramProps) {
       setStatus("Could not export PNG. Try copying the diagram source.");
       toast.error("Could not export diagram as PNG");
     }
-  }, [fullscreen, source, theme]);
+  }, [displaySource, fullscreen, theme]);
 
   const renderDiagram = (
     ref: RefObject<HTMLDivElement | null>,
     expanded = false,
-  ) => (
-    <div
-      ref={ref}
-      className={`mermaid-fit w-full min-w-0 ${expanded ? "mermaid-fit-fullscreen" : ""}`}
-    >
-      <Streamdown
-        mode="static"
-        controls={{
-          code: false,
-          table: false,
-          mermaid: {
-            copy: false,
-            download: false,
-            fullscreen: false,
-            panZoom: false,
-          },
-        }}
-        mermaid={{
-          config: {
-            securityLevel: "strict",
-            theme,
-            fontFamily: "ui-sans-serif, system-ui, sans-serif",
-            htmlLabels: false,
-            flowchart: { useMaxWidth: true, htmlLabels: false },
-          },
-        }}
+  ) => {
+    if (isGenerating || isValidating) {
+      return (
+        <div className="w-full p-3">
+          <DiagramGenerationProgress
+            isGenerating
+            label={
+              isGenerating
+                ? t("chat.diagram.building")
+                : t("chat.diagram.checking")
+            }
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={`mermaid-fit w-full min-w-0 ${expanded ? "mermaid-fit-fullscreen" : ""}`}
       >
-        {`\`\`\`mermaid\n${source}\n\`\`\``}
-      </Streamdown>
-    </div>
-  );
+        {renderedSvg && (
+          <div dangerouslySetInnerHTML={{ __html: renderedSvg }} />
+        )}
+      </div>
+    );
+  };
+
+  if (validationFailed && !isGenerating && !isValidating) {
+    return (
+      <p className="my-2 text-sm text-muted-foreground" role="status">
+        {t("chat.diagram.failed")}
+      </p>
+    );
+  }
 
   const toolbar = (expanded = false) => (
     <div className="flex shrink-0 items-center justify-end gap-1 border-b border-border/70 px-2 py-1.5">
@@ -420,10 +509,16 @@ interface UseMarkdownOptions {
   isWrapped?: boolean;
   toggleWrap?: () => void;
   resolvedTheme?: string;
+  isGenerating?: boolean;
 }
 
 export const useMarkdown = (options: UseMarkdownOptions = {}) => {
-  const { onCopy, copied = false, isWrapped = false } = options;
+  const {
+    onCopy,
+    copied = false,
+    isWrapped = false,
+    isGenerating = false,
+  } = options;
 
   // Preprocessing function
   const preprocessMarkdown = useMemo(
@@ -480,6 +575,15 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
         </li>
       ),
 
+      img: ({ src, alt }: any) => (
+        <img
+          src={src}
+          alt={alt ?? "Image"}
+          className="my-3 h-auto max-w-full rounded-xl border border-border"
+          loading="lazy"
+        />
+      ),
+
       // Blockquotes
       blockquote: ({ children }: any) => (
         <blockquote className="border-l-2 border-border pl-3 py-1 my-3 bg-muted/30 rounded-r-lg italic text-muted-foreground">
@@ -490,11 +594,34 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
       // Code blocks
       pre({ children }: any) {
         if (isValidElement(children)) {
+          const childProps = children.props as {
+            role?: string;
+          };
+          if (childProps.role === "status") {
+            return children;
+          }
+        }
+
+        if (isValidElement(children) && children.type === MermaidDiagram) {
+          return children;
+        }
+
+        if (isValidElement(children)) {
           const code = children as ReactElement<{
             children?: ReactNode;
+            className?: string;
             node?: { properties?: { className?: string[] } };
           }>;
           const codeText = String(code.props.children ?? "").trim();
+          const classNames = [
+            code.props.className,
+            ...(code.props.node?.properties?.className ?? []),
+          ]
+            .filter(Boolean)
+            .join(" ");
+          if (/(?:^|\s)language-mermaid(?:\s|$)/i.test(classNames)) {
+            return children;
+          }
           const hasLanguage =
             (code.props.node?.properties?.className?.length ?? 0) > 0;
           const isMarkdownBlock =
@@ -534,6 +661,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
             <MermaidDiagram
               source={mermaidSource}
               theme={options.resolvedTheme === "dark" ? "dark" : "default"}
+              isGenerating={isGenerating}
             />
           );
         }
@@ -652,7 +780,7 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
         <hr className="my-6 border-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       ),
     }),
-    [onCopy, copied, isWrapped, options.resolvedTheme],
+    [onCopy, copied, isWrapped, options.resolvedTheme, isGenerating],
   );
 
   // Remark and rehype plugins

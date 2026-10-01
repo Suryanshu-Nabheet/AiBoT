@@ -14,6 +14,7 @@ import { ModelSelector } from "@/components/ui/model-selector";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ExecutionType } from "@/hooks/useExecution";
 import { ChatInput } from "./chat-input";
+import { usePromptQueue, type QueuedPrompt } from "@/hooks/use-prompt-queue";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
 import { Message } from "@/lib/types";
@@ -183,6 +184,63 @@ export default function ArenaInterface({
     ]);
   };
 
+  const promptQueue = usePromptQueue(isLoadingEither, async (prompt) => {
+    await Promise.all([
+      leftChat.handleSend(prompt, [], undefined, leftThinking.thinkingEnabled),
+      rightChat.handleSend(
+        prompt,
+        [],
+        undefined,
+        rightThinking.thinkingEnabled,
+      ),
+    ]);
+  });
+
+  const handleQueueSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    promptQueue.enqueue(query);
+    setQuery("");
+  };
+
+  const handleSendNow = (item: QueuedPrompt) => {
+    promptQueue.remove(item.id);
+    void Promise.all([
+      leftChat.handleSend(
+        item.prompt,
+        [],
+        undefined,
+        leftThinking.thinkingEnabled,
+        true,
+      ),
+      rightChat.handleSend(
+        item.prompt,
+        [],
+        undefined,
+        rightThinking.thinkingEnabled,
+        true,
+      ),
+    ]);
+  };
+
+  const handleSendDraftNow = (prompt: string) => {
+    void Promise.all([
+      leftChat.handleSend(
+        prompt,
+        [],
+        undefined,
+        leftThinking.thinkingEnabled,
+        true,
+      ),
+      rightChat.handleSend(
+        prompt,
+        [],
+        undefined,
+        rightThinking.thinkingEnabled,
+        true,
+      ),
+    ]);
+  };
+
   const handleStopArena = useCallback(() => {
     if (leftChat.isLoading) leftChat.stopHelpers.stop();
     if (rightChat.isLoading) rightChat.stopHelpers.stop();
@@ -200,8 +258,13 @@ export default function ArenaInterface({
     <ChatInput
       query={query}
       setQuery={setQuery}
-      onSubmit={handleSharedSubmit}
+      onSubmit={isLoadingEither ? handleQueueSubmit : handleSharedSubmit}
       isLoading={leftChat.isLoading || rightChat.isLoading}
+      onQueue={promptQueue.enqueue}
+      queuedPrompts={promptQueue.queue}
+      onRemoveQueuedPrompt={promptQueue.remove}
+      onSendQueuedPromptNow={handleSendNow}
+      onSendWhileLoading={handleSendDraftNow}
       onStop={handleStopArena}
       attachments={attachments}
       setAttachments={setAttachments}

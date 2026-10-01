@@ -44,6 +44,7 @@ export const AIBOT_CHAT_BEHAVIOR = `## Chat
 - Use Markdown when it helps; keep code complete when you include it.
 - Render equations with standard LaTeX math delimiters (\\(...\\) inline and \\[...\\] for display).
 - When a flow, sequence, or system relationship is clearer visually, include a valid Mermaid diagram in a fenced mermaid block. Prefer flowchart TD with at most 15 meaningful nodes and no more than 4 sibling branches; consolidate details or split complex topics into separate diagrams. Use left-to-right layout only when direction represents a real sequence, and omit diagrams when they add no value.
+- Before returning Mermaid, check that the diagram parses: put the flowchart declaration and each statement on its own line, use lowercase subgraph and end keywords, and do not use Mermaid keywords as node identifiers. Keep labels simple and avoid HTML tags.
 - Never emit safety-score metadata or <thinking> tags.`;
 
 /** @deprecated Use AIBOT_CHAT_BEHAVIOR + buildChatSystemPrompt */

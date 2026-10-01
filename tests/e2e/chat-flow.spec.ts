@@ -11,6 +11,80 @@ import { deflateSync } from "node:zlib";
 import { mockChatStream } from "./helpers/mock-chat";
 
 test.describe("Chat layout after first message", () => {
+  test("repairs a packed Mermaid response and renders the diagram", async ({
+    page,
+  }) => {
+    const malformed = [
+      "Here is the architecture:",
+      "",
+      "```mermaid",
+      "flowchart TD     Subgraph Development         Dev1[Developer<br>Git Repository] --> Build[Build<br>Create Package]         Build --> Deploy{Deploy}         subgraph Deployment Options             Option1[Edge Network<br>Global CDN]             Option2[Custom Domain<br>.dev/.vercel.app]             Option3[Different Region<br>e.g., .myvercelapp.io]         end         Deploy --> Subgraph{Network Choice}         Option1 --> EdgeDeploy[Delivery<br>To Global Users]         Option2 --> CustomDeploy[Deployment<br>For Personal Use]         subgraph Monitoring         Mon[Live Logs<br>and Analytics]         Alert[Alerts<br>When Issues Arise]     end         End([Production])         End --> Subgraph{Real-Time Ops}         Build --> Subgraph         Dev1 --> Subgraph         Deploy --> Monitor",
+      "```",
+    ].join("\n");
+    await mockChatStream(page, malformed);
+    await page.goto("/");
+    await page
+      .getByPlaceholder(/message aibot/i)
+      .fill("Show me the architecture");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    await expect(page.locator(".mermaid-fit svg.flowchart")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByText("The diagram could not be repaired automatically."),
+    ).toHaveCount(0);
+  });
+
+  test("repairs the malformed AGI Mermaid response", async ({ page }) => {
+    const malformed = `The Pathway from Narrow AI to AGI
+
+\`\`\`mermaid
+flowchart TD
+    Start((Current AI / Narrow AI)) --> |Task Specific | TaskAI1[Specialized Tasks]
+    TaskAI1 -->|Learning | MLModel[Machine Learning Models]
+    MLModel -->|Generalization Gap | [Narrow Capabilities]
+    Subgraph AGI_Path["Path to AGI"]
+        AGI1[General Reasoning] --> AGICap[Full Cognitive Abilities]
+        Subgraph ASI_Path["Future Pathway"]
+            AGICap -->|Optimization| ASI[Artificial Superintelligence]
+        end
+    end
+    Start ==> |Goal | End((AGI / ASI State))
+\`\`\``;
+    await mockChatStream(page, malformed);
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("what is agi");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    await expect(page.locator(".mermaid-fit svg.flowchart")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("Could not generate diagram.")).toHaveCount(0);
+  });
+
+  test("shows a compact message when a Mermaid diagram cannot be rendered", async ({
+    page,
+  }) => {
+    await mockChatStream(
+      page,
+      "```mermaid\nthis is not valid Mermaid syntax\n```",
+    );
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("make a diagram");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    const failure = page.getByText("Could not generate diagram.", {
+      exact: true,
+    });
+    await expect(failure).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel("Scrollable diagram preview")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Copy diagram source" }),
+    ).toHaveCount(0);
+    await expect(page.locator("pre:visible")).toHaveCount(0);
+  });
+
   test("composer moves to thread mode with user bubble", async ({ page }) => {
     await mockChatStream(page);
     await page.goto("/");
@@ -44,6 +118,126 @@ test.describe("Chat layout after first message", () => {
     await expect(page.getByText(/what can i help you with today/i)).toHaveCount(
       0,
     );
+  });
+
+  test("collapses multiple queued prompts and reveals per-prompt actions on hover", async ({
+    page,
+  }) => {
+    let requestCount = 0;
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      requestCount += 1;
+      if (requestCount === 1)
+        await new Promise((resolve) => setTimeout(resolve, 8_000));
+      await route
+        .fulfill({
+          status: 200,
+          contentType: "text/event-stream",
+          body: `data: ${JSON.stringify({ choices: [{ delta: { content: "pong" } }] })}\n\ndata: [DONE]\n\n`,
+        })
+        .catch(() => undefined);
+    });
+
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("first prompt");
+    await page.getByRole("button", { name: /send message/i }).click();
+    const composer = page.getByPlaceholder(/send follow-up/i);
+    await expect(composer).toBeVisible();
+
+    await composer.fill("queued follow-up");
+    await composer.press("Enter");
+    await composer.fill("second queued follow-up");
+    await composer.press("Enter");
+    const queue = page.getByTestId("prompt-queue");
+    const composerForm = page.getByTestId("chat-composer-form");
+    await expect
+      .poll(() =>
+        composerForm.evaluate(
+          (element) => getComputedStyle(element).backgroundColor,
+        ),
+      )
+      .toBe("rgba(0, 0, 0, 0)");
+    await expect
+      .poll(() =>
+        page
+          .getByTestId("composer-surface")
+          .evaluate((element) => getComputedStyle(element).backgroundColor),
+      )
+      .not.toBe("rgba(0, 0, 0, 0)");
+    const queueToggle = queue.getByRole("button", {
+      name: /queued messages · 2/i,
+    });
+    await expect(queueToggle).toHaveAttribute("aria-expanded", "false");
+    await queueToggle.click();
+    await expect(queueToggle).toHaveAttribute("aria-expanded", "true");
+
+    const queuedMessage = page.getByText("queued follow-up", { exact: true });
+    await expect(queuedMessage).toBeVisible();
+    const queuedRow = queuedMessage.locator("..");
+    await queuedRow.hover();
+    const sendQueuedNow = queuedRow.getByRole("button", {
+      name: /send now: queued follow-up/i,
+    });
+    const removeQueuedMessage = queuedRow.getByRole("button", {
+      name: /remove queued prompt/i,
+    });
+    await expect(sendQueuedNow).toBeVisible();
+    await expect(removeQueuedMessage).toBeVisible();
+    await removeQueuedMessage.click();
+    await expect(queuedMessage).toHaveCount(0);
+    const secondQueuedMessage = page.getByText("second queued follow-up", {
+      exact: true,
+    });
+    const secondQueuedRow = secondQueuedMessage.locator("..");
+    await secondQueuedRow.hover();
+    await secondQueuedRow
+      .getByRole("button", { name: /send now: second queued follow-up/i })
+      .click();
+    await expect(
+      page
+        .locator("main")
+        .getByText("second queued follow-up", { exact: true }),
+    ).toBeVisible();
+    await expect.poll(() => requestCount).toBe(2);
+  });
+
+  test("turns the active stop control into Send now for a typed follow-up", async ({
+    page,
+  }) => {
+    let requestCount = 0;
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      requestCount += 1;
+      if (requestCount === 1)
+        await new Promise((resolve) => setTimeout(resolve, 8_000));
+      await route
+        .fulfill({
+          status: 200,
+          contentType: "text/event-stream",
+          body: `data: ${JSON.stringify({ choices: [{ delta: { content: "pong" } }] })}\n\ndata: [DONE]\n\n`,
+        })
+        .catch(() => undefined);
+    });
+
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("first prompt");
+    await page.getByRole("button", { name: /send message/i }).click();
+    const composer = page.getByPlaceholder(/send follow-up/i);
+    await expect(composer).toBeVisible();
+    await composer.fill("urgent follow-up");
+    const sendNow = page.getByRole("button", { name: /^send now$/i });
+    await expect(sendNow).toBeVisible();
+    await sendNow.click();
+    await expect(
+      page.locator("main").getByText("urgent follow-up", { exact: true }),
+    ).toBeVisible();
+    await expect.poll(() => requestCount).toBe(2);
   });
 
   test("keeps long user prompts on the right with readable left-aligned text", async ({

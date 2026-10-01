@@ -122,6 +122,7 @@ export const ChatMessage = memo(
       [],
     );
 
+    const isStreaming = Boolean(isGenerating);
     const {
       preprocessMarkdown,
       markdownComponents,
@@ -132,11 +133,11 @@ export const ChatMessage = memo(
       copied: isCopied,
       isWrapped: false,
       resolvedTheme: "dark",
+      isGenerating: isStreaming,
     });
 
     const isUser = message.role === Role.User;
     const isAssistantError = !isUser && Boolean(message.isError);
-    const isStreaming = Boolean(isGenerating);
     const displayedContent = useSmoothTyping(
       message.content,
       5,

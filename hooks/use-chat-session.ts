@@ -136,6 +136,7 @@ export function useChatSession({
 
   // --- Refs ---
   const abortControllerRef = useRef<AbortController | null>(null);
+  const requestSequenceRef = useRef(0);
   const requestStartedAtRef = useRef<number | null>(null);
   const thinkingRequestedRef = useRef(false);
   /** Avoid re-applying stored messages after every request (was wiping new replies). */
@@ -192,11 +193,15 @@ export function useChatSession({
       streamField?: "content" | "thinkingText";
       /** Thinking stage 2 may be empty; reconcile instead of showing a stream error. */
       allowEmptyContent?: boolean;
+      requestId?: number;
     },
   ) => {
     const finalize = options?.finalize ?? true;
+    const requestId = options?.requestId;
+    const isCurrentRequest = () =>
+      requestId === undefined || requestSequenceRef.current === requestId;
     if (!response.ok || !response.body) {
-      if (finalize) setIsLoading(false);
+      if (finalize && isCurrentRequest()) setIsLoading(false);
       return "";
     }
 
@@ -243,13 +248,15 @@ export function useChatSession({
     const streamField = options?.streamField ?? "content";
 
     const pushContentToUi = () => {
+      if (!isCurrentRequest()) return;
       let live = sanitizeAssistantStreamField(streamField, accumulated, false);
       if (streamField === "thinkingText") {
         const preview = thinkingPanelPreview(live);
         live = preview || (live.length > 0 && live.length < 280 ? live : "");
       }
-      setMessages((prev) =>
-        prev.map((m) =>
+      setMessages((prev) => {
+        if (!isCurrentRequest()) return prev;
+        return prev.map((m) =>
           m.id === tempId
             ? {
                 ...m,
@@ -257,8 +264,8 @@ export function useChatSession({
                 isThinkingRequested,
               }
             : m,
-        ),
-      );
+        );
+      });
     };
 
     try {
@@ -286,6 +293,7 @@ export function useChatSession({
       const hasText = sanitized.trim().length > 0;
 
       setMessages((prev) => {
+        if (!isCurrentRequest()) return prev;
         const updatedMessages = prev.map((m) => {
           if (m.id !== tempId) return m;
           if (
@@ -347,6 +355,7 @@ export function useChatSession({
         }
         return partial;
       }
+      if (!isCurrentRequest()) return "";
       console.error("Stream error", e);
       const streamErr = assistantErrorFields(
         locale,
@@ -386,11 +395,12 @@ export function useChatSession({
       }
       return "";
     } finally {
-      if (finalize) {
+      if (finalize && isCurrentRequest()) {
         setIsLoading(false);
         refreshExecutions();
 
-        const wasAborted = abortControllerRef.current?.signal.aborted;
+        const wasAborted =
+          !isCurrentRequest() || abortControllerRef.current?.signal.aborted;
         const startedAt = requestStartedAtRef.current;
         const elapsed = startedAt ? Date.now() - startedAt : 0;
         const wasLong = thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
@@ -429,13 +439,26 @@ export function useChatSession({
     manualAttachments?: ChatAttachment[],
     systemInstruction?: string,
     isThinking?: boolean,
+    interruptCurrent = false,
   ) => {
     const inputQuery = manualQuery || query;
     const currentAttachments = (manualAttachments || attachments).map((a) =>
       normalizeLegacyAttachment(a),
     );
-    if ((!inputQuery.trim() && currentAttachments.length === 0) || isLoading)
+    if (
+      (!inputQuery.trim() && currentAttachments.length === 0) ||
+      (isLoading && !interruptCurrent)
+    )
       return;
+
+    abortControllerRef.current?.abort();
+    const requestId = ++requestSequenceRef.current;
+    const requestController = new AbortController();
+    abortControllerRef.current = requestController;
+    const isCurrentRequest = () => requestSequenceRef.current === requestId;
+    const finishRequest = () => {
+      if (isCurrentRequest()) setIsLoading(false);
+    };
 
     const thinkingRequested =
       !!isThinking &&
@@ -501,13 +524,11 @@ export function useChatSession({
       setExecutionCreated(true);
     }
 
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
-
     const newAssistantMessageId = () =>
       `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     const pushAssistantHttpError = (status: number, errorText: string) => {
+      if (!isCurrentRequest()) return;
       const err = assistantErrorFields(
         locale,
         status,
@@ -526,7 +547,7 @@ export function useChatSession({
           isError: true,
         },
       ]);
-      setIsLoading(false);
+      finishRequest();
     };
 
     const runTwoStageThinking = async (
@@ -557,6 +578,7 @@ export function useChatSession({
         thinkingText: string;
         content: string;
       }) => {
+        if (!isCurrentRequest()) return;
         setMessages((prev) => {
           const updatedMessages = prev.map((m) => {
             if (m.id !== tempId) return m;
@@ -604,10 +626,11 @@ export function useChatSession({
           return updatedMessages;
         });
 
-        setIsLoading(false);
+        finishRequest();
         refreshExecutions();
 
-        const wasAborted = abortControllerRef.current?.signal.aborted;
+        const wasAborted =
+          !isCurrentRequest() || requestController.signal.aborted;
         const startedAt = requestStartedAtRef.current;
         const elapsed = startedAt ? Date.now() - startedAt : 0;
         const wasLong = thinkingRequestedRef.current || elapsed >= LONG_TASK_MS;
@@ -634,6 +657,7 @@ export function useChatSession({
       ): Promise<string | null> => {
         const res = await requestStage("thinking", priorForRepair);
         if (!res.ok) {
+          if (!isCurrentRequest()) return null;
           if (!priorForRepair) {
             const errorText = await res.text();
             pushAssistantHttpError(res.status, errorText);
@@ -645,6 +669,7 @@ export function useChatSession({
           finalize: false,
           tempId,
           streamField: "thinkingText",
+          requestId,
         });
         return cleanThinkingText(raw);
       };
@@ -679,6 +704,7 @@ export function useChatSession({
       );
       const res2 = await requestStage("final", stage2Prior);
       if (!res2.ok) {
+        if (!isCurrentRequest()) return;
         const fallback = reconcileTwoStageThinking(stage1.notes, "", {
           answerDraft: stage1.answerDraft,
         });
@@ -688,7 +714,7 @@ export function useChatSession({
         }
         const errorText = await res2.text();
         pushAssistantHttpError(res2.status, errorText);
-        setIsLoading(false);
+        finishRequest();
         return;
       }
 
@@ -697,6 +723,7 @@ export function useChatSession({
         tempId,
         streamField: "content",
         allowEmptyContent: true,
+        requestId,
       });
 
       // A model can obey the first stage but leak the protocol in stage 2.
@@ -715,6 +742,7 @@ export function useChatSession({
           tempId,
           streamField: "content",
           allowEmptyContent: true,
+          requestId,
         });
         answerRepairs += 1;
       }
@@ -800,7 +828,7 @@ export function useChatSession({
               postOllamaChat(
                 ollamaUrl,
                 buildOllamaPayload(stage, prior),
-                abortControllerRef.current!.signal,
+                requestController.signal,
               ),
           );
           return;
@@ -831,10 +859,11 @@ export function useChatSession({
         const res = await postOllamaChat(
           ollamaUrl,
           chatPayload,
-          abortControllerRef.current.signal,
+          requestController.signal,
         );
 
         if (!res.ok) {
+          if (!isCurrentRequest()) return;
           const errorText = await res.text();
           const err = assistantErrorFields(
             locale,
@@ -855,11 +884,11 @@ export function useChatSession({
               isError: true,
             },
           ]);
-          setIsLoading(false);
+          finishRequest();
           return;
         }
 
-        await processStream(res, false, true);
+        await processStream(res, false, true, { requestId });
         return;
       }
 
@@ -894,7 +923,7 @@ export function useChatSession({
               customKeys: sanitizeCustomKeysForRequest(apiKeys),
               locale,
             }),
-            signal: abortControllerRef.current!.signal,
+            signal: requestController.signal,
           }),
         );
         return;
@@ -913,10 +942,11 @@ export function useChatSession({
           customKeys: sanitizeCustomKeysForRequest(apiKeys),
           locale,
         }),
-        signal: abortControllerRef.current.signal,
+        signal: requestController.signal,
       });
 
       if (!res.ok) {
+        if (!isCurrentRequest()) return;
         const errorText = await res.text();
         const err = assistantErrorFields(
           locale,
@@ -936,12 +966,13 @@ export function useChatSession({
             isError: true,
           },
         ]);
-        setIsLoading(false);
+        finishRequest();
         return;
       }
 
-      await processStream(res, false, false);
+      await processStream(res, false, false, { requestId });
     } catch (error: unknown) {
+      if (!isCurrentRequest()) return;
       const isAbort = error instanceof Error && error.name === "AbortError";
       if (!isAbort) {
         const message = error instanceof Error ? error.message : String(error);
@@ -965,7 +996,7 @@ export function useChatSession({
           },
         ]);
       }
-      setIsLoading(false);
+      finishRequest();
     }
   };
 
