@@ -118,11 +118,10 @@ export function ChatInput({
   const showComposerModel = showModelSelector && model && onModelChange;
   const hasDraft = Boolean(query.trim()) || attachments.length > 0;
   const useVoiceAction =
-    !isLoading &&
     !isProcessingFiles &&
     (isListening ||
       voiceModifierHeld ||
-      (!query.trim() && !attachments.length));
+      (!isLoading && !query.trim() && !attachments.length));
   const compactComposer = dock === "bottom" && compact;
   const hasQueuedCompactComposer = compactComposer && queuedPrompts.length > 0;
 
@@ -416,7 +415,42 @@ export function ChatInput({
                   />
                 )}
 
-                {isLoading && query.trim() && onSendWhileLoading ? (
+                {useVoiceAction ? (
+                  <IconTooltip
+                    label={
+                      voiceModifierHeld && hasDraft
+                        ? t("composer.voice.modifierHint")
+                        : isListening
+                          ? t("composer.voice.stop")
+                          : t("composer.voice")
+                    }
+                  >
+                    <Button
+                      type="button"
+                      size="icon"
+                      className={cn(
+                        "rounded-full p-0",
+                        compactComposer
+                          ? "size-8 sm:size-9"
+                          : "size-9 sm:size-8",
+                        isListening &&
+                          "animate-pulse border border-red-500/20 bg-red-500/10 text-red-500 shadow-none hover:bg-red-500/20",
+                      )}
+                      onClick={onSpeechToggle}
+                      aria-label={
+                        isListening
+                          ? t("composer.voice.stop")
+                          : t("composer.voice")
+                      }
+                    >
+                      {isListening ? (
+                        <StopIcon weight="fill" className="size-[14px]" />
+                      ) : (
+                        <MicrophoneIcon className="size-[18px]" />
+                      )}
+                    </Button>
+                  </IconTooltip>
+                ) : isLoading && query.trim() && onSendWhileLoading ? (
                   <IconTooltip label={t("composer.sendNow")}>
                     <Button
                       type="button"
@@ -455,41 +489,6 @@ export function ChatInput({
                       aria-label={t("composer.stop")}
                     >
                       <StopIcon weight="fill" className="size-[14px]" />
-                    </Button>
-                  </IconTooltip>
-                ) : useVoiceAction ? (
-                  <IconTooltip
-                    label={
-                      voiceModifierHeld && hasDraft
-                        ? t("composer.voice.modifierHint")
-                        : isListening
-                          ? t("composer.voice.stop")
-                          : t("composer.voice")
-                    }
-                  >
-                    <Button
-                      type="button"
-                      size="icon"
-                      className={cn(
-                        "rounded-full p-0",
-                        compactComposer
-                          ? "size-8 sm:size-9"
-                          : "size-9 sm:size-8",
-                        isListening &&
-                          "animate-pulse border border-red-500/20 bg-red-500/10 text-red-500 shadow-none hover:bg-red-500/20",
-                      )}
-                      onClick={onSpeechToggle}
-                      aria-label={
-                        isListening
-                          ? t("composer.voice.stop")
-                          : t("composer.voice")
-                      }
-                    >
-                      {isListening ? (
-                        <StopIcon weight="fill" className="size-[14px]" />
-                      ) : (
-                        <MicrophoneIcon className="size-[18px]" />
-                      )}
                     </Button>
                   </IconTooltip>
                 ) : (

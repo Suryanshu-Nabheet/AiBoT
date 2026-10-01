@@ -240,6 +240,85 @@ flowchart TD
     await expect.poll(() => requestCount).toBe(2);
   });
 
+  test("keeps the Command voice action available in normal and busy chat", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      class MockSpeechRecognition {
+        continuous = false;
+        interimResults = false;
+        lang = "";
+        onstart: (() => void) | null = null;
+        onend: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        onresult:
+          | ((event: { results: Array<Array<{ transcript: string }>> }) => void)
+          | null = null;
+
+        start() {
+          this.onstart?.();
+        }
+
+        stop() {
+          this.onend?.();
+        }
+      }
+
+      Object.defineProperty(window, "webkitSpeechRecognition", {
+        configurable: true,
+        value: MockSpeechRecognition,
+      });
+    });
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 8_000));
+      await route
+        .fulfill({
+          status: 200,
+          contentType: "text/event-stream",
+          body: `data: ${JSON.stringify({ choices: [{ delta: { content: "pong" } }] })}\n\ndata: [DONE]\n\n`,
+        })
+        .catch(() => undefined);
+    });
+
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("first prompt");
+    await page.keyboard.down("Meta");
+    await expect(
+      page.getByRole("button", { name: "Voice input" }),
+    ).toBeVisible();
+    await page.keyboard.up("Meta");
+    await expect(
+      page.getByRole("button", { name: /send message/i }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    const composer = page.getByPlaceholder(/send follow-up/i);
+    await expect(composer).toBeVisible();
+    await composer.fill("follow-up with voice shortcut");
+    await expect(
+      page.getByRole("button", { name: /^send now$/i }),
+    ).toBeVisible();
+
+    await page.keyboard.down("Meta");
+    const voiceInput = page.getByRole("button", { name: "Voice input" });
+    await expect(voiceInput).toBeVisible();
+    await voiceInput.click();
+    const stopVoiceInput = page.getByRole("button", {
+      name: "Stop voice input",
+    });
+    await expect(stopVoiceInput).toBeVisible();
+    await page.keyboard.up("Meta");
+    await expect(stopVoiceInput).toBeVisible();
+    await stopVoiceInput.click();
+    await expect(
+      page.getByRole("button", { name: /^send now$/i }),
+    ).toBeVisible();
+  });
+
   test("keeps long user prompts on the right with readable left-aligned text", async ({
     page,
   }) => {
