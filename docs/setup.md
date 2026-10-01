@@ -5,8 +5,8 @@ This guide provides detailed instructions for setting up the AiBoT development e
 ## Prerequisites
 
 Before installation, ensure the following requirements are met:
-- **Node.js**: Version 18.17.0 or higher (LTS recommended).
-- **pnpm**: Version 8.0.0 or higher.
+- **Node.js**: Version 20.9.0 or higher, matching the project engine requirement.
+- **pnpm**: Version 11.25.0, matching the version pinned in `package.json`.
 - **Git**: For version control and repository cloning.
 
 ## Quick Start (Automated)
@@ -82,7 +82,7 @@ This script validates model accessibility and response integrity against the Ope
 ### Dependency Issues
 If `pnpm` is not available, install it globally using npm:
 ```bash
-npm install -g pnpm
+npm install -g pnpm@11.25.0
 ```
 
 ### API Connectivity

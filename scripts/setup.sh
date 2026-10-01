@@ -57,16 +57,28 @@ fi
 
 # Check Node.js
 if ! command -v node &> /dev/null; then
-    error_log "Node.js is not installed. Please install Node.js (>=18.17.0)."
+    error_log "Node.js is not installed. Please install Node.js (>=20.9.0)."
     exit 1
 fi
 status_log "Node.js version: $(node -v)"
 
+if ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major > 20 || (major === 20 && minor >= 9) ? 0 : 1)'; then
+    error_log "AiBoT requires Node.js >=20.9.0. Please switch to a supported version."
+    exit 1
+fi
+
+EXPECTED_PNPM_VERSION="$(node -p 'require("./package.json").packageManager.split("@")[1]')"
+
 # Check pnpm
 if ! command -v pnpm &> /dev/null; then
-    warning_log "pnpm not found. Attempting to install pnpm globally..."
-    npm install -g pnpm || { error_log "Failed to install pnpm. Please install it manually."; exit 1; }
+    warning_log "pnpm not found. Installing the project's pinned pnpm version..."
+    npm install -g "pnpm@${EXPECTED_PNPM_VERSION}" || { error_log "Failed to install pnpm. Please install pnpm ${EXPECTED_PNPM_VERSION} manually."; exit 1; }
 else
+    CURRENT_PNPM_VERSION="$(pnpm -v)"
+    if [ "$CURRENT_PNPM_VERSION" != "$EXPECTED_PNPM_VERSION" ]; then
+        warning_log "AiBoT pins pnpm ${EXPECTED_PNPM_VERSION}; installing the required version..."
+        npm install -g "pnpm@${EXPECTED_PNPM_VERSION}" || { error_log "Failed to install pnpm ${EXPECTED_PNPM_VERSION}. Please install it manually."; exit 1; }
+    fi
     status_log "pnpm version: $(pnpm -v)"
 fi
 
