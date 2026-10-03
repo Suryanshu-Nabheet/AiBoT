@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
 import { mockChatStream, mockWebSearchApi } from "./helpers/mock-chat";
 
 test.describe("Web search mode", () => {
-  test("injects grounded context before the user message and shows sources", async ({
+  test("appends web search context to the user message and shows sources", async ({
     page,
   }) => {
     await page.addInitScript(() => {
@@ -47,12 +47,11 @@ test.describe("Web search mode", () => {
         ? userMessage.content
         : JSON.stringify(userMessage?.content ?? "");
 
-    expect(content).toContain("Web search sources");
-    expect(content).toContain("Page excerpt:");
-    expect(content).toContain("Region X announced new policy");
+    expect(content).toContain("Web search context");
+    expect(content).toContain("Official update published today");
     expect(content).toContain("latest news about Region X");
-    expect(content.indexOf("Web search sources")).toBeLessThan(
-      content.indexOf("latest news about Region X"),
+    expect(content.indexOf("latest news about Region X")).toBeLessThan(
+      content.indexOf("Web search context"),
     );
   });
 });

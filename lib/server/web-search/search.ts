@@ -3,22 +3,12 @@ import "server-only";
 import { searchBing } from "@/lib/server/web-search/bing";
 import { searchBrave } from "@/lib/server/web-search/brave";
 import { searchDuckDuckGo } from "@/lib/server/web-search/duckduckgo";
+import { filterIrrelevantNewsHomepages } from "@/lib/server/web-search/quality";
 import type { WebSearchApiResult } from "@/lib/web-search/types";
 
-type ProviderSearch = (
-  query: string,
-  maxResults: number,
-) => Promise<WebSearchApiResult>;
-
-const KEYLESS_PROVIDERS: ProviderSearch[] = [
-  searchBing,
-  searchBrave,
-  searchDuckDuckGo,
-];
-
 /**
- * Keyless web search for serverless (Vercel). Tries Bing, then Brave, then
- * DuckDuckGo so datacenter IPs still get results when one provider blocks.
+ * DuckDuckGo first (best relevance, original behavior). Brave/Bing only when
+ * DDG is empty (e.g. Vercel bot challenge). Bing is last and filtered.
  */
 export async function searchWeb(
   query: string,
@@ -29,15 +19,28 @@ export async function searchWeb(
     return { query: "", results: [] };
   }
 
-  for (const provider of KEYLESS_PROVIDERS) {
-    try {
-      const batch = await provider(trimmed, maxResults);
-      if (batch.results.length > 0) {
-        return batch;
-      }
-    } catch {
-      // Try the next keyless provider.
+  try {
+    const ddg = await searchDuckDuckGo(trimmed, maxResults);
+    if (ddg.results.length > 0) return ddg;
+  } catch {
+    // fall through
+  }
+
+  try {
+    const brave = await searchBrave(trimmed, maxResults);
+    if (brave.results.length > 0) return brave;
+  } catch {
+    // fall through
+  }
+
+  try {
+    const bing = await searchBing(trimmed, maxResults);
+    const results = filterIrrelevantNewsHomepages(bing.results, trimmed);
+    if (results.length > 0) {
+      return { query: trimmed, results };
     }
+  } catch {
+    // fall through
   }
 
   return { query: trimmed, results: [] };

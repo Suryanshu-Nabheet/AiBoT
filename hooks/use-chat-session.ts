@@ -630,12 +630,9 @@ export function useChatSession({
         webSearchTrace = searchResult.trace;
         const contextBlock = searchResult.context;
         if (typeof apiContent === "string") {
-          apiContent = `${contextBlock}\n\n---\n\n${apiContent}`;
+          apiContent = `${apiContent}\n\n${contextBlock}`;
         } else {
-          apiContent = [
-            { type: "text", text: `${contextBlock}\n\n---\n\n` },
-            ...apiContent,
-          ];
+          apiContent = [...apiContent, { type: "text", text: contextBlock }];
         }
       } catch (error) {
         const message =

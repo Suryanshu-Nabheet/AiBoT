@@ -16,9 +16,8 @@ describe("searchWeb orchestration", () => {
     searchDuckDuckGo.mockReset();
   });
 
-  it("returns the first provider that yields results", async () => {
-    searchBing.mockResolvedValue({ query: "react", results: [] });
-    searchBrave.mockResolvedValue({
+  it("prefers DuckDuckGo when it returns results", async () => {
+    searchDuckDuckGo.mockResolvedValue({
       query: "react",
       results: [
         {
@@ -29,21 +28,21 @@ describe("searchWeb orchestration", () => {
         },
       ],
     });
-    searchDuckDuckGo.mockResolvedValue({ query: "react", results: [] });
+    searchBrave.mockResolvedValue({ query: "react", results: [] });
+    searchBing.mockResolvedValue({ query: "react", results: [] });
 
     const { searchWeb } = await import("@/lib/server/web-search/search");
     const batch = await searchWeb("react", 5);
 
     expect(batch.results).toHaveLength(1);
-    expect(searchBing).toHaveBeenCalledOnce();
-    expect(searchBrave).toHaveBeenCalledOnce();
-    expect(searchDuckDuckGo).not.toHaveBeenCalled();
+    expect(searchDuckDuckGo).toHaveBeenCalledOnce();
+    expect(searchBrave).not.toHaveBeenCalled();
+    expect(searchBing).not.toHaveBeenCalled();
   });
 
-  it("falls through to DuckDuckGo when earlier providers are empty", async () => {
-    searchBing.mockResolvedValue({ query: "vue", results: [] });
-    searchBrave.mockResolvedValue({ query: "vue", results: [] });
-    searchDuckDuckGo.mockResolvedValue({
+  it("falls through to Brave when DuckDuckGo is empty", async () => {
+    searchDuckDuckGo.mockResolvedValue({ query: "vue", results: [] });
+    searchBrave.mockResolvedValue({
       query: "vue",
       results: [
         {
@@ -54,11 +53,14 @@ describe("searchWeb orchestration", () => {
         },
       ],
     });
+    searchBing.mockResolvedValue({ query: "vue", results: [] });
 
     const { searchWeb } = await import("@/lib/server/web-search/search");
     const batch = await searchWeb("vue", 5);
 
     expect(batch.results[0]?.href).toBe("https://vuejs.org/");
     expect(searchDuckDuckGo).toHaveBeenCalledOnce();
+    expect(searchBrave).toHaveBeenCalledOnce();
+    expect(searchBing).not.toHaveBeenCalled();
   });
 });

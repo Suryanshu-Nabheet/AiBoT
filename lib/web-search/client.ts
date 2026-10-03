@@ -20,7 +20,7 @@ export async function runWebSearchForTurn(
   const response = await fetch("/api/web-search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ queries, maxResults: 6 }),
+    body: JSON.stringify({ queries, maxResults: 8 }),
     signal: options?.signal,
   });
 
@@ -37,9 +37,6 @@ export async function runWebSearchForTurn(
   return {
     batches,
     trace: buildWebSearchTraceFromResults(batches, "complete"),
-    context: formatWebSearchContextForModel(batches, {
-      locale: options?.locale ?? "en",
-      userQuestion: userQuery,
-    }),
+    context: formatWebSearchContextForModel(batches, options?.locale ?? "en"),
   };
 }

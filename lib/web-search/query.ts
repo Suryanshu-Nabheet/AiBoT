@@ -44,6 +44,7 @@ export function normalizeUserQueryForSearch(userQuery: string): string {
     )
     .replace(/\b(get\s+)?(latest|recent|up-to-date)\s+context\b/gi, "")
     .replace(/\bfor\s+me\b/gi, "")
+    .replace(/\bgive\s+with\b/gi, "with")
     .trim();
 
   q = q
@@ -75,15 +76,8 @@ export function planWebSearchQueries(userQuery: string): string[] {
     );
 
   const queries = [primary];
-  if (wantsFresh) {
-    const newsQuery = /\bnews\b/i.test(primary)
-      ? primary
-      : `${primary} news`.slice(0, 500);
-    if (newsQuery !== primary) {
-      queries.push(newsQuery);
-    } else if (!primary.includes(String(year))) {
-      queries.push(`${primary} ${year}`.slice(0, 500));
-    }
+  if (wantsFresh && !primary.includes(String(year))) {
+    queries.push(`${primary} ${year}`.slice(0, 500));
   }
 
   return queries.slice(0, 2);

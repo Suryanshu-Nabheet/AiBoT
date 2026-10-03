@@ -47,6 +47,16 @@ describe("planWebSearchQueries", () => {
     expect(queries[0]).toBe("latest AI news");
     expect(queries[1]).toBe(`latest AI news ${year}`);
   });
+
+  it("does not append a news query for non-news product questions", () => {
+    const queries = planWebSearchQueries(
+      "the latest claude models give with cost",
+    );
+    expect(queries.some((q) => /\bnews\b/i.test(q) && !/claude/i.test(q))).toBe(
+      false,
+    );
+    expect(queries[0]).toContain("claude");
+  });
 });
 
 describe("parseDuckDuckGoHtml", () => {
