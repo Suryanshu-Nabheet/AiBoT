@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { searchWeb } from "@/lib/server/web-search/search";
 
-describe("searchWeb (live, keyless)", () => {
+/** CI runner IPs are often blocked by search providers; run locally before release. */
+const runLiveSearch = process.env.CI !== "true";
+
+describe.skipIf(!runLiveSearch)("searchWeb (live, keyless)", () => {
   it("returns at least one web result for a stable query", async () => {
     const { query, results } = await searchWeb("Next.js React framework", 5);
     expect(query).toBe("Next.js React framework");
