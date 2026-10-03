@@ -376,7 +376,10 @@ export default function ArenaInterface({
         />
       </div>
 
-      <div className="min-h-0 w-full shrink-0" data-testid="arena-composer-dock">
+      <div
+        className="min-h-0 w-full shrink-0"
+        data-testid="arena-composer-dock"
+      >
         {sharedChatInput}
       </div>
     </PageShell>

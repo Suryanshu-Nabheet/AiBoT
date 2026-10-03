@@ -88,9 +88,8 @@ function queueConversationPersist(
     saveConversation({
       id: conversationPersistId,
       title:
-        messages
-          .find((m) => m.role === Role.User)
-          ?.content.substring(0, 50) || translate(locale, "chat.defaultTitle"),
+        messages.find((m) => m.role === Role.User)?.content.substring(0, 50) ||
+        translate(locale, "chat.defaultTitle"),
       createdAt: new Date().toISOString(),
       messages,
       updatedAt: new Date().toISOString(),
@@ -173,12 +172,7 @@ export function useChatSession({
     setQuery("");
     setAttachments([]);
     setIsLoading(false);
-  }, [
-    initialConversationId,
-    conversationId,
-    sessionId,
-    executionType,
-  ]);
+  }, [initialConversationId, conversationId, sessionId, executionType]);
 
   // Persist conversationId if sessionId is provided
   useEffect(() => {

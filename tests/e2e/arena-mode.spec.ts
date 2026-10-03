@@ -71,7 +71,8 @@ test.describe("Arena mode", () => {
     expect(composerBox).not.toBeNull();
     if (!shellBox || !composerBox) return;
 
-    const composerBottomGap = shellBox.y + shellBox.height - composerBox.y - composerBox.height;
+    const composerBottomGap =
+      shellBox.y + shellBox.height - composerBox.y - composerBox.height;
     expect(composerBottomGap).toBeLessThan(48);
 
     const panels = page.getByTestId("arena-panels");
