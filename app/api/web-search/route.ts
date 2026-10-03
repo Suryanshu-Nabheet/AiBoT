@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchDuckDuckGo } from "@/lib/server/web-search/duckduckgo";
+import { searchWeb } from "@/lib/server/web-search/search";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { webSearchRequestSchema } from "@/lib/server/request-schemas";
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   for (const query of parsed.data.queries) {
     try {
-      batches.push(await searchDuckDuckGo(query, maxResults));
+      batches.push(await searchWeb(query, maxResults));
     } catch {
       batches.push({ query, results: [] });
     }

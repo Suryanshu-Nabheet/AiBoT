@@ -1,6 +1,13 @@
 import "server-only";
 
-import { brandFromDomain, domainFromUrl } from "@/lib/web-search/brand";
+import {
+  BROWSER_HEADERS,
+  FETCH_TIMEOUT_MS,
+  isDuckDuckGoBlockedHtml,
+  pushUniqueResult,
+  sourceFromHref,
+  stripHtml,
+} from "@/lib/server/web-search/common";
 import type {
   WebSearchApiResult,
   WebSearchSource,
@@ -8,15 +15,12 @@ import type {
 
 const DDG_HTML = "https://html.duckduckgo.com/html/";
 const DDG_INSTANT = "https://api.duckduckgo.com/";
-const FETCH_TIMEOUT_MS = 14_000;
 
-const BROWSER_HEADERS = {
+const DDG_HEADERS = {
+  ...BROWSER_HEADERS,
   "Content-Type": "application/x-www-form-urlencoded",
-  Accept:
-    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.9",
-  "User-Agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Referer: "https://duckduckgo.com/",
+  Origin: "https://duckduckgo.com",
 };
 
 function decodeDuckDuckGoRedirect(href: string): string {
@@ -31,31 +35,6 @@ function decodeDuckDuckGoRedirect(href: string): string {
   } catch {
     return href;
   }
-}
-
-function stripHtml(text: string): string {
-  return text
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function pushUniqueResult(
-  results: WebSearchSource[],
-  seen: Set<string>,
-  candidate: WebSearchSource,
-  maxResults: number,
-) {
-  if (results.length >= maxResults) return;
-  const key = candidate.href.toLowerCase();
-  if (seen.has(key)) return;
-  seen.add(key);
-  results.push(candidate);
 }
 
 /** Parse DuckDuckGo HTML results (keyless). Tolerates varying attribute order. */
@@ -88,18 +67,11 @@ export function parseDuckDuckGoHtml(
       /class="[^"]*\bresult__snippet\b[^"]*"[^>]*>([\s\S]*?)<\//i,
     );
     const snippet = snippetMatch ? stripHtml(snippetMatch[1]) : undefined;
-    const domain = domainFromUrl(href);
 
     pushUniqueResult(
       results,
       seen,
-      {
-        title,
-        domain,
-        href,
-        brand: brandFromDomain(domain),
-        snippet,
-      },
+      sourceFromHref(href, title, snippet),
       maxResults,
     );
   }
@@ -158,17 +130,14 @@ export async function searchDuckDuckGoInstant(
   const seen = new Set<string>();
 
   if (data.AbstractURL && data.AbstractText) {
-    const domain = domainFromUrl(data.AbstractURL);
     pushUniqueResult(
       results,
       seen,
-      {
-        title: data.Heading || data.AbstractText.slice(0, 80),
-        href: data.AbstractURL,
-        domain,
-        brand: brandFromDomain(domain),
-        snippet: data.AbstractText,
-      },
+      sourceFromHref(
+        data.AbstractURL,
+        data.Heading || data.AbstractText.slice(0, 80),
+        data.AbstractText,
+      ),
       maxResults,
     );
   }
@@ -177,13 +146,12 @@ export async function searchDuckDuckGoInstant(
   for (const topic of related) {
     if (!topic.FirstURL || !topic.Text) continue;
     const href = topic.FirstURL;
-    const domain = domainFromUrl(href);
     const title = topic.Text.split(" - ")[0]?.trim() || topic.Text;
     const snippet = topic.Text;
     pushUniqueResult(
       results,
       seen,
-      { title, href, domain, brand: brandFromDomain(domain), snippet },
+      sourceFromHref(href, title, snippet),
       maxResults,
     );
   }
@@ -206,7 +174,7 @@ export async function searchDuckDuckGo(
   try {
     const response = await fetch(DDG_HTML, {
       method: "POST",
-      headers: BROWSER_HEADERS,
+      headers: DDG_HEADERS,
       body: new URLSearchParams({ q: trimmed, b: "", kl: "us-en" }),
       signal: controller.signal,
       cache: "no-store",
@@ -216,7 +184,9 @@ export async function searchDuckDuckGo(
 
     if (response.ok) {
       const html = await response.text();
-      results = parseDuckDuckGoHtml(html, maxResults);
+      if (!isDuckDuckGoBlockedHtml(html)) {
+        results = parseDuckDuckGoHtml(html, maxResults);
+      }
     }
 
     if (results.length === 0) {

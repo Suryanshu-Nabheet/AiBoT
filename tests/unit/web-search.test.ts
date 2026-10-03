@@ -3,6 +3,12 @@ import {
   normalizeUserQueryForSearch,
   planWebSearchQueries,
 } from "@/lib/web-search/query";
+import {
+  decodeBingRedirect,
+  parseBingSearchHtml,
+} from "@/lib/server/web-search/bing";
+import { parseBraveSearchHtml } from "@/lib/server/web-search/brave";
+import { isDuckDuckGoBlockedHtml } from "@/lib/server/web-search/common";
 import { parseDuckDuckGoHtml } from "@/lib/server/web-search/duckduckgo";
 
 describe("normalizeUserQueryForSearch", () => {
@@ -74,5 +80,58 @@ describe("parseDuckDuckGoHtml", () => {
       <a class="result__a" href="https://c.test/3">Three</a>
     `;
     expect(parseDuckDuckGoHtml(html, 2)).toHaveLength(2);
+  });
+});
+
+describe("isDuckDuckGoBlockedHtml", () => {
+  it("detects bot challenge pages", () => {
+    expect(
+      isDuckDuckGoBlockedHtml(
+        '<div class="anomaly-modal">bots use DuckDuckGo</div>',
+      ),
+    ).toBe(true);
+    expect(isDuckDuckGoBlockedHtml('<a class="result__a">ok</a>')).toBe(false);
+  });
+});
+
+describe("decodeBingRedirect", () => {
+  it("decodes Bing click-through URLs", () => {
+    const href =
+      "https://www.bing.com/ck/a?!&&p=x&u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS8&ntb=1";
+    expect(decodeBingRedirect(href)).toBe("https://example.com/");
+  });
+});
+
+describe("parseBingSearchHtml", () => {
+  it("extracts results from b_algo blocks", () => {
+    const html = `
+      <li class="b_algo">
+        <h2><a href="https://www.bing.com/ck/a?u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS8">Example Site</a></h2>
+        <div class="b_caption"><p>A short description.</p></div>
+      </li>
+    `;
+    const results = parseBingSearchHtml(html, 5);
+    expect(results).toHaveLength(1);
+    expect(results[0].href).toBe("https://example.com/");
+    expect(results[0].title).toBe("Example Site");
+    expect(results[0].snippet).toBe("A short description.");
+  });
+});
+
+describe("parseBraveSearchHtml", () => {
+  it("extracts title, href, and snippet from Brave SERP markup", () => {
+    const html = `
+      <a href="https://example.com/page">
+        <div class="title search-snippet-title line-clamp-1" title="Example Page Title">Example Page Title</div>
+      </a>
+      <div class="generic-snippet"><div class="content">A helpful snippet about the page.</div></div>
+    `;
+
+    const results = parseBraveSearchHtml(html, 5);
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("Example Page Title");
+    expect(results[0].href).toBe("https://example.com/page");
+    expect(results[0].snippet).toBe("A helpful snippet about the page.");
+    expect(results[0].domain).toBe("example.com");
   });
 });
