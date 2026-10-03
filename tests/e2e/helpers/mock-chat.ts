@@ -33,6 +33,40 @@ export async function mockChatStream(page: Page, assistantText = "pong") {
 }
 
 /** Mock the complete two-call thinking protocol used by useChatSession. */
+/** Mock keyless web search API with rich snippets + page excerpts. */
+export async function mockWebSearchApi(page: Page) {
+  await page.route("**/api/web-search", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    const body = route.request().postDataJSON() as { queries?: string[] };
+    const query = body.queries?.[0] ?? "test";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        batches: [
+          {
+            query,
+            results: [
+              {
+                title: "Example News — Region X",
+                href: "https://example.com/news/region-x",
+                domain: "example.com",
+                brand: "generic",
+                snippet: "Official update published today about Region X.",
+                pageExcerpt:
+                  "Region X announced new policy changes effective this week. Officials confirmed three main points: funding, elections, and infrastructure.",
+              },
+            ],
+          },
+        ],
+      }),
+    });
+  });
+}
+
 export async function mockThinkingChatStream(
   page: Page,
   options: { notes?: string; answer?: string } = {},

@@ -13,6 +13,8 @@ export type WebSearchSource = {
   href: string;
   brand: WebSearchBrand;
   snippet?: string;
+  /** Plain-text excerpt fetched from the result page (when available). */
+  pageExcerpt?: string;
 };
 
 export type WebSearchStep =

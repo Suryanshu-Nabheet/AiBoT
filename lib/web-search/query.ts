@@ -75,8 +75,15 @@ export function planWebSearchQueries(userQuery: string): string[] {
     );
 
   const queries = [primary];
-  if (wantsFresh && !primary.includes(String(year))) {
-    queries.push(`${primary} ${year}`.slice(0, 500));
+  if (wantsFresh) {
+    const newsQuery = /\bnews\b/i.test(primary)
+      ? primary
+      : `${primary} news`.slice(0, 500);
+    if (newsQuery !== primary) {
+      queries.push(newsQuery);
+    } else if (!primary.includes(String(year))) {
+      queries.push(`${primary} ${year}`.slice(0, 500));
+    }
   }
 
   return queries.slice(0, 2);

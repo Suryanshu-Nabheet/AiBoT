@@ -1,9 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { enrichSourcesWithPageExcerpts } from "@/lib/server/web-search/enrich";
 import { searchWeb } from "@/lib/server/web-search/search";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { webSearchRequestSchema } from "@/lib/server/request-schemas";
+import { mergeWebSearchBatches } from "@/lib/web-search/merge";
+import type {
+  WebSearchApiResult,
+  WebSearchSource,
+} from "@/lib/web-search/types";
 
-export const maxDuration = 30;
+function applyEnrichedSources(
+  batches: WebSearchApiResult[],
+  enriched: WebSearchSource[],
+): WebSearchApiResult[] {
+  const byHref = new Map(
+    enriched.map((source) => [source.href.toLowerCase(), source]),
+  );
+  return batches.map((batch) => ({
+    ...batch,
+    results: batch.results.map(
+      (source) => byHref.get(source.href.toLowerCase()) ?? source,
+    ),
+  }));
+}
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const blocked = protectApiRequest(req, {
@@ -28,8 +49,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const maxResults = parsed.data.maxResults ?? 8;
-  const batches = [];
+  const maxResults = parsed.data.maxResults ?? 6;
+  const batches: WebSearchApiResult[] = [];
 
   for (const query of parsed.data.queries) {
     try {
@@ -46,5 +67,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ batches });
+  const merged = mergeWebSearchBatches(batches, 10);
+  const enriched = await enrichSourcesWithPageExcerpts(merged, { maxPages: 4 });
+  const enrichedBatches = applyEnrichedSources(batches, enriched);
+
+  return NextResponse.json({ batches: enrichedBatches });
 }
