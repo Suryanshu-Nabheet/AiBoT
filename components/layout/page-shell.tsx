@@ -15,16 +15,15 @@ import { cn } from "@/lib/utils";
 export function PageShell({
   children,
   className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+  ...rest
+}: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
         "flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden",
         className,
       )}
+      {...rest}
     >
       {children}
     </div>

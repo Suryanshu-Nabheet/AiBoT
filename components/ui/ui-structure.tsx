@@ -132,6 +132,7 @@ export const UIStructure = () => {
                       router.push("/");
                     }
                   }}
+                  onMouseEnter={() => router.prefetch("/")}
                   className="h-10 w-full justify-start gap-3 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium tracking-tight text-sidebar-foreground/90 shadow-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center">
@@ -188,6 +189,12 @@ export const UIStructure = () => {
                               setViewMode(execution.mode);
                             }
                             router.push(`/chat/${execution.id}`);
+                          }}
+                          onMouseEnter={() => {
+                            router.prefetch(`/chat/${execution.id}`);
+                          }}
+                          onFocus={() => {
+                            router.prefetch(`/chat/${execution.id}`);
                           }}
                         >
                           <span className="w-full truncate">

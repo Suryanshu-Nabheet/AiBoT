@@ -5,7 +5,7 @@
  * See LICENSE file for details
  */
 
-import { useEffect, useState, useCallback } from "react";
+import { useLayoutEffect, useState, useCallback } from "react";
 
 export interface Execution {
   id: string;
@@ -38,8 +38,7 @@ export const useExecution = () => {
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Load executions on mount
-  useEffect(() => {
+  useLayoutEffect(() => {
     setExecutions(getInitialExecutions());
     setLoading(false);
   }, []);

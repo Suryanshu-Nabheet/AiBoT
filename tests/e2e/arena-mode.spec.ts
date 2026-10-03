@@ -6,6 +6,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { mockChatStream } from "./helpers/mock-chat";
 
 async function openArenaMode(page: import("@playwright/test").Page) {
   await page.addInitScript(() => {
@@ -48,5 +49,36 @@ test.describe("Arena mode", () => {
     const composer = page.locator("main").getByPlaceholder(/message aibot/i);
     await expect(composer).toBeVisible();
     await expect(composer).toBeEditable();
+  });
+
+  test("active arena pins composer to the bottom of the viewport", async ({
+    page,
+  }) => {
+    await mockChatStream(page, "Arena lane response");
+    await openArenaMode(page);
+    await page.getByPlaceholder(/message aibot/i).fill("compare models");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    const shell = page.getByTestId("arena-active-shell");
+    await expect(shell).toBeVisible({ timeout: 15_000 });
+
+    const composer = page.getByPlaceholder(/send follow-up/i);
+    await expect(composer).toBeVisible();
+
+    const shellBox = await shell.boundingBox();
+    const composerBox = await composer.boundingBox();
+    expect(shellBox).not.toBeNull();
+    expect(composerBox).not.toBeNull();
+    if (!shellBox || !composerBox) return;
+
+    const composerBottomGap = shellBox.y + shellBox.height - composerBox.y - composerBox.height;
+    expect(composerBottomGap).toBeLessThan(48);
+
+    const panels = page.getByTestId("arena-panels");
+    const panelsBox = await panels.boundingBox();
+    expect(panelsBox).not.toBeNull();
+    if (!panelsBox) return;
+
+    expect(panelsBox.height).toBeGreaterThan(shellBox.height * 0.45);
   });
 });

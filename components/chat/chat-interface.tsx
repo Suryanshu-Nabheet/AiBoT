@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useChatSession } from "@/hooks/use-chat-session";
-import { ChatInput } from "./chat-input";
+import { ChatComposerHost } from "./chat-composer-host";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
@@ -133,6 +133,14 @@ export default function ChatInterface({
     scrollToBottom("auto");
   }, [messages.length, isEmptyChat, scrollToBottom]);
 
+  useEffect(() => {
+    if (isEmptyChat) return;
+    const id = window.requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isEmptyChat]);
+
   useGlobalKeyPress({
     inputRef: textareaRef,
     onKeyPress: (key: string) => setQuery((prev) => prev + key),
@@ -199,7 +207,11 @@ export default function ChatInterface({
               {t("chat.welcome.greeting")}
             </p>
 
-            <ChatInput {...chatInputProps} dock="center" className="w-full" />
+            <ChatComposerHost
+              {...chatInputProps}
+              variant="hero"
+              className="w-full"
+            />
           </motion.div>
         </div>
       ) : (
@@ -233,8 +245,9 @@ export default function ChatInterface({
             )}
           </AnimatePresence>
 
-          <ChatInput
+          <ChatComposerHost
             {...chatInputProps}
+            variant="thread"
             onQueue={promptQueue.enqueue}
             queuedPrompts={promptQueue.queue}
             onRemoveQueuedPrompt={promptQueue.remove}
@@ -242,8 +255,6 @@ export default function ChatInterface({
               promptQueue.remove(item.id);
               void handleSend(item.prompt, [], undefined, isThinking, true);
             }}
-            dock="bottom"
-            compact
             className="shrink-0"
           />
         </>

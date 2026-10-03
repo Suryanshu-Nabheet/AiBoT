@@ -45,7 +45,7 @@ export default function HomePage() {
               className="absolute inset-0"
             >
               <PageViewSlot>
-                <ArenaInterface />
+                <ArenaInterface className="h-full" />
               </PageViewSlot>
             </motion.div>
           )}

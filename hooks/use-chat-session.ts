@@ -12,6 +12,7 @@ import { v4 } from "uuid";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
 import { useConversationById, saveConversation } from "@/hooks/useConversation";
+import { readConversation } from "@/lib/chat/conversation-store";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { postOllamaChat } from "@/lib/chat/ollama-url";
 import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
@@ -78,6 +79,25 @@ function assistantErrorFields(
   };
 }
 
+function queueConversationPersist(
+  conversationPersistId: string,
+  messages: Message[],
+  locale: Locale,
+) {
+  queueMicrotask(() => {
+    saveConversation({
+      id: conversationPersistId,
+      title:
+        messages
+          .find((m) => m.role === Role.User)
+          ?.content.substring(0, 50) || translate(locale, "chat.defaultTitle"),
+      createdAt: new Date().toISOString(),
+      messages,
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}
+
 export interface UseChatSessionOptions {
   conversationId?: string;
   storageKey?: string;
@@ -110,7 +130,7 @@ export function useChatSession({
   const [executionCreated, setExecutionCreated] = useState(false);
 
   // Initialize conversationId with session persistence logic
-  const [conversationId] = useState<string | null>(() => {
+  const [conversationId, setConversationId] = useState<string | null>(() => {
     if (initialConversationId) return initialConversationId;
     if (sessionId && typeof window !== "undefined") {
       try {
@@ -122,6 +142,43 @@ export function useChatSession({
     }
     return v4();
   });
+
+  useEffect(() => {
+    if (!initialConversationId || initialConversationId === conversationId) {
+      return;
+    }
+
+    const nextPersistId =
+      getConversationPersistId(initialConversationId, {
+        sessionId,
+        executionType,
+      }) ?? initialConversationId;
+    const stored = readConversation(nextPersistId);
+    hydratedConversationIdRef.current = nextPersistId;
+
+    if (stored?.messages?.length) {
+      setMessages(
+        stored.messages.map((m) => ({
+          ...m,
+          shouldAnimate: false,
+        })),
+      );
+      setShowWelcome(false);
+    } else {
+      setMessages([]);
+      setShowWelcome(true);
+    }
+
+    setConversationId(initialConversationId);
+    setQuery("");
+    setAttachments([]);
+    setIsLoading(false);
+  }, [
+    initialConversationId,
+    conversationId,
+    sessionId,
+    executionType,
+  ]);
 
   // Persist conversationId if sessionId is provided
   useEffect(() => {
@@ -292,6 +349,7 @@ export function useChatSession({
         : "";
       const hasText = sanitized.trim().length > 0;
 
+      let messagesToPersist: Message[] | null = null;
       setMessages((prev) => {
         if (!isCurrentRequest()) return prev;
         const updatedMessages = prev.map((m) => {
@@ -330,20 +388,17 @@ export function useChatSession({
         });
 
         if (finalize && conversationPersistId && hasText) {
-          saveConversation({
-            id: conversationPersistId,
-            title:
-              updatedMessages
-                .find((m) => m.role === Role.User)
-                ?.content.substring(0, 50) ||
-              translate(locale, "chat.defaultTitle"),
-            createdAt: new Date().toISOString(),
-            messages: updatedMessages,
-            updatedAt: new Date().toISOString(),
-          });
+          messagesToPersist = updatedMessages;
         }
         return updatedMessages;
       });
+      if (messagesToPersist && conversationPersistId) {
+        queueConversationPersist(
+          conversationPersistId,
+          messagesToPersist,
+          locale,
+        );
+      }
       return sanitized;
     } catch (e) {
       if ((e as Error).name === "AbortError") {
@@ -579,6 +634,7 @@ export function useChatSession({
         content: string;
       }) => {
         if (!isCurrentRequest()) return;
+        let messagesToPersist: Message[] | null = null;
         setMessages((prev) => {
           const updatedMessages = prev.map((m) => {
             if (m.id !== tempId) return m;
@@ -611,20 +667,17 @@ export function useChatSession({
           });
 
           if (conversationPersistId && reconciled.content.trim()) {
-            saveConversation({
-              id: conversationPersistId,
-              title:
-                updatedMessages
-                  .find((msg) => msg.role === Role.User)
-                  ?.content.substring(0, 50) ||
-                translate(locale, "chat.defaultTitle"),
-              createdAt: new Date().toISOString(),
-              messages: updatedMessages,
-              updatedAt: new Date().toISOString(),
-            });
+            messagesToPersist = updatedMessages;
           }
           return updatedMessages;
         });
+        if (messagesToPersist && conversationPersistId) {
+          queueConversationPersist(
+            conversationPersistId,
+            messagesToPersist,
+            locale,
+          );
+        }
 
         finishRequest();
         refreshExecutions();

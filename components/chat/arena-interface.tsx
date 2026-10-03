@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { ExecutionType } from "@/hooks/useExecution";
-import { ChatInput } from "./chat-input";
+import { ChatComposerHost } from "./chat-composer-host";
 import { usePromptQueue, type QueuedPrompt } from "@/hooks/use-prompt-queue";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
@@ -27,6 +27,8 @@ import {
   useChatComposerSpeech,
 } from "@/hooks/use-chat-composer";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
+import { scrollThreadToEnd } from "@/lib/chat/scroll-thread-to-end";
+import { cn } from "@/lib/utils";
 
 function ArenaPanel({
   model,
@@ -55,11 +57,11 @@ function ArenaPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollThreadToEnd(scrollRef, messages.length > 0 ? "smooth" : "auto");
   }, [messages, isLoading]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col basis-0 bg-background">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col basis-0 bg-background">
       <div className="z-10 shrink-0 border-b border-border/40 bg-background/95 px-3 py-2.5 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 sm:px-4">
         <ModelSelector
           value={model}
@@ -91,8 +93,10 @@ function ArenaPanel({
 
 export default function ArenaInterface({
   conversationId: initialConversationId,
+  className,
 }: {
   conversationId?: string;
+  className?: string;
 }) {
   const { t, locale } = useTranslation();
   // Shared conversation ID for both panels to keep history unified
@@ -255,7 +259,7 @@ export default function ArenaInterface({
     "h-8 w-full max-w-full justify-between sm:w-fit sm:max-w-[min(42vw,160px)]";
 
   const sharedChatInput = (
-    <ChatInput
+    <ChatComposerHost
       query={query}
       setQuery={setQuery}
       onSubmit={isLoadingEither ? handleQueueSubmit : handleSharedSubmit}
@@ -279,15 +283,20 @@ export default function ArenaInterface({
             ? t("composer.placeholder")
             : t("composer.placeholder.followup")
       }
-      dock={isEmptyArena ? "center" : "bottom"}
-      compact={!isEmptyArena}
+      variant={isEmptyArena ? "hero" : "thread"}
+      layoutContext="arena"
       className={isEmptyArena ? "w-full" : "shrink-0"}
     />
   );
 
   if (isEmptyArena) {
     return (
-      <PageShell className="relative h-full min-h-0 w-full flex-col bg-background">
+      <PageShell
+        className={cn(
+          "relative h-full min-h-0 w-full flex-col bg-background",
+          className,
+        )}
+      >
         <div className="grid min-h-0 w-full flex-1 place-items-center overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4">
           <motion.div
             initial={{ opacity: 0, y: 6 }}
@@ -330,8 +339,17 @@ export default function ArenaInterface({
   }
 
   return (
-    <PageShell className="relative flex h-full min-h-0 flex-col bg-background">
-      <div className="flex min-h-0 flex-1 flex-col divide-y divide-border/60 overflow-hidden md:flex-row md:divide-x md:divide-y-0">
+    <PageShell
+      data-testid="arena-active-shell"
+      className={cn(
+        "relative grid h-full min-h-0 w-full grid-rows-[minmax(0,1fr)_auto] bg-background",
+        className,
+      )}
+    >
+      <div
+        data-testid="arena-panels"
+        className="flex min-h-0 min-w-0 flex-col divide-y divide-border/60 overflow-hidden md:flex-row md:divide-x md:divide-y-0"
+      >
         <ArenaPanel
           model={leftChat.model}
           onModelChange={leftChat.setModel}
@@ -358,7 +376,9 @@ export default function ArenaInterface({
         />
       </div>
 
-      {sharedChatInput}
+      <div className="min-h-0 w-full shrink-0" data-testid="arena-composer-dock">
+        {sharedChatInput}
+      </div>
     </PageShell>
   );
 }

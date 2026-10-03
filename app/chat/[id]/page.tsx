@@ -37,7 +37,11 @@ const ChatPage = ({ params }: { params: any }) => {
               className="absolute inset-0"
             >
               <PageViewSlot>
-                <ChatInterface conversationId={id} className="h-full" />
+                <ChatInterface
+                  key={id}
+                  conversationId={id}
+                  className="h-full"
+                />
               </PageViewSlot>
             </motion.div>
           )}
@@ -49,7 +53,11 @@ const ChatPage = ({ params }: { params: any }) => {
               className="absolute inset-0"
             >
               <PageViewSlot>
-                <ArenaInterface conversationId={id} />
+                <ArenaInterface
+                  key={id}
+                  conversationId={id}
+                  className="h-full"
+                />
               </PageViewSlot>
             </motion.div>
           )}

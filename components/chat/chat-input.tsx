@@ -13,11 +13,8 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  PaperPlaneRightIcon,
-  StopIcon,
   PaperclipIcon,
   PlusIcon,
-  MicrophoneIcon,
   CircleNotchIcon,
   X as XIcon,
 } from "@phosphor-icons/react";
@@ -25,12 +22,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { cn } from "@/lib/utils";
-import { ModelSelector } from "@/components/ui/model-selector";
 import { toast } from "sonner";
 import { useTranslation } from "@/hooks/use-translation";
+import { useComposerTextarea } from "@/hooks/use-composer-textarea";
 import { ATTACH_ACCEPT, type ChatAttachment } from "@/lib/chat/attachments";
 import { processFilesForChat } from "@/lib/chat/process-files";
+import {
+  composerDockShellClassName,
+  composerFormClassName,
+  composerSurfaceClassName,
+  resolveComposerDensity,
+  type ComposerLayoutContext,
+} from "@/lib/chat/composer-mode";
 import { PromptQueue } from "./prompt-queue";
+import { ComposerModelSlot } from "./composer-model-slot";
+import { ComposerPrimaryAction } from "./composer-primary-action";
 import type { QueuedPrompt } from "@/hooks/use-prompt-queue";
 
 interface ChatInputProps {
@@ -62,6 +68,8 @@ interface ChatInputProps {
   compact?: boolean;
   /** Optional ref for global typing / focus helpers */
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
+  /** Arena uses a full-width dock with tighter vertical padding */
+  layoutContext?: ComposerLayoutContext;
 }
 
 export function ChatInput({
@@ -90,14 +98,37 @@ export function ChatInput({
   dock = "bottom",
   compact = false,
   textareaRef: textareaRefProp,
+  layoutContext = "chat",
 }: ChatInputProps) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t("composer.placeholder");
   const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = textareaRefProp ?? internalTextareaRef;
+  const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [voiceModifierHeld, setVoiceModifierHeld] = useState(false);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+
+  const density = resolveComposerDensity(dock, compact);
+  const isThread = density === "thread";
+  const hasQueuedInThread = isThread && queuedPrompts.length > 0;
+
+  const showComposerModel = Boolean(
+    showModelSelector && model && onModelChange,
+  );
+  const hasDraft = Boolean(query.trim()) || attachments.length > 0;
+  const useVoiceAction =
+    !isProcessingFiles &&
+    (isListening ||
+      voiceModifierHeld ||
+      (!isLoading && !query.trim() && !attachments.length));
+
+  useComposerTextarea(
+    textareaRef,
+    query,
+    true,
+    isThread ? "compact" : "default",
+  );
 
   useEffect(() => {
     const handleModifier = (event: KeyboardEvent) => {
@@ -115,24 +146,25 @@ export function ChatInput({
     };
   }, []);
 
-  const showComposerModel = showModelSelector && model && onModelChange;
-  const hasDraft = Boolean(query.trim()) || attachments.length > 0;
-  const useVoiceAction =
-    !isProcessingFiles &&
-    (isListening ||
-      voiceModifierHeld ||
-      (!isLoading && !query.trim() && !attachments.length));
-  const compactComposer = dock === "bottom" && compact;
-  const hasQueuedCompactComposer = compactComposer && queuedPrompts.length > 0;
+  const handleFormSubmit = (event: React.FormEvent) => {
+    if (isLoading) {
+      event.preventDefault();
+      if (query.trim()) {
+        onQueue?.(query);
+        if (onQueue) setQuery("");
+      }
+      return;
+    }
+    if (isProcessingFiles) {
+      event.preventDefault();
+      return;
+    }
+    onSubmit(event);
+  };
 
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!compactComposer || !textarea) return;
-
-    const maxHeight = Math.min(window.innerHeight * 0.3, 160);
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
-  }, [compactComposer, query, textareaRef]);
+  const requestFormSubmit = () => {
+    formRef.current?.requestSubmit();
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
@@ -193,22 +225,19 @@ export function ChatInput({
     <div
       className={cn(
         "z-10 w-full max-w-full shrink-0",
-        dock === "bottom"
-          ? "bg-gradient-to-t from-background via-background to-transparent px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4 md:pt-6"
-          : "px-0 pb-0 pt-0",
+        composerDockShellClassName(dock, layoutContext),
         className,
       )}
     >
       <div
         data-testid="composer-surface"
-        className={cn(
-          "mx-auto w-full",
-          compactComposer ? "max-w-3xl" : "max-w-4xl",
-          hasQueuedCompactComposer &&
-            "overflow-hidden rounded-2xl border border-border/50 bg-muted/40",
+        className={composerSurfaceClassName(
+          density,
+          hasQueuedInThread,
+          layoutContext,
         )}
       >
-        {compactComposer && queuedPrompts.length > 0 && (
+        {hasQueuedInThread && (
           <div className="border-b border-border/50">
             <PromptQueue
               items={queuedPrompts}
@@ -218,36 +247,16 @@ export function ChatInput({
           </div>
         )}
         <motion.form
+          ref={formRef}
           data-testid="chat-composer-form"
-          initial={dock === "center" ? { opacity: 0 } : { y: 20, opacity: 0 }}
-          animate={dock === "center" ? { opacity: 1 } : { y: 0, opacity: 1 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          onSubmit={(event) => {
-            if (isLoading) {
-              event.preventDefault();
-              if (query.trim()) {
-                onQueue?.(query);
-                if (onQueue) setQuery("");
-              }
-              return;
-            }
-            if (isProcessingFiles) {
-              event.preventDefault();
-              return;
-            }
-            onSubmit(event);
-          }}
-          className={cn(
-            "relative flex w-full max-w-full min-w-0 overflow-hidden",
-            compactComposer
-              ? cn(
-                  "flex-col transition-[border-radius] duration-200",
-                  hasQueuedCompactComposer
-                    ? "rounded-none border-0 bg-transparent"
-                    : "rounded-full border border-border/50 bg-muted/40",
-                )
-              : "flex-col gap-0 rounded-2xl border border-border/50 bg-muted/40 sm:rounded-3xl",
-            compactComposer && attachments.length > 0 && "rounded-3xl",
+          initial={dock === "center" ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+          onSubmit={handleFormSubmit}
+          className={composerFormClassName(
+            density,
+            hasQueuedInThread,
+            attachments.length > 0,
           )}
         >
           {isProcessingFiles && (
@@ -265,9 +274,9 @@ export function ChatInput({
             <div className="flex gap-2 overflow-x-auto px-4 pt-3 scrollbar-none">
               {attachments.map((att, i) => (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  key={i}
+                  key={`${att.name}-${i}`}
                   className="relative group flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-background/50"
                 >
                   {att.type.startsWith("image/") ||
@@ -308,7 +317,7 @@ export function ChatInput({
           <div
             className={cn(
               "flex min-w-0 items-center",
-              compactComposer
+              isThread
                 ? "min-h-12 gap-1 px-3 py-0.5 sm:min-h-[52px] sm:gap-2 sm:px-4"
                 : "flex-col gap-0",
             )}
@@ -318,17 +327,17 @@ export function ChatInput({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={resolvedPlaceholder}
-              rows={compactComposer ? 1 : undefined}
+              rows={isThread ? 1 : undefined}
               className={cn(
                 "min-w-0 resize-none border-0 bg-transparent font-sans text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0 scrollbar-thin scrollbar-thumb-muted-foreground/20",
-                compactComposer
+                isThread
                   ? "order-2 min-h-8 max-h-[min(30dvh,160px)] flex-1 content-center px-2 py-1 text-base leading-5 sm:px-3 sm:text-[17px]"
                   : "min-h-[48px] max-h-[min(35dvh,240px)] w-full px-3 py-2.5 text-[15px] leading-relaxed sm:min-h-[56px] sm:px-4 sm:py-3 sm:text-base md:px-5 md:py-4",
               )}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  onSubmit(e);
+                  requestFormSubmit();
                 }
               }}
             />
@@ -336,7 +345,7 @@ export function ChatInput({
             <div
               className={cn(
                 "flex min-w-0 items-center",
-                compactComposer
+                isThread
                   ? "contents"
                   : "w-full gap-1 px-2 pb-2 pt-0 sm:gap-2 sm:px-3 sm:pb-3",
               )}
@@ -344,9 +353,7 @@ export function ChatInput({
               <div
                 className={cn(
                   "flex min-w-0 items-center justify-start gap-0.5 overscroll-x-contain scrollbar-none [-webkit-overflow-scrolling:touch] sm:gap-1",
-                  compactComposer
-                    ? "order-1 shrink-0"
-                    : "flex-1 overflow-x-auto",
+                  isThread ? "order-1 shrink-0" : "flex-1 overflow-x-auto",
                 )}
               >
                 <input
@@ -368,7 +375,7 @@ export function ChatInput({
                     disabled={isProcessingFiles || isLoading}
                     className={cn(
                       "shrink-0 rounded-full border border-border/50 bg-muted/70 text-muted-foreground transition-[background-color,border-color,box-shadow,color] duration-200 hover:border-foreground/20 hover:bg-muted hover:text-foreground hover:shadow-[0_1px_4px_rgb(0_0_0/0.12)] dark:hover:shadow-[0_1px_4px_rgb(0_0_0/0.3)]",
-                      compactComposer ? "size-8 sm:size-9" : "size-9 sm:size-8",
+                      isThread ? "size-8 sm:size-9" : "size-9 sm:size-8",
                     )}
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -376,20 +383,15 @@ export function ChatInput({
                   </Button>
                 </IconTooltip>
 
-                {showComposerModel && !compactComposer && (
-                  <ModelSelector
-                    value={model}
-                    onValueChange={onModelChange}
+                {showComposerModel && !isThread && (
+                  <ComposerModelSlot
+                    visible
+                    model={model!}
+                    onModelChange={onModelChange!}
                     modelStorageKey={modelStorageKey}
-                    thinkingEnabled={isThinking}
+                    isThinking={isThinking}
                     onThinkingChange={onThinkingChange}
-                    showModelList={showModelSelector}
-                    triggerVariant="compact"
-                    iconOnlyOnMobile
-                    enablePickerShortcut={Boolean(showComposerModel)}
-                    triggerClassName={
-                      compactComposer ? "h-8 sm:h-9" : undefined
-                    }
+                    showModelSelector={showModelSelector}
                   />
                 )}
               </div>
@@ -397,127 +399,36 @@ export function ChatInput({
               <div
                 className={cn(
                   "flex shrink-0 items-center",
-                  compactComposer ? "order-4 gap-1 sm:gap-2" : "ml-auto",
+                  isThread ? "order-4 gap-1 sm:gap-2" : "ml-auto",
                 )}
               >
-                {showComposerModel && compactComposer && (
-                  <ModelSelector
-                    value={model}
-                    onValueChange={onModelChange}
+                {showComposerModel && isThread && (
+                  <ComposerModelSlot
+                    visible
+                    model={model!}
+                    onModelChange={onModelChange!}
                     modelStorageKey={modelStorageKey}
-                    thinkingEnabled={isThinking}
+                    isThinking={isThinking}
                     onThinkingChange={onThinkingChange}
-                    showModelList={showModelSelector}
-                    triggerVariant="compact"
-                    iconOnlyOnMobile
-                    enablePickerShortcut={Boolean(showComposerModel)}
-                    triggerClassName="h-8 sm:h-9"
+                    showModelSelector={showModelSelector}
                   />
                 )}
 
-                {useVoiceAction ? (
-                  <IconTooltip
-                    label={
-                      voiceModifierHeld && hasDraft
-                        ? t("composer.voice.modifierHint")
-                        : isListening
-                          ? t("composer.voice.stop")
-                          : t("composer.voice")
-                    }
-                  >
-                    <Button
-                      type="button"
-                      size="icon"
-                      className={cn(
-                        "rounded-full p-0",
-                        compactComposer
-                          ? "size-8 sm:size-9"
-                          : "size-9 sm:size-8",
-                        isListening &&
-                          "animate-pulse border border-red-500/20 bg-red-500/10 text-red-500 shadow-none hover:bg-red-500/20",
-                      )}
-                      onClick={onSpeechToggle}
-                      aria-label={
-                        isListening
-                          ? t("composer.voice.stop")
-                          : t("composer.voice")
-                      }
-                    >
-                      {isListening ? (
-                        <StopIcon weight="fill" className="size-[14px]" />
-                      ) : (
-                        <MicrophoneIcon className="size-[18px]" />
-                      )}
-                    </Button>
-                  </IconTooltip>
-                ) : isLoading && query.trim() && onSendWhileLoading ? (
-                  <IconTooltip label={t("composer.sendNow")}>
-                    <Button
-                      type="button"
-                      size="icon"
-                      onClick={() => {
-                        onSendWhileLoading(query);
-                        setQuery("");
-                      }}
-                      aria-label={t("composer.sendNow")}
-                      title={t("composer.sendNow")}
-                      className={cn(
-                        "rounded-full p-0",
-                        compactComposer
-                          ? "size-8 sm:size-9"
-                          : "size-9 sm:size-8",
-                      )}
-                    >
-                      <PaperPlaneRightIcon
-                        weight="fill"
-                        className="size-[14px]"
-                      />
-                    </Button>
-                  </IconTooltip>
-                ) : isLoading ? (
-                  <IconTooltip label={t("composer.stop")}>
-                    <Button
-                      type="button"
-                      size="icon"
-                      className={cn(
-                        "rounded-full border border-red-500/20 bg-red-500/10 p-0 text-red-500 shadow-none hover:bg-red-500/20",
-                        compactComposer
-                          ? "size-8 sm:size-9"
-                          : "size-9 sm:size-8",
-                      )}
-                      onClick={onStop}
-                      aria-label={t("composer.stop")}
-                    >
-                      <StopIcon weight="fill" className="size-[14px]" />
-                    </Button>
-                  </IconTooltip>
-                ) : (
-                  <IconTooltip
-                    label={`${t("composer.send")} · ${t("composer.voice.modifierHint")}`}
-                  >
-                    <Button
-                      type="submit"
-                      size="icon"
-                      disabled={isProcessingFiles}
-                      className={cn(
-                        "rounded-full p-0",
-                        compactComposer
-                          ? "size-8 sm:size-9"
-                          : "size-9 sm:size-8",
-                      )}
-                      aria-label={t("composer.send")}
-                    >
-                      {isProcessingFiles ? (
-                        <CircleNotchIcon className="size-[15px] animate-spin" />
-                      ) : (
-                        <PaperPlaneRightIcon
-                          weight="fill"
-                          className="size-[14px]"
-                        />
-                      )}
-                    </Button>
-                  </IconTooltip>
-                )}
+                <ComposerPrimaryAction
+                  t={t}
+                  density={density}
+                  isProcessingFiles={isProcessingFiles}
+                  isLoading={isLoading}
+                  useVoiceAction={useVoiceAction}
+                  isListening={isListening}
+                  voiceModifierHeld={voiceModifierHeld}
+                  hasDraft={hasDraft}
+                  query={query}
+                  onSpeechToggle={onSpeechToggle}
+                  onStop={onStop}
+                  onSendWhileLoading={onSendWhileLoading}
+                  onClearQuery={() => setQuery("")}
+                />
               </div>
             </div>
           </div>
