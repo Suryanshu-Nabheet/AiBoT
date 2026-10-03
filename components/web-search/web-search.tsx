@@ -14,8 +14,7 @@ import { WebSearchBrandMark } from "./web-search-brand-mark";
 import { WebSearchBar } from "./web-search-bar";
 
 const INITIAL_SOURCES_VISIBLE = 4;
-const PANEL_RAIL =
-  "mb-0.5 border-l-2 border-border/55 py-1.5 pl-3 sm:pl-3.5";
+const PANEL_RAIL = "mb-0.5 border-l-2 border-border/55 py-1.5 pl-3 sm:pl-3.5";
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 function collectSources(steps: WebSearchStep[]): WebSearchSource[] {
@@ -33,13 +32,7 @@ function collectSources(steps: WebSearchStep[]): WebSearchSource[] {
   return out;
 }
 
-function Collapse({
-  open,
-  children,
-}: {
-  open: boolean;
-  children: ReactNode;
-}) {
+function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
   return (
     <div
       className={cn(
@@ -55,9 +48,7 @@ function Collapse({
 
 function QueryChip({ query }: { query: string }) {
   return (
-    <span
-      className="inline-flex max-w-full items-center rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[12px] font-medium text-foreground ring-1 ring-border/30"
-    >
+    <span className="inline-flex max-w-full items-center rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[12px] font-medium text-foreground ring-1 ring-border/30">
       {query}
     </span>
   );
@@ -95,9 +86,7 @@ function SourcesPanel({ sources }: { sources: WebSearchSource[] }) {
 
   if (!sources.length) return null;
 
-  const visible = showAll
-    ? sources
-    : sources.slice(0, INITIAL_SOURCES_VISIBLE);
+  const visible = showAll ? sources : sources.slice(0, INITIAL_SOURCES_VISIBLE);
   const hiddenCount = sources.length - INITIAL_SOURCES_VISIBLE;
 
   return (

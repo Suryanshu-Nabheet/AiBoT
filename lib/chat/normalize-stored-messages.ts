@@ -50,10 +50,7 @@ export function normalizeWebSearchTrace(
 
   const stepsNormalized = steps.map((step) => {
     if (!step || typeof step !== "object" || step.kind !== "query") return step;
-    if (
-      step.label === "Searched the web for" ||
-      step.label === "Query"
-    ) {
+    if (step.label === "Searched the web for" || step.label === "Query") {
       return { ...step, brand: undefined };
     }
     return step;

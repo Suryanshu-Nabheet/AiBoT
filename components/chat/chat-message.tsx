@@ -299,7 +299,9 @@ export const ChatMessage = memo(
                 {message.webSearchTrace && (
                   <WebSearch
                     trace={message.webSearchTrace}
-                    className={hasThinkingPanel || showAnswer ? "pb-1" : undefined}
+                    className={
+                      hasThinkingPanel || showAnswer ? "pb-1" : undefined
+                    }
                   />
                 )}
 

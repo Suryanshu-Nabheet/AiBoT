@@ -1,7 +1,10 @@
 import "server-only";
 
 import { brandFromDomain, domainFromUrl } from "@/lib/web-search/brand";
-import type { WebSearchApiResult, WebSearchSource } from "@/lib/web-search/types";
+import type {
+  WebSearchApiResult,
+  WebSearchSource,
+} from "@/lib/web-search/types";
 
 const DDG_HTML = "https://html.duckduckgo.com/html/";
 const DDG_INSTANT = "https://api.duckduckgo.com/";
@@ -67,7 +70,10 @@ export function parseDuckDuckGoHtml(
     /<a\b[^>]*class="[^"]*\bresult__a\b[^"]*"[^>]*>[\s\S]*?<\/a>/gi;
 
   let match: RegExpExecArray | null;
-  while ((match = linkRegex.exec(html)) !== null && results.length < maxResults) {
+  while (
+    (match = linkRegex.exec(html)) !== null &&
+    results.length < maxResults
+  ) {
     const tag = match[0];
     const hrefMatch = tag.match(/\bhref="([^"]+)"/i);
     if (!hrefMatch) continue;
@@ -131,7 +137,10 @@ export async function searchDuckDuckGoInstant(
   })}`;
 
   const response = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": BROWSER_HEADERS["User-Agent"] },
+    headers: {
+      Accept: "application/json",
+      "User-Agent": BROWSER_HEADERS["User-Agent"],
+    },
     signal,
     cache: "no-store",
   });

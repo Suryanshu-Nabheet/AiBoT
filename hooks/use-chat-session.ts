@@ -27,9 +27,7 @@ import {
   resolveConversationPersistId,
 } from "@/lib/chat/load-conversation-messages";
 import { runWebSearchForTurn } from "@/lib/web-search/client";
-import {
-  buildRunningWebSearchTrace,
-} from "@/lib/web-search/trace";
+import { buildRunningWebSearchTrace } from "@/lib/web-search/trace";
 import type { WebSearchTrace } from "@/lib/web-search/types";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { postOllamaChat } from "@/lib/chat/ollama-url";
@@ -347,10 +345,7 @@ export function useChatSession({
             : m,
         );
         streamPersistTickRef.current += 1;
-        if (
-          conversationPersistId &&
-          streamPersistTickRef.current % 4 === 0
-        ) {
+        if (conversationPersistId && streamPersistTickRef.current % 4 === 0) {
           queueConversationPersist(conversationPersistId, next, locale);
         }
         return next;

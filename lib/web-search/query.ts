@@ -14,9 +14,7 @@ function extractTopicQuery(raw: string): string | null {
     return `latest news ${giveNews[1].trim()}`.replace(/\s+/g, " ");
   }
 
-  const whatIs = trimmed.match(
-    /\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i,
-  );
+  const whatIs = trimmed.match(/\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i);
   if (whatIs?.[1] && whatIs[1].length <= 120) {
     return whatIs[1].trim().replace(/\s+/g, " ");
   }
@@ -40,7 +38,10 @@ export function normalizeUserQueryForSearch(userQuery: string): string {
     .replace(/\band\s+then\s+give\s+(?:me\s+)?(?:the\s+)?/gi, "")
     .replace(/\bgive\s+(?:me\s+)?(?:the\s+)?/gi, "")
     .replace(/\bsearch\s+the\s+web\s+for\b/gi, "")
-    .replace(/\bto\s+get\s+(the\s+)?(latest|recent|up-to-date)\s+context\b/gi, "")
+    .replace(
+      /\bto\s+get\s+(the\s+)?(latest|recent|up-to-date)\s+context\b/gi,
+      "",
+    )
     .replace(/\b(get\s+)?(latest|recent|up-to-date)\s+context\b/gi, "")
     .replace(/\bfor\s+me\b/gi, "")
     .trim();

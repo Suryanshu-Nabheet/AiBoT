@@ -124,7 +124,9 @@ function ThinkingMenuRow({
   variant?: "thinking" | "webSearch";
 }) {
   const accent =
-    variant === "webSearch" ? webSearchAccentTextClass : thinkingAccentTextClass;
+    variant === "webSearch"
+      ? webSearchAccentTextClass
+      : thinkingAccentTextClass;
   const Switch =
     variant === "webSearch" ? WebSearchModeSwitch : ThinkingModeSwitch;
 

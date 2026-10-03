@@ -24,7 +24,10 @@ export function WebSearchSourceStack({
 
   return (
     <span
-      className={cn("relative inline-flex h-4 shrink-0 items-center", className)}
+      className={cn(
+        "relative inline-flex h-4 shrink-0 items-center",
+        className,
+      )}
       style={{ width }}
       aria-hidden
     >

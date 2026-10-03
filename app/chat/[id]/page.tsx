@@ -23,11 +23,7 @@ const ChatPage = ({ params }: { params: any }) => {
       <div className="relative h-full min-h-0 flex-1">
         {viewMode === "direct" ? (
           <PageViewSlot>
-            <ChatInterface
-              key={id}
-              conversationId={id}
-              className="h-full"
-            />
+            <ChatInterface key={id} conversationId={id} className="h-full" />
           </PageViewSlot>
         ) : (
           <PageViewSlot>

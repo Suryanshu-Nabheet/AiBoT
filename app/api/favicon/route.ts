@@ -37,8 +37,7 @@ export async function GET(req: NextRequest) {
     }
 
     const bytes = await upstream.arrayBuffer();
-    const contentType =
-      upstream.headers.get("content-type") ?? "image/png";
+    const contentType = upstream.headers.get("content-type") ?? "image/png";
 
     return new NextResponse(bytes, {
       status: 200,

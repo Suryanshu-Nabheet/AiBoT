@@ -42,10 +42,8 @@ export default function ChatInterface({
   const { t, locale } = useTranslation();
   const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
     useThinkingMode("aibot_thinking_enabled");
-  const {
-    webSearchEnabled: webSearchOn,
-    setWebSearchEnabled: setWebSearchOn,
-  } = useWebSearchMode();
+  const { webSearchEnabled: webSearchOn, setWebSearchEnabled: setWebSearchOn } =
+    useWebSearchMode();
 
   const {
     model,

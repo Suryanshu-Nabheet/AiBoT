@@ -105,10 +105,8 @@ export default function ArenaInterface({
   className?: string;
 }) {
   const { t, locale } = useTranslation();
-  const {
-    webSearchEnabled: webSearchOn,
-    setWebSearchEnabled: setWebSearchOn,
-  } = useWebSearchMode();
+  const { webSearchEnabled: webSearchOn, setWebSearchEnabled: setWebSearchOn } =
+    useWebSearchMode();
   // Shared conversation ID for both panels to keep history unified
   const [arenaConversationId] = useState(() => initialConversationId || v4());
 

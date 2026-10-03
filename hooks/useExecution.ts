@@ -47,7 +47,7 @@ export const useExecution = () => {
       if (execution.type === ExecutionType.ARENA) {
         return Boolean(
           readConversation(`${execution.id}::arena-a`)?.messages?.length ||
-            readConversation(`${execution.id}::arena-b`)?.messages?.length,
+          readConversation(`${execution.id}::arena-b`)?.messages?.length,
         );
       }
       return false;

@@ -44,9 +44,7 @@ describe("loadConversationMessages", () => {
           title: "Test",
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
-          messages: [
-            { id: "m1", role: Role.User, content: "hello" },
-          ],
+          messages: [{ id: "m1", role: Role.User, content: "hello" }],
         },
       }),
     );

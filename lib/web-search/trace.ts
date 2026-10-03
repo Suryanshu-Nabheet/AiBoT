@@ -30,8 +30,7 @@ export function buildWebSearchTraceFromResults(
   const steps: WebSearchStep[] = [
     {
       kind: "summary",
-      label:
-        searchCount === 1 ? "Ran 1 search" : `Ran ${searchCount} searches`,
+      label: searchCount === 1 ? "Ran 1 search" : `Ran ${searchCount} searches`,
       meta: totalResults > 0 ? `${totalResults} sources` : undefined,
     },
   ];
@@ -43,8 +42,7 @@ export function buildWebSearchTraceFromResults(
         ? batch.results[0].brand
         : undefined;
     const label = labelForSearchStep(topBrand);
-    const stepBrand =
-      label === "Searched the web for" ? undefined : topBrand;
+    const stepBrand = label === "Searched the web for" ? undefined : topBrand;
     steps.push({
       kind: "query",
       label,
