@@ -7,12 +7,30 @@
 
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { v4 } from "uuid";
 import { useModel } from "@/hooks/use-model";
 import { useSettings } from "@/contexts/settings-context";
-import { useConversationById, saveConversation } from "@/hooks/useConversation";
-import { readConversation } from "@/lib/chat/conversation-store";
+import {
+  flushPersistConversationSnapshot,
+  persistConversationSnapshot,
+} from "@/lib/chat/persist-conversation-snapshot";
+import {
+  getConversationInitialState,
+  loadConversationMessages,
+  resolveConversationPersistId,
+} from "@/lib/chat/load-conversation-messages";
+import { runWebSearchForTurn } from "@/lib/web-search/client";
+import {
+  buildRunningWebSearchTrace,
+} from "@/lib/web-search/trace";
+import type { WebSearchTrace } from "@/lib/web-search/types";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { postOllamaChat } from "@/lib/chat/ollama-url";
 import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
@@ -85,15 +103,7 @@ function queueConversationPersist(
   locale: Locale,
 ) {
   queueMicrotask(() => {
-    saveConversation({
-      id: conversationPersistId,
-      title:
-        messages.find((m) => m.role === Role.User)?.content.substring(0, 50) ||
-        translate(locale, "chat.defaultTitle"),
-      createdAt: new Date().toISOString(),
-      messages,
-      updatedAt: new Date().toISOString(),
-    });
+    persistConversationSnapshot(conversationPersistId, messages, locale);
   });
 }
 
@@ -103,6 +113,7 @@ export interface UseChatSessionOptions {
   sessionId?: string; // Persistence key for conversationId
   executionType?: ExecutionType;
   viewMode?: "direct" | "side-by-side";
+  webSearchEnabled?: boolean;
 }
 
 export function useChatSession({
@@ -111,6 +122,7 @@ export function useChatSession({
   sessionId,
   executionType,
   viewMode,
+  webSearchEnabled = false,
 }: UseChatSessionOptions = {}) {
   // --- State ---
   const { modelId: persistedModelId, setModelId } = useModel({
@@ -120,8 +132,14 @@ export function useChatSession({
 
   const [model, setModel] = useState<string>(persistedModelId);
   const [query, setQuery] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [initialChat] = useState(() =>
+    getConversationInitialState(initialConversationId, {
+      sessionId,
+      executionType,
+    }),
+  );
+  const [messages, setMessages] = useState<Message[]>(initialChat.messages);
+  const [showWelcome, setShowWelcome] = useState(initialChat.showWelcome);
   const [isLoading, setIsLoading] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const { apiKeys, ollamaUrl, desktopNotifications, completionSound, locale } =
@@ -143,36 +161,37 @@ export function useChatSession({
   });
 
   useEffect(() => {
-    if (!initialConversationId || initialConversationId === conversationId) {
-      return;
-    }
+    if (!initialConversationId) return;
 
-    const nextPersistId =
-      getConversationPersistId(initialConversationId, {
-        sessionId,
-        executionType,
-      }) ?? initialConversationId;
-    const stored = readConversation(nextPersistId);
-    hydratedConversationIdRef.current = nextPersistId;
-
-    if (stored?.messages?.length) {
-      setMessages(
-        stored.messages.map((m) => ({
-          ...m,
-          shouldAnimate: false,
-        })),
-      );
-      setShowWelcome(false);
-    } else {
-      setMessages([]);
-      setShowWelcome(true);
-    }
+    const nextPersistId = resolveConversationPersistId(initialConversationId, {
+      sessionId,
+      executionType,
+    });
+    if (!nextPersistId) return;
 
     setConversationId(initialConversationId);
     setQuery("");
     setAttachments([]);
     setIsLoading(false);
-  }, [initialConversationId, conversationId, sessionId, executionType]);
+
+    if (hydratedConversationIdRef.current === nextPersistId) {
+      return;
+    }
+
+    hydratedConversationIdRef.current = nextPersistId;
+    const storedMessages = loadConversationMessages(initialConversationId, {
+      sessionId,
+      executionType,
+    });
+
+    if (storedMessages.length > 0) {
+      setMessages(storedMessages);
+      setShowWelcome(false);
+    } else {
+      setMessages([]);
+      setShowWelcome(true);
+    }
+  }, [initialConversationId, sessionId, executionType]);
 
   // Persist conversationId if sessionId is provided
   useEffect(() => {
@@ -192,6 +211,8 @@ export function useChatSession({
   const thinkingRequestedRef = useRef(false);
   /** Avoid re-applying stored messages after every request (was wiping new replies). */
   const hydratedConversationIdRef = useRef<string | null>(null);
+  const messagesRef = useRef(messages);
+  const streamPersistTickRef = useRef(0);
 
   const conversationPersistId = getConversationPersistId(conversationId, {
     sessionId,
@@ -199,30 +220,31 @@ export function useChatSession({
   });
 
   // --- Hooks ---
-  const { conversation } = useConversationById(conversationPersistId);
   const { refreshExecutions, addExecution } = useExecutionContext();
 
   // --- Effects ---
+  useLayoutEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      if (conversationPersistId && messagesRef.current.length > 0) {
+        flushPersistConversationSnapshot(
+          conversationPersistId,
+          messagesRef.current,
+          locale,
+        );
+      }
+    };
+  }, [conversationPersistId, locale]);
+
   useEffect(() => {
     if (persistedModelId !== model) {
       setModel(persistedModelId);
     }
   }, [persistedModelId, model]);
-
-  useEffect(() => {
-    if (!conversationPersistId || !conversation?.messages?.length) return;
-    if (conversation.id !== conversationPersistId) return;
-    if (hydratedConversationIdRef.current === conversationPersistId) return;
-
-    hydratedConversationIdRef.current = conversationPersistId;
-    setMessages(
-      conversation.messages.map((m) => ({
-        ...m,
-        shouldAnimate: false,
-      })),
-    );
-    setShowWelcome(false);
-  }, [conversation, conversationPersistId]);
 
   // --- Handlers ---
   const handleModelChange = useCallback(
@@ -245,6 +267,7 @@ export function useChatSession({
       /** Thinking stage 2 may be empty; reconcile instead of showing a stream error. */
       allowEmptyContent?: boolean;
       requestId?: number;
+      webSearchTrace?: WebSearchTrace;
     },
   ) => {
     const finalize = options?.finalize ?? true;
@@ -259,15 +282,22 @@ export function useChatSession({
     const tempId = options?.tempId ?? `ai-${Date.now()}`;
     const shouldCreatePlaceholder = !options?.tempId;
     if (shouldCreatePlaceholder) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: tempId,
-          role: Role.Assistant,
-          content: "",
-          isThinkingRequested,
-        },
-      ]);
+      setMessages((prev) => {
+        const next: Message[] = [
+          ...prev,
+          {
+            id: tempId,
+            role: Role.Assistant,
+            content: "",
+            isThinkingRequested,
+            webSearchTrace: options?.webSearchTrace,
+          },
+        ];
+        if (conversationPersistId) {
+          queueConversationPersist(conversationPersistId, next, locale);
+        }
+        return next;
+      });
     }
 
     const reader = response.body.getReader();
@@ -307,7 +337,7 @@ export function useChatSession({
       }
       setMessages((prev) => {
         if (!isCurrentRequest()) return prev;
-        return prev.map((m) =>
+        const next = prev.map((m) =>
           m.id === tempId
             ? {
                 ...m,
@@ -316,6 +346,14 @@ export function useChatSession({
               }
             : m,
         );
+        streamPersistTickRef.current += 1;
+        if (
+          conversationPersistId &&
+          streamPersistTickRef.current % 4 === 0
+        ) {
+          queueConversationPersist(conversationPersistId, next, locale);
+        }
+        return next;
       });
     };
 
@@ -381,7 +419,7 @@ export function useChatSession({
           };
         });
 
-        if (finalize && conversationPersistId && hasText) {
+        if (finalize && conversationPersistId) {
           messagesToPersist = updatedMessages;
         }
         return updatedMessages;
@@ -397,10 +435,36 @@ export function useChatSession({
     } catch (e) {
       if ((e as Error).name === "AbortError") {
         const partial = accumulated;
-        if (!accumulated.trim() && options?.tempId) {
-          setMessages((prev) =>
-            prev.filter((m) => m.id !== tempId || m.content.trim().length > 0),
-          );
+        const sanitizedPartial = partial.trim()
+          ? sanitizeAssistantStreamField(streamField, partial, true)
+          : "";
+        if (options?.tempId) {
+          setMessages((prev) => {
+            let next: Message[];
+            if (!sanitizedPartial.trim()) {
+              next = prev.filter(
+                (m) =>
+                  m.id !== tempId ||
+                  m.content.trim().length > 0 ||
+                  Boolean(m.thinkingText?.trim()) ||
+                  Boolean(m.webSearchTrace),
+              );
+            } else {
+              next = prev.map((m) =>
+                m.id === tempId
+                  ? {
+                      ...m,
+                      [streamField]: sanitizedPartial,
+                      isThinkingRequested,
+                    }
+                  : m,
+              );
+            }
+            if (conversationPersistId && finalize) {
+              queueConversationPersist(conversationPersistId, next, locale);
+            }
+            return next;
+          });
         }
         return partial;
       }
@@ -518,6 +582,7 @@ export function useChatSession({
       });
     thinkingRequestedRef.current = thinkingRequested;
     requestStartedAtRef.current = Date.now();
+    streamPersistTickRef.current = 0;
     setShowWelcome(false);
     const currentQuery = inputQuery.trim();
 
@@ -546,12 +611,51 @@ export function useChatSession({
       attachments: [...currentAttachments],
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => {
+      const next = [...prev, userMessage];
+      if (conversationPersistId) {
+        queueConversationPersist(conversationPersistId, next, locale);
+      }
+      return next;
+    });
 
     // Only clear local query state if we are depending on it.
     setQuery("");
     setAttachments([]);
     setIsLoading(true);
+
+    let webSearchTrace: WebSearchTrace | undefined;
+    if (webSearchEnabled && currentQuery.trim()) {
+      webSearchTrace = buildRunningWebSearchTrace(currentQuery);
+      try {
+        const searchResult = await runWebSearchForTurn(currentQuery, {
+          signal: requestController.signal,
+          locale,
+        });
+        webSearchTrace = searchResult.trace;
+        const contextBlock = searchResult.context;
+        if (typeof apiContent === "string") {
+          apiContent = `${apiContent}\n\n${contextBlock}`;
+        } else {
+          apiContent = [{ type: "text", text: contextBlock }, ...apiContent];
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Web search failed";
+        webSearchTrace = {
+          status: "error",
+          queriedAt: new Date().toISOString(),
+          errorMessage: message,
+          steps: [
+            {
+              kind: "summary",
+              label: "Web search failed",
+              meta: message,
+            },
+          ],
+        };
+      }
+    }
 
     if (
       !executionCreated &&
@@ -660,7 +764,7 @@ export function useChatSession({
             };
           });
 
-          if (conversationPersistId && reconciled.content.trim()) {
+          if (conversationPersistId) {
             messagesToPersist = updatedMessages;
           }
           return updatedMessages;
@@ -857,15 +961,22 @@ export function useChatSession({
 
         if (thinkingRequested) {
           const tempId = newAssistantMessageId();
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: tempId,
-              role: Role.Assistant,
-              content: "",
-              isThinkingRequested: true,
-            },
-          ]);
+          setMessages((prev) => {
+            const next: Message[] = [
+              ...prev,
+              {
+                id: tempId,
+                role: Role.Assistant,
+                content: "",
+                isThinkingRequested: true,
+                webSearchTrace,
+              },
+            ];
+            if (conversationPersistId) {
+              queueConversationPersist(conversationPersistId, next, locale);
+            }
+            return next;
+          });
 
           await runTwoStageThinking(
             tempId,
@@ -935,7 +1046,10 @@ export function useChatSession({
           return;
         }
 
-        await processStream(res, false, true, { requestId });
+        await processStream(res, false, true, {
+          requestId,
+          webSearchTrace,
+        });
         return;
       }
 
@@ -946,15 +1060,22 @@ export function useChatSession({
           { role: "user", content: apiContent },
         ];
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: tempId,
-            role: Role.Assistant,
-            content: "",
-            isThinkingRequested: true,
-          },
-        ]);
+        setMessages((prev) => {
+          const next: Message[] = [
+            ...prev,
+            {
+              id: tempId,
+              role: Role.Assistant,
+              content: "",
+              isThinkingRequested: true,
+              webSearchTrace,
+            },
+          ];
+          if (conversationPersistId) {
+            queueConversationPersist(conversationPersistId, next, locale);
+          }
+          return next;
+        });
 
         await runTwoStageThinking(tempId, false, currentQuery, (stage, prior) =>
           fetch("/api/chat", {
@@ -1017,7 +1138,7 @@ export function useChatSession({
         return;
       }
 
-      await processStream(res, false, false, { requestId });
+      await processStream(res, false, false, { requestId, webSearchTrace });
     } catch (error: unknown) {
       if (!isCurrentRequest()) return;
       const isAbort = error instanceof Error && error.name === "AbortError";

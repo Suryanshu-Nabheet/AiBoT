@@ -7,49 +7,39 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
 import ChatInterface from "@/components/chat/chat-interface";
 import ArenaInterface from "@/components/chat/arena-interface";
-import { AnimatePresence, motion } from "framer-motion";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
-
-const viewMotion = {
-  initial: { opacity: 0, scale: 0.98 },
-  animate: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0.98 },
-  transition: { duration: 0.2 },
-};
+import { NEW_CHAT_EVENT } from "@/lib/chat/new-chat-session";
 
 export default function HomePage() {
   const { viewMode } = useViewMode();
+  const [homeChatKey, setHomeChatKey] = useState(0);
+
+  useEffect(() => {
+    const onNewChat = () => setHomeChatKey((key) => key + 1);
+    window.addEventListener(NEW_CHAT_EVENT, onNewChat);
+    return () => window.removeEventListener(NEW_CHAT_EVENT, onNewChat);
+  }, []);
 
   return (
     <PageShell className="h-full min-h-0">
       <div className="relative h-full min-h-0 flex-1">
-        <AnimatePresence mode="wait" initial={false}>
-          {viewMode === "direct" && (
-            <motion.div
-              key="direct"
-              {...viewMotion}
-              className="absolute inset-0"
-            >
-              <PageViewSlot>
-                <ChatInterface storageKey="directModel" className="h-full" />
-              </PageViewSlot>
-            </motion.div>
-          )}
-          {viewMode === "side-by-side" && (
-            <motion.div
-              key="side-by-side"
-              {...viewMotion}
-              className="absolute inset-0"
-            >
-              <PageViewSlot>
-                <ArenaInterface className="h-full" />
-              </PageViewSlot>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {viewMode === "direct" ? (
+          <PageViewSlot>
+            <ChatInterface
+              key={homeChatKey}
+              storageKey="directModel"
+              className="h-full"
+            />
+          </PageViewSlot>
+        ) : (
+          <PageViewSlot>
+            <ArenaInterface key={homeChatKey} className="h-full" />
+          </PageViewSlot>
+        )}
       </div>
     </PageShell>
   );

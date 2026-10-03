@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { requestNewChat } from "@/lib/chat/new-chat-session";
 import { useTheme } from "next-themes";
 import {
   Columns2,
@@ -106,12 +107,10 @@ export function CommandPalette() {
 
   const startNewChat = () => {
     run(() => {
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("session-directModel");
-        sessionStorage.removeItem("session-arena-a");
-        sessionStorage.removeItem("session-arena-b");
+      requestNewChat();
+      if (window.location.pathname !== "/") {
+        router.push("/");
       }
-      router.push("/");
     });
   };
 

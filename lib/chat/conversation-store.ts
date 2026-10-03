@@ -71,6 +71,18 @@ export function saveConversation(conversation: Conversation, debounceMs = 400) {
   );
 }
 
+/** Persist only when debounced saves are pending (fast no-op on navigation). */
+export function flushPendingConversationSaves() {
+  if (typeof window === "undefined" || saveTimers.size === 0) return;
+  saveTimers.forEach((timer) => clearTimeout(timer));
+  saveTimers.clear();
+  persistCacheToSessionStorage();
+}
+
+export function flushAllConversationSaves() {
+  flushPendingConversationSaves();
+}
+
 export function flushSaveConversation(conversation: Conversation) {
   if (typeof window === "undefined") return;
 

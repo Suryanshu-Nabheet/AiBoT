@@ -9,6 +9,8 @@ interface ComposerModelSlotProps {
   modelStorageKey?: string;
   isThinking: boolean;
   onThinkingChange?: (enabled: boolean) => void;
+  webSearchEnabled?: boolean;
+  onWebSearchChange?: (enabled: boolean) => void;
   showModelSelector: boolean;
   triggerClassName?: string;
 }
@@ -20,6 +22,8 @@ export function ComposerModelSlot({
   modelStorageKey,
   isThinking,
   onThinkingChange,
+  webSearchEnabled,
+  onWebSearchChange,
   showModelSelector,
   triggerClassName = "h-8 sm:h-9",
 }: ComposerModelSlotProps) {
@@ -32,6 +36,8 @@ export function ComposerModelSlot({
       modelStorageKey={modelStorageKey}
       thinkingEnabled={isThinking}
       onThinkingChange={onThinkingChange}
+      webSearchEnabled={webSearchEnabled}
+      onWebSearchChange={onWebSearchChange}
       showModelList={showModelSelector}
       triggerVariant="compact"
       iconOnlyOnMobile

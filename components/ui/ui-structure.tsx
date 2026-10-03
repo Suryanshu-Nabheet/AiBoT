@@ -50,6 +50,8 @@ import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { useTranslation } from "@/hooks/use-translation";
+import { flushPendingConversationSaves } from "@/lib/chat/conversation-store";
+import { requestNewChat } from "@/lib/chat/new-chat-session";
 
 export const UIStructure = () => {
   const { t } = useTranslation();
@@ -107,10 +109,8 @@ export const UIStructure = () => {
                   aria-label="AiBoT home"
                   className="cursor-pointer"
                   onClick={() => {
-                    if (typeof window !== "undefined") {
-                      sessionStorage.removeItem("session-directModel");
-                      sessionStorage.removeItem("session-arena-a");
-                      sessionStorage.removeItem("session-arena-b");
+                    requestNewChat();
+                    if (pathname !== "/") {
                       router.push("/");
                     }
                   }}
@@ -125,10 +125,8 @@ export const UIStructure = () => {
                   variant="ghost"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (typeof window !== "undefined") {
-                      sessionStorage.removeItem("session-directModel");
-                      sessionStorage.removeItem("session-arena-a");
-                      sessionStorage.removeItem("session-arena-b");
+                    requestNewChat();
+                    if (pathname !== "/") {
                       router.push("/");
                     }
                   }}
@@ -165,10 +163,12 @@ export const UIStructure = () => {
             <SidebarMenu className="w-full gap-1 p-0">
               {loading
                 ? Array.from({ length: 4 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-10 w-full animate-pulse rounded-lg bg-muted"
-                    />
+                    <SidebarMenuItem key={i}>
+                      <div
+                        className="h-9 w-full animate-pulse rounded-lg bg-muted"
+                        aria-hidden
+                      />
+                    </SidebarMenuItem>
                   ))
                 : [...new Map(executions.map((e) => [e.id, e])).values()].map(
                     (execution: Execution) => (
@@ -185,6 +185,8 @@ export const UIStructure = () => {
                               : "hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
                           )}
                           onClick={() => {
+                            if (execution.id === currentConversationId) return;
+                            flushPendingConversationSaves();
                             if (execution.mode) {
                               setViewMode(execution.mode);
                             }

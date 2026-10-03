@@ -11,11 +11,14 @@ import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThinkingBrainIcon } from "@/components/core/thinking-brain-icon";
+import { TextShimmer } from "@/components/core/text-shimmer";
 
 interface ThinkingBarProps {
   text?: string;
   onClick?: () => void;
   isExpanded?: boolean;
+  /** Shimmer label while the model is still in the thinking phase. */
+  shimmerLabel?: boolean;
   className?: string;
 }
 
@@ -23,6 +26,7 @@ export function ThinkingBar({
   text = "Thinking",
   onClick,
   isExpanded = false,
+  shimmerLabel = false,
   className,
 }: ThinkingBarProps) {
   const rowClass = cn(
@@ -31,14 +35,22 @@ export function ThinkingBar({
     className,
   );
 
+  const labelText = shimmerLabel ? (
+    <TextShimmer className="text-sm font-medium" duration={1.2}>
+      {text}
+    </TextShimmer>
+  ) : (
+    <span className="text-sm font-medium text-foreground">{text}</span>
+  );
+
   const label = (
     <span className="flex min-w-0 items-center gap-2">
       <ThinkingBrainIcon
-        active={isExpanded || !onClick}
+        active={shimmerLabel || isExpanded || !onClick}
         size="sm"
         className="group-hover:text-foreground/80"
       />
-      <span className="text-sm font-medium text-foreground">{text}</span>
+      {labelText}
     </span>
   );
 

@@ -23,7 +23,6 @@ export const ChatThread = memo(
     messages,
     isLoading,
     loadingStatus,
-    thinkingRequested,
     onCopy,
     onModelSelect,
     layout = "thread",
@@ -35,7 +34,6 @@ export const ChatThread = memo(
     messages: Message[];
     isLoading: boolean;
     loadingStatus: string;
-    thinkingRequested?: boolean;
     onCopy: (content: string) => void;
     onModelSelect?: (modelId: string) => void;
     layout?: ChatMessageLayout;
@@ -72,29 +70,16 @@ export const ChatThread = memo(
           const isLast = i === messages.length - 1;
           const isAssistantGenerating =
             isLoading && isLast && message.role === Role.Assistant;
-          const msgIsThinking = message.isThinkingRequested;
-          // Thinking mode uses ThinkingPanel on the message — avoid a second ThinkingBar here.
-          const showLoadingStatus =
-            isAssistantGenerating && !msgIsThinking && Boolean(loadingStatus);
-
           return (
             <React.Fragment key={message.id || i}>
-              {showLoadingStatus && (
-                <div className={cn(statusPadding, "mb-2")}>
-                  <div
-                    className={layout === "thread" ? "mx-auto max-w-4xl" : ""}
-                  >
-                    <TextShimmer className="text-sm font-medium" duration={1.2}>
-                      {loadingStatus}
-                    </TextShimmer>
-                  </div>
-                </div>
-              )}
               <ChatMessage
                 message={message}
                 onCopy={onCopy}
                 onModelSelect={onModelSelect}
                 isGenerating={isAssistantGenerating}
+                loadingStatus={
+                  isAssistantGenerating ? loadingStatus : undefined
+                }
                 layout={layout}
                 pdfFileName={pdfFileName}
                 pdfTitle={pdfTitle}
@@ -107,8 +92,7 @@ export const ChatThread = memo(
         {isLoading &&
           messages.length > 0 &&
           messages[messages.length - 1].role === Role.User &&
-          loadingStatus &&
-          !thinkingRequested && (
+          loadingStatus && (
             <div className={cn(statusPadding, "mb-2")}>
               <div className={layout === "thread" ? "mx-auto max-w-4xl" : ""}>
                 <TextShimmer className="text-sm font-medium" duration={1.2}>

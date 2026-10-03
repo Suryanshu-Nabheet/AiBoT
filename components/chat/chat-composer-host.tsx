@@ -18,6 +18,8 @@ export type ChatComposerHostProps = {
   onSpeechToggle?: () => void;
   isThinking?: boolean;
   onThinkingChange?: (enabled: boolean) => void;
+  webSearchEnabled?: boolean;
+  onWebSearchChange?: (enabled: boolean) => void;
   model?: string;
   onModelChange?: (model: string) => void;
   modelStorageKey?: string;

@@ -11,15 +11,7 @@ import React, { use } from "react";
 import ChatInterface from "@/components/chat/chat-interface";
 import ArenaInterface from "@/components/chat/arena-interface";
 import { useViewMode } from "@/contexts/view-mode-context";
-import { AnimatePresence, motion } from "framer-motion";
 import { PageShell, PageViewSlot } from "@/components/layout/page-shell";
-
-const viewMotion = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-  transition: { duration: 0.15 },
-};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ChatPage = ({ params }: { params: any }) => {
@@ -29,39 +21,19 @@ const ChatPage = ({ params }: { params: any }) => {
   return (
     <PageShell className="h-full min-h-0">
       <div className="relative h-full min-h-0 flex-1">
-        <AnimatePresence mode="wait" initial={false}>
-          {viewMode === "direct" && (
-            <motion.div
-              key="direct"
-              {...viewMotion}
-              className="absolute inset-0"
-            >
-              <PageViewSlot>
-                <ChatInterface
-                  key={id}
-                  conversationId={id}
-                  className="h-full"
-                />
-              </PageViewSlot>
-            </motion.div>
-          )}
-
-          {viewMode === "side-by-side" && (
-            <motion.div
-              key="arena"
-              {...viewMotion}
-              className="absolute inset-0"
-            >
-              <PageViewSlot>
-                <ArenaInterface
-                  key={id}
-                  conversationId={id}
-                  className="h-full"
-                />
-              </PageViewSlot>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {viewMode === "direct" ? (
+          <PageViewSlot>
+            <ChatInterface
+              key={id}
+              conversationId={id}
+              className="h-full"
+            />
+          </PageViewSlot>
+        ) : (
+          <PageViewSlot>
+            <ArenaInterface key={id} conversationId={id} className="h-full" />
+          </PageViewSlot>
+        )}
       </div>
     </PageShell>
   );

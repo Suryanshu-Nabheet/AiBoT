@@ -10,18 +10,33 @@ export function useRotatingChatStatus(
   isLoading: boolean,
   isThinking: boolean,
   t: Translate,
+  isSearchingWeb = false,
 ) {
   const [loadingStatus, setLoadingStatus] = useState(() =>
-    isThinking ? t("chat.status.thinking") : t("chat.status.generating"),
+    isSearchingWeb
+      ? t("chat.status.searching")
+      : isThinking
+        ? t("chat.status.thinking")
+        : t("chat.status.generating"),
   );
 
   useEffect(() => {
     if (!isLoading) {
       setLoadingStatus(
-        isThinking ? t("chat.status.thinking") : t("chat.status.generating"),
+        isSearchingWeb
+          ? t("chat.status.searching")
+          : isThinking
+            ? t("chat.status.thinking")
+            : t("chat.status.generating"),
       );
       return;
     }
+
+    const searchStatuses = [
+      t("chat.status.searching"),
+      t("chat.status.searchingSources"),
+      t("chat.status.analyzing"),
+    ];
 
     const thinkingStatuses = [
       t("chat.status.thinking"),
@@ -39,7 +54,11 @@ export function useRotatingChatStatus(
       t("chat.status.polishing"),
     ];
 
-    const statuses = isThinking ? thinkingStatuses : normalStatuses;
+    const statuses = isSearchingWeb
+      ? searchStatuses
+      : isThinking
+        ? thinkingStatuses
+        : normalStatuses;
 
     let i = 0;
     setLoadingStatus(statuses[0]);
@@ -49,7 +68,7 @@ export function useRotatingChatStatus(
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isLoading, isThinking, t]);
+  }, [isLoading, isThinking, isSearchingWeb, t]);
 
   return loadingStatus;
 }

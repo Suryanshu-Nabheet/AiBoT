@@ -7,8 +7,9 @@
 
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { flushPendingConversationSaves } from "@/lib/chat/conversation-store";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { UIStructure } from "@/components/ui/ui-structure";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
@@ -24,6 +25,16 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === "/" || pathname?.startsWith("/chat/");
   const { t } = useTranslation();
+
+  useEffect(() => {
+    const flush = () => flushPendingConversationSaves();
+    window.addEventListener("beforeunload", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, []);
 
   return (
     <div className="flex h-app max-h-app w-full max-w-full min-h-0 overflow-hidden pt-[env(safe-area-inset-top,0px)]">

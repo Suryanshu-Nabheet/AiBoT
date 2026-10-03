@@ -188,10 +188,16 @@ export const en = {
   "chat.message.stopListening": "Stop listening",
   "chat.thinking.label": "Thinking",
   "chat.thinking.inProgress": "Thinking…",
+  "chat.webSearch.label": "Web search",
+  "chat.webSearch.sources": "Sources",
+  "chat.webSearch.showMore": "Show {count} more",
+  "chat.webSearch.showLess": "Show less",
   "chat.diagram.building": "Building diagram…",
   "chat.diagram.checking": "Checking diagram syntax…",
   "chat.diagram.failed": "Could not generate diagram.",
   "chat.status.thinking": "AiBoT is thinking...",
+  "chat.status.searching": "Searching the web...",
+  "chat.status.searchingSources": "Gathering sources...",
   "chat.status.generating": "AiBoT is generating...",
   "chat.status.connecting": "Thinking…",
   "chat.status.reasoningQuery": "Reasoning about the query...",
@@ -237,6 +243,9 @@ export const en = {
   "model.thinkingMenu": "Options",
   "model.thinkingShort": "Think",
   "model.thinkingOffShort": "Fast",
+  "model.webSearchPower": "Web search",
+  "model.webSearchHint":
+    "Search the web before replying for fresher facts and sources.",
 
   // Toasts
   "toast.pdf.success": "PDF downloaded successfully!",

@@ -34,6 +34,11 @@ const customKeysSchema = z
   })
   .optional();
 
+export const webSearchRequestSchema = z.object({
+  queries: z.array(z.string().trim().min(1).max(500)).min(1).max(3),
+  maxResults: z.number().int().min(1).max(12).optional(),
+});
+
 export const chatRequestSchema = z.object({
   messages: z
     .array(

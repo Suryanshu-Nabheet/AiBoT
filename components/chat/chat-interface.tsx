@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useChatSession } from "@/hooks/use-chat-session";
+import { Role } from "@/lib/types";
 import { ChatComposerHost } from "./chat-composer-host";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { ChatThread } from "./chat-thread";
@@ -19,6 +20,7 @@ import { ChatThreadViewport } from "./chat-thread-viewport";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
 import { useTranslation } from "@/hooks/use-translation";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
+import { useWebSearchMode } from "@/hooks/use-web-search-mode";
 import { PageShell } from "@/components/layout/page-shell";
 import { useRotatingChatStatus } from "@/hooks/use-rotating-chat-status";
 import {
@@ -38,6 +40,13 @@ export default function ChatInterface({
   className,
 }: ChatInterfaceProps = {}) {
   const { t, locale } = useTranslation();
+  const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
+    useThinkingMode("aibot_thinking_enabled");
+  const {
+    webSearchEnabled: webSearchOn,
+    setWebSearchEnabled: setWebSearchOn,
+  } = useWebSearchMode();
+
   const {
     model,
     setModel,
@@ -53,11 +62,20 @@ export default function ChatInterface({
     conversationId: initialConversationId,
     storageKey,
     viewMode: "direct",
+    webSearchEnabled: webSearchOn,
   });
+  const isSearchingWeb =
+    webSearchOn &&
+    isLoading &&
+    messages.length > 0 &&
+    messages[messages.length - 1]?.role === Role.User;
 
-  const { thinkingEnabled: isThinking, setThinkingEnabled: setIsThinking } =
-    useThinkingMode("aibot_thinking_enabled");
-  const loadingStatus = useRotatingChatStatus(isLoading, isThinking, t);
+  const loadingStatus = useRotatingChatStatus(
+    isLoading,
+    isThinking,
+    t,
+    isSearchingWeb,
+  );
   const { isListening, onSpeechToggle } = useChatComposerSpeech(
     setQuery,
     t,
@@ -177,6 +195,8 @@ export default function ChatInterface({
     onSpeechToggle,
     isThinking,
     onThinkingChange: setIsThinking,
+    webSearchEnabled: webSearchOn,
+    onWebSearchChange: setWebSearchOn,
     model,
     onModelChange: setModel,
     modelStorageKey: storageKey,
@@ -224,7 +244,6 @@ export default function ChatInterface({
                 onModelSelect={setModel}
                 isLoading={isLoading}
                 loadingStatus={loadingStatus}
-                thinkingRequested={isThinking}
                 endRef={messagesEndRef}
               />
             </div>

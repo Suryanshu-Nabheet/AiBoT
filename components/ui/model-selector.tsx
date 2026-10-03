@@ -34,7 +34,10 @@ import {
   ThinkingModeSwitch,
   thinkingAccentTextClass,
 } from "@/components/ui/thinking-mode-switch";
-
+import {
+  WebSearchModeSwitch,
+  webSearchAccentTextClass,
+} from "@/components/ui/web-search-mode-switch";
 interface ModelSelectorProps {
   value?: string;
   onValueChange?: (value: string) => void;
@@ -43,6 +46,8 @@ interface ModelSelectorProps {
   modelStorageKey?: string;
   thinkingEnabled?: boolean;
   onThinkingChange?: (enabled: boolean) => void;
+  webSearchEnabled?: boolean;
+  onWebSearchChange?: (enabled: boolean) => void;
   showModelList?: boolean;
   triggerVariant?: "default" | "compact";
   /** Keep compact composer controls readable on narrow screens. */
@@ -80,13 +85,15 @@ function ModelListItem({
       className="cursor-pointer flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-blue-500/10 dark:aria-selected:bg-blue-400/15"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border/40 bg-background p-0.5">
-          {model.logo ? (
-            <BrandIcon src={model.logo} alt="" className="size-full" />
-          ) : (
-            <Cpu className="size-3.5 text-muted-foreground" />
-          )}
-        </div>
+        {model.logo ? (
+          <BrandIcon
+            src={model.logo}
+            alt=""
+            className="size-5 shrink-0 opacity-90"
+          />
+        ) : (
+          <Cpu className="size-5 shrink-0 text-muted-foreground" />
+        )}
         <span
           className={cn(
             "min-w-0 truncate font-medium",
@@ -108,12 +115,19 @@ function ThinkingMenuRow({
   hint,
   checked,
   onCheckedChange,
+  variant = "thinking",
 }: {
   label: string;
   hint?: string;
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
+  variant?: "thinking" | "webSearch";
 }) {
+  const accent =
+    variant === "webSearch" ? webSearchAccentTextClass : thinkingAccentTextClass;
+  const Switch =
+    variant === "webSearch" ? WebSearchModeSwitch : ThinkingModeSwitch;
+
   return (
     <div
       className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5"
@@ -122,13 +136,13 @@ function ThinkingMenuRow({
       <span
         className={cn(
           "text-sm font-medium",
-          checked ? thinkingAccentTextClass : "text-foreground",
+          checked ? accent : "text-foreground",
         )}
         title={hint ?? label}
       >
         {label}
       </span>
-      <ThinkingModeSwitch
+      <Switch
         checked={checked}
         onCheckedChange={onCheckedChange}
         aria-label={label}
@@ -145,6 +159,8 @@ export function ModelSelector({
   modelStorageKey = "preferredModel",
   thinkingEnabled = false,
   onThinkingChange,
+  webSearchEnabled = false,
+  onWebSearchChange,
   showModelList = true,
   triggerVariant = "default",
   iconOnlyOnMobile = false,
@@ -220,6 +236,7 @@ export function ModelSelector({
 
   const selectedModelObj = availableModels.find((m) => m.id === selectedModel);
   const showThinking = typeof onThinkingChange === "function";
+  const showWebSearch = typeof onWebSearchChange === "function";
 
   const fullModelLabel = selectedModelObj
     ? displayModelName(selectedModelObj.name)
@@ -265,11 +282,8 @@ export function ModelSelector({
               {showModelList ? (
                 <span
                   className={cn(
-                    "min-w-0 truncate text-left text-sm font-medium",
+                    "min-w-0 truncate text-left text-sm font-medium text-foreground",
                     iconOnlyOnMobile && "hidden sm:inline",
-                    thinkingEnabled
-                      ? thinkingAccentTextClass
-                      : "text-foreground",
                   )}
                 >
                   {fullModelLabel}
@@ -302,6 +316,15 @@ export function ModelSelector({
                 hint={t("model.thinkingHint")}
                 checked={thinkingEnabled}
                 onCheckedChange={onThinkingChange}
+              />
+            )}
+            {showWebSearch && onWebSearchChange && (
+              <ThinkingMenuRow
+                variant="webSearch"
+                label={t("model.webSearchPower")}
+                hint={t("model.webSearchHint")}
+                checked={webSearchEnabled}
+                onCheckedChange={onWebSearchChange}
               />
             )}
             <CommandList className="max-h-[min(50vh,300px)] scrollbar-thin p-1">
@@ -350,15 +373,25 @@ export function ModelSelector({
             </CommandList>
           </Command>
         ) : (
-          showThinking &&
-          onThinkingChange && (
+          (showThinking || showWebSearch) && (
             <div className="p-1">
-              <ThinkingMenuRow
-                label={t("model.thinkingPower")}
-                hint={t("model.thinkingHint")}
-                checked={thinkingEnabled}
-                onCheckedChange={onThinkingChange}
-              />
+              {showThinking && onThinkingChange && (
+                <ThinkingMenuRow
+                  label={t("model.thinkingPower")}
+                  hint={t("model.thinkingHint")}
+                  checked={thinkingEnabled}
+                  onCheckedChange={onThinkingChange}
+                />
+              )}
+              {showWebSearch && onWebSearchChange && (
+                <ThinkingMenuRow
+                  variant="webSearch"
+                  label={t("model.webSearchPower")}
+                  hint={t("model.webSearchHint")}
+                  checked={webSearchEnabled}
+                  onCheckedChange={onWebSearchChange}
+                />
+              )}
             </div>
           )
         )}

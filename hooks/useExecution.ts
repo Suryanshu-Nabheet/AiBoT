@@ -5,7 +5,8 @@
  * See LICENSE file for details
  */
 
-import { useLayoutEffect, useState, useCallback } from "react";
+import { useState, useCallback, useLayoutEffect } from "react";
+import { readConversation } from "@/lib/chat/conversation-store";
 
 export interface Execution {
   id: string;
@@ -36,12 +37,29 @@ const getInitialExecutions = (): Execution[] => {
 
 export const useExecution = () => {
   const [executions, setExecutions] = useState<Execution[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [hydrated, setHydrated] = useState(false);
 
   useLayoutEffect(() => {
-    setExecutions(getInitialExecutions());
-    setLoading(false);
+    const stored = getInitialExecutions();
+    const withHistory = stored.filter((execution) => {
+      const direct = readConversation(execution.id);
+      if (direct?.messages?.length) return true;
+      if (execution.type === ExecutionType.ARENA) {
+        return Boolean(
+          readConversation(`${execution.id}::arena-a`)?.messages?.length ||
+            readConversation(`${execution.id}::arena-b`)?.messages?.length,
+        );
+      }
+      return false;
+    });
+    setExecutions(withHistory);
+    if (withHistory.length !== stored.length) {
+      saveToStorage(withHistory);
+    }
+    setHydrated(true);
   }, []);
+
+  const loading = !hydrated;
 
   const saveToStorage = (newExecutions: Execution[]) => {
     if (typeof window !== "undefined") {

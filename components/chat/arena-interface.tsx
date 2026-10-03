@@ -17,10 +17,11 @@ import { ChatComposerHost } from "./chat-composer-host";
 import { usePromptQueue, type QueuedPrompt } from "@/hooks/use-prompt-queue";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
-import { Message } from "@/lib/types";
+import { Message, Role } from "@/lib/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { PageShell } from "@/components/layout/page-shell";
 import { useThinkingMode } from "@/hooks/use-thinking-mode";
+import { useWebSearchMode } from "@/hooks/use-web-search-mode";
 import { useRotatingChatStatus } from "@/hooks/use-rotating-chat-status";
 import {
   useChatComposerClipboard,
@@ -36,6 +37,8 @@ function ArenaPanel({
   modelStorageKey,
   thinkingEnabled,
   onThinkingChange,
+  webSearchEnabled,
+  onWebSearchChange,
   triggerClassName,
   messages,
   isLoading,
@@ -47,6 +50,8 @@ function ArenaPanel({
   modelStorageKey: string;
   thinkingEnabled: boolean;
   onThinkingChange: (enabled: boolean) => void;
+  webSearchEnabled: boolean;
+  onWebSearchChange: (enabled: boolean) => void;
   triggerClassName: string;
   messages: Message[];
   isLoading: boolean;
@@ -69,6 +74,8 @@ function ArenaPanel({
           modelStorageKey={modelStorageKey}
           thinkingEnabled={thinkingEnabled}
           onThinkingChange={onThinkingChange}
+          webSearchEnabled={webSearchEnabled}
+          onWebSearchChange={onWebSearchChange}
           triggerClassName={triggerClassName}
           enablePickerShortcut={modelStorageKey === "arena-a"}
         />
@@ -79,7 +86,6 @@ function ArenaPanel({
           messages={messages}
           isLoading={isLoading}
           loadingStatus={loadingStatus}
-          thinkingRequested={thinkingEnabled}
           onCopy={onCopy}
           onModelSelect={onModelChange}
           pdfFileName="arena-response.pdf"
@@ -99,6 +105,10 @@ export default function ArenaInterface({
   className?: string;
 }) {
   const { t, locale } = useTranslation();
+  const {
+    webSearchEnabled: webSearchOn,
+    setWebSearchEnabled: setWebSearchOn,
+  } = useWebSearchMode();
   // Shared conversation ID for both panels to keep history unified
   const [arenaConversationId] = useState(() => initialConversationId || v4());
 
@@ -109,6 +119,7 @@ export default function ArenaInterface({
     conversationId: arenaConversationId,
     executionType: ExecutionType.ARENA,
     viewMode: "side-by-side",
+    webSearchEnabled: webSearchOn,
   });
   const rightChat = useChatSession({
     storageKey: "arena-b",
@@ -116,6 +127,7 @@ export default function ArenaInterface({
     conversationId: arenaConversationId,
     executionType: ExecutionType.ARENA,
     viewMode: "side-by-side",
+    webSearchEnabled: webSearchOn,
   });
 
   // --- Shared Input State ---
@@ -128,15 +140,28 @@ export default function ArenaInterface({
   const isEmptyArena =
     leftChat.messages.length === 0 && rightChat.messages.length === 0;
 
+  const leftSearchingWeb =
+    webSearchOn &&
+    leftChat.isLoading &&
+    leftChat.messages.length > 0 &&
+    leftChat.messages[leftChat.messages.length - 1]?.role === Role.User;
+  const rightSearchingWeb =
+    webSearchOn &&
+    rightChat.isLoading &&
+    rightChat.messages.length > 0 &&
+    rightChat.messages[rightChat.messages.length - 1]?.role === Role.User;
+
   const leftLoadingStatus = useRotatingChatStatus(
     leftChat.isLoading,
     leftThinking.thinkingEnabled,
     t,
+    leftSearchingWeb,
   );
   const rightLoadingStatus = useRotatingChatStatus(
     rightChat.isLoading,
     rightThinking.thinkingEnabled,
     t,
+    rightSearchingWeb,
   );
 
   const { isListening, onSpeechToggle } = useChatComposerSpeech(
@@ -274,6 +299,8 @@ export default function ArenaInterface({
       setAttachments={setAttachments}
       isListening={isListening}
       onSpeechToggle={onSpeechToggle}
+      webSearchEnabled={webSearchOn}
+      onWebSearchChange={setWebSearchOn}
       textareaRef={textareaRef}
       showModelSelector={false}
       placeholder={
@@ -318,6 +345,8 @@ export default function ArenaInterface({
                 modelStorageKey="arena-a"
                 thinkingEnabled={leftThinking.thinkingEnabled}
                 onThinkingChange={leftThinking.setThinkingEnabled}
+                webSearchEnabled={webSearchOn}
+                onWebSearchChange={setWebSearchOn}
                 triggerClassName={arenaModelTriggerClass}
                 enablePickerShortcut
               />
@@ -327,6 +356,8 @@ export default function ArenaInterface({
                 modelStorageKey="arena-b"
                 thinkingEnabled={rightThinking.thinkingEnabled}
                 onThinkingChange={rightThinking.setThinkingEnabled}
+                webSearchEnabled={webSearchOn}
+                onWebSearchChange={setWebSearchOn}
                 triggerClassName={arenaModelTriggerClass}
               />
             </div>
@@ -356,6 +387,8 @@ export default function ArenaInterface({
           modelStorageKey="arena-a"
           thinkingEnabled={leftThinking.thinkingEnabled}
           onThinkingChange={leftThinking.setThinkingEnabled}
+          webSearchEnabled={webSearchOn}
+          onWebSearchChange={setWebSearchOn}
           triggerClassName={arenaModelTriggerClass}
           messages={leftChat.messages}
           isLoading={leftChat.isLoading}
@@ -368,6 +401,8 @@ export default function ArenaInterface({
           modelStorageKey="arena-b"
           thinkingEnabled={rightThinking.thinkingEnabled}
           onThinkingChange={rightThinking.setThinkingEnabled}
+          webSearchEnabled={webSearchOn}
+          onWebSearchChange={setWebSearchOn}
           triggerClassName={arenaModelTriggerClass}
           messages={rightChat.messages}
           isLoading={rightChat.isLoading}

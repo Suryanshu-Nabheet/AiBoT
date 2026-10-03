@@ -56,6 +56,8 @@ interface ChatInputProps {
   onSpeechToggle?: () => void;
   isThinking?: boolean;
   onThinkingChange?: (enabled: boolean) => void;
+  webSearchEnabled?: boolean;
+  onWebSearchChange?: (enabled: boolean) => void;
   model?: string;
   onModelChange?: (model: string) => void;
   modelStorageKey?: string;
@@ -89,6 +91,8 @@ export function ChatInput({
   onSpeechToggle,
   isThinking = false,
   onThinkingChange,
+  webSearchEnabled = false,
+  onWebSearchChange,
   model,
   onModelChange,
   modelStorageKey,
@@ -391,6 +395,8 @@ export function ChatInput({
                     modelStorageKey={modelStorageKey}
                     isThinking={isThinking}
                     onThinkingChange={onThinkingChange}
+                    webSearchEnabled={webSearchEnabled}
+                    onWebSearchChange={onWebSearchChange}
                     showModelSelector={showModelSelector}
                   />
                 )}
@@ -410,6 +416,8 @@ export function ChatInput({
                     modelStorageKey={modelStorageKey}
                     isThinking={isThinking}
                     onThinkingChange={onThinkingChange}
+                    webSearchEnabled={webSearchEnabled}
+                    onWebSearchChange={onWebSearchChange}
                     showModelSelector={showModelSelector}
                   />
                 )}

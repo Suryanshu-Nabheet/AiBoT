@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ChatErrorBanner } from "@/components/chat/chat-error-banner";
 import { ThinkingPanel } from "@/components/chat/thinking-panel";
+import { WebSearch } from "@/components/web-search/web-search";
 import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
@@ -44,6 +45,7 @@ import {
 import { splitDocumentResponse } from "@/lib/chat/document-work";
 import { chatMessageBodyClass } from "@/lib/chat/message-prose";
 import { CHAT_THREAD_HORIZONTAL_INSET } from "@/lib/chat/thread-layout";
+import { TextShimmer } from "@/components/core/text-shimmer";
 
 export type ChatMessageLayout = "thread" | "arena";
 
@@ -60,6 +62,7 @@ export const ChatMessage = memo(
     onCopy,
     onModelSelect,
     isGenerating,
+    loadingStatus,
     isDocumentRequest = false,
     layout = "thread",
     pdfFileName = "ai-response.pdf",
@@ -69,6 +72,7 @@ export const ChatMessage = memo(
     onCopy: (content: string) => void;
     onModelSelect?: (modelId: string) => void;
     isGenerating?: boolean;
+    loadingStatus?: string;
     isDocumentRequest?: boolean;
     layout?: ChatMessageLayout;
     pdfFileName?: string;
@@ -284,12 +288,28 @@ export const ChatMessage = memo(
                   </div>
                 )}
 
+                {!isUser && isStreaming && loadingStatus && (
+                  <div className="mb-2 w-full">
+                    <TextShimmer className="text-sm font-medium" duration={1.2}>
+                      {loadingStatus}
+                    </TextShimmer>
+                  </div>
+                )}
+
+                {message.webSearchTrace && (
+                  <WebSearch
+                    trace={message.webSearchTrace}
+                    className={hasThinkingPanel || showAnswer ? "pb-1" : undefined}
+                  />
+                )}
+
                 {hasThinkingPanel && (
                   <ThinkingPanel
                     thinkingContent={thinkingContent}
                     isExpanded={isThinkingExpanded}
                     onToggle={handleThinkingToggle}
                     isStreaming={isStreaming}
+                    isThinkingPhase={isStreaming && !showAnswer}
                     label={t("chat.thinking.label")}
                     remarkPlugins={remarkPlugins}
                     rehypePlugins={rehypePlugins}

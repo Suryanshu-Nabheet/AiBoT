@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import type { ChatErrorCode } from "@/lib/chat/chat-error";
+import type { WebSearchTrace } from "@/lib/web-search/types";
 
 export const MODELS: ModelFull[] = [
   {
@@ -221,6 +222,8 @@ export type Message = {
     note?: string;
   }[];
   shouldAnimate?: boolean;
+  /** Agent web-search trace shown above the assistant reply. */
+  webSearchTrace?: WebSearchTrace;
 };
 
 export type Messages = Message[];

@@ -19,6 +19,8 @@ type ThinkingPanelProps = {
   isExpanded: boolean;
   onToggle: () => void;
   isStreaming?: boolean;
+  /** Shimmer the bar label until the main answer has started. */
+  isThinkingPhase?: boolean;
   label: string;
   remarkPlugins: Options["remarkPlugins"];
   rehypePlugins: Options["rehypePlugins"];
@@ -38,6 +40,7 @@ export function ThinkingPanel({
   preprocessMarkdown,
   className,
   isStreaming = false,
+  isThinkingPhase = false,
 }: ThinkingPanelProps) {
   const hasBody =
     isSubstantiveThinkingContent(thinkingContent) ||
@@ -47,7 +50,12 @@ export function ThinkingPanel({
 
   return (
     <div className={cn("w-full max-w-full", className)}>
-      <ThinkingBar text={label} isExpanded={isExpanded} onClick={onToggle} />
+      <ThinkingBar
+        text={label}
+        isExpanded={isExpanded}
+        onClick={onToggle}
+        shimmerLabel={isThinkingPhase}
+      />
       <div
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
