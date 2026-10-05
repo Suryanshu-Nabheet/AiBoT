@@ -29,10 +29,7 @@ interface ComposerPrimaryActionProps {
   query: string;
   onSpeechToggle?: () => void;
   onStop?: () => void;
-  onSendWhileLoading?: (
-    prompt: string,
-    attachments: ChatAttachment[],
-  ) => void;
+  onSendWhileLoading?: (prompt: string, attachments: ChatAttachment[]) => void;
   attachments: ChatAttachment[];
   onClearDraft: () => void;
 }

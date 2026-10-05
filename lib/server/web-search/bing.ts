@@ -63,9 +63,7 @@ export function parseBingSearchHtml(
     if (!title) continue;
 
     if (!href.startsWith("http") || href.includes("bing.com/ck/")) {
-      const citeMatch = block.match(
-        /<cite[^>]*>(https?:\/\/[^<]+)<\/cite>/i,
-      );
+      const citeMatch = block.match(/<cite[^>]*>(https?:\/\/[^<]+)<\/cite>/i);
       if (citeMatch?.[1]) {
         href = citeMatch[1].replace(/\s*›\s*/g, "/").trim();
       }

@@ -116,7 +116,9 @@ describe("decodeBingRedirect", () => {
   it("decodes URLs with HTML-escaped ampersands", () => {
     const href =
       "https://www.bing.com/ck/a?!&amp;&amp;p=x&amp;u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS8&amp;ntb=1";
-    expect(decodeBingRedirect(normalizeBingHref(href))).toBe("https://example.com/");
+    expect(decodeBingRedirect(normalizeBingHref(href))).toBe(
+      "https://example.com/",
+    );
   });
 });
 

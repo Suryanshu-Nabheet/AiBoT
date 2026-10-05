@@ -55,7 +55,11 @@ export function sanitizeSearchResults(
 ): WebSearchSource[] {
   return results.filter((result) => {
     const domain = result.domain.toLowerCase();
-    if (SEARCH_ENGINE_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`))) {
+    if (
+      SEARCH_ENGINE_DOMAINS.some(
+        (d) => domain === d || domain.endsWith(`.${d}`),
+      )
+    ) {
       return false;
     }
     if (/bing\.com|duckduckgo\.com|search\.brave\.com/i.test(result.href)) {
@@ -83,7 +87,8 @@ export function searchResultRelevanceRatio(
 
   let matched = 0;
   for (const result of results) {
-    const blob = `${result.title} ${result.snippet ?? ""} ${result.domain}`.toLowerCase();
+    const blob =
+      `${result.title} ${result.snippet ?? ""} ${result.domain}`.toLowerCase();
     if (tokens.some((token) => blob.includes(token))) matched += 1;
   }
   return matched / results.length;

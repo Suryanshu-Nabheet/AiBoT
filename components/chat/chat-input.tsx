@@ -46,10 +46,7 @@ interface ChatInputProps {
   isLoading: boolean;
   onStop?: () => void;
   onQueue?: (prompt: string, attachments: ChatAttachment[]) => void;
-  onSendWhileLoading?: (
-    prompt: string,
-    attachments: ChatAttachment[],
-  ) => void;
+  onSendWhileLoading?: (prompt: string, attachments: ChatAttachment[]) => void;
   queuedPrompts?: QueuedPrompt[];
   onRemoveQueuedPrompt?: (id: string) => void;
   onSendQueuedPromptNow?: (item: QueuedPrompt) => void;

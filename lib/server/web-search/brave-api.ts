@@ -4,7 +4,10 @@ import type {
   WebSearchApiResult,
   WebSearchSource,
 } from "@/lib/web-search/types";
-import { FETCH_TIMEOUT_MS, sourceFromHref } from "@/lib/server/web-search/common";
+import {
+  FETCH_TIMEOUT_MS,
+  sourceFromHref,
+} from "@/lib/server/web-search/common";
 
 /** Official Brave Search API — reliable from Vercel/serverless when HTML scrapers fail. */
 export async function searchBraveApi(
@@ -21,13 +24,15 @@ export async function searchBraveApi(
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const url = `https://api.search.brave.com/res/v1/web/search?${new URLSearchParams({
-      q: trimmed,
-      count: String(Math.min(maxResults, 20)),
-      search_lang: "en",
-      country: "US",
-      text_decorations: "false",
-    })}`;
+    const url = `https://api.search.brave.com/res/v1/web/search?${new URLSearchParams(
+      {
+        q: trimmed,
+        count: String(Math.min(maxResults, 20)),
+        search_lang: "en",
+        country: "US",
+        text_decorations: "false",
+      },
+    )}`;
 
     const response = await fetch(url, {
       headers: {
@@ -43,14 +48,20 @@ export async function searchBraveApi(
     }
 
     const data = (await response.json()) as {
-      web?: { results?: { title?: string; url?: string; description?: string }[] };
+      web?: {
+        results?: { title?: string; url?: string; description?: string }[];
+      };
     };
 
     const results: WebSearchSource[] = [];
     for (const item of data.web?.results ?? []) {
       if (!item.url || !item.title) continue;
       results.push(
-        sourceFromHref(item.url, item.title, item.description?.trim() || undefined),
+        sourceFromHref(
+          item.url,
+          item.title,
+          item.description?.trim() || undefined,
+        ),
       );
       if (results.length >= maxResults) break;
     }

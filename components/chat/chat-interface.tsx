@@ -186,14 +186,11 @@ export default function ChatInterface({
     onSubmit: handleCreateChat,
     isLoading,
     onStop: stopHelpers.stop,
-    onSendWhileLoading: (prompt: string, queuedAttachments: ChatAttachment[]) => {
-      void handleSend(
-        prompt,
-        queuedAttachments,
-        undefined,
-        isThinking,
-        true,
-      );
+    onSendWhileLoading: (
+      prompt: string,
+      queuedAttachments: ChatAttachment[],
+    ) => {
+      void handleSend(prompt, queuedAttachments, undefined, isThinking, true);
     },
     attachments,
     setAttachments,

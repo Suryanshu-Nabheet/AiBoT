@@ -27,15 +27,21 @@ function extractTopicQuery(raw: string): string | null {
   return null;
 }
 
-function extractSubjectFromHistory(recentUserMessages: string[]): string | null {
+function extractSubjectFromHistory(
+  recentUserMessages: string[],
+): string | null {
   for (let i = recentUserMessages.length - 1; i >= 0; i -= 1) {
     const topic = extractTopicQuery(recentUserMessages[i]);
     if (topic) return topic;
 
-    const whoIs = recentUserMessages[i].match(/\bwho\s+is\s+(.+?)(?:[.?!,]|$)/i);
+    const whoIs = recentUserMessages[i].match(
+      /\bwho\s+is\s+(.+?)(?:[.?!,]|$)/i,
+    );
     if (whoIs?.[1]) return whoIs[1].trim().replace(/\s+/g, " ");
 
-    const whatIs = recentUserMessages[i].match(/\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i);
+    const whatIs = recentUserMessages[i].match(
+      /\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i,
+    );
     if (whatIs?.[1]) return whatIs[1].trim().replace(/\s+/g, " ");
   }
   return null;

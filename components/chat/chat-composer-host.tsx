@@ -11,10 +11,7 @@ export type ChatComposerHostProps = {
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   onStop?: () => void;
-  onSendWhileLoading?: (
-    prompt: string,
-    attachments: ChatAttachment[],
-  ) => void;
+  onSendWhileLoading?: (prompt: string, attachments: ChatAttachment[]) => void;
   attachments: ChatAttachment[];
   setAttachments: React.Dispatch<React.SetStateAction<ChatAttachment[]>>;
   isListening?: boolean;
