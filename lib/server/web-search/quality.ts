@@ -14,6 +14,9 @@ const SEARCH_ENGINE_DOMAINS = [
 const DICTIONARY_NOISE =
   /dictionary|merriam-webster|cambridge\.org|definitions?\.net|meaning of|vocabulary\.com/i;
 
+const TRANSLATION_NOISE =
+  /translate\.(com|google)|google\.[a-z.]+\/translate|\/translate\b/i;
+
 const QUERY_STOPWORDS = new Set([
   "who",
   "what",
@@ -49,6 +52,22 @@ const QUERY_STOPWORDS = new Set([
   "their",
 ]);
 
+function isLikelyEnglishQuery(query: string): boolean {
+  const q = query.trim();
+  return q.length > 0 && /^[\x20-\x7E]+$/.test(q) && /[a-z]/i.test(q);
+}
+
+function isLikelyForeignLanguageTitle(title: string): boolean {
+  const letters = title.match(/\p{L}/gu) ?? [];
+  if (letters.length < 6) return false;
+  const nonLatin = letters.filter((ch) => !/\p{Script=Latin}/u.test(ch)).length;
+  const latinExtended = letters.filter((ch) => {
+    const cp = ch.codePointAt(0) ?? 0;
+    return cp > 0x024f && cp < 0x1e00;
+  }).length;
+  return (nonLatin + latinExtended) / letters.length > 0.12;
+}
+
 /** Drop search-engine redirect URLs and other non-destination links. */
 export function sanitizeSearchResults(
   results: WebSearchSource[],
@@ -65,8 +84,26 @@ export function sanitizeSearchResults(
     if (/bing\.com|duckduckgo\.com|search\.brave\.com/i.test(result.href)) {
       return false;
     }
+    if (
+      TRANSLATION_NOISE.test(result.href) ||
+      TRANSLATION_NOISE.test(result.domain)
+    ) {
+      return false;
+    }
+    if (/^translate\b/i.test(result.title)) {
+      return false;
+    }
     return true;
   });
+}
+
+export function filterLocaleAlignedResults(
+  query: string,
+  results: WebSearchSource[],
+): WebSearchSource[] {
+  if (!isLikelyEnglishQuery(query)) return results;
+  const aligned = results.filter((r) => !isLikelyForeignLanguageTitle(r.title));
+  return aligned.length > 0 ? aligned : results;
 }
 
 function meaningfulQueryTokens(query: string): string[] {
@@ -106,8 +143,12 @@ export function isLowQualitySearchBatch(
   );
   if (dictHits.length >= Math.ceil(clean.length * 0.5)) return true;
 
+  const tokens = meaningfulQueryTokens(query);
   const relevance = searchResultRelevanceRatio(query, clean);
-  if (meaningfulQueryTokens(query).length >= 2 && relevance < 0.2) {
+  if (tokens.length === 1 && relevance === 0) {
+    return true;
+  }
+  if (tokens.length >= 2 && relevance < 0.2) {
     return true;
   }
 
@@ -119,7 +160,10 @@ export function finalizeSearchResults(
   results: WebSearchSource[],
   maxResults: number,
 ): WebSearchSource[] {
-  const clean = sanitizeSearchResults(results);
+  const clean = filterLocaleAlignedResults(
+    query,
+    sanitizeSearchResults(results),
+  );
   const newsFiltered = filterIrrelevantNewsHomepages(clean, query).slice(
     0,
     maxResults,

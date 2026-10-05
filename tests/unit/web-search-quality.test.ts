@@ -1,5 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { filterIrrelevantNewsHomepages } from "@/lib/server/web-search/quality";
+import {
+  finalizeSearchResults,
+  filterIrrelevantNewsHomepages,
+} from "@/lib/server/web-search/quality";
+import { decodeHtmlEntities } from "@/lib/server/web-search/common";
+
+describe("decodeHtmlEntities", () => {
+  it("decodes numeric entities from SERP titles", () => {
+    expect(decodeHtmlEntities("Google &#214;vers&#228;tt")).toBe(
+      "Google Översätt",
+    );
+  });
+});
+
+describe("finalizeSearchResults", () => {
+  it("rejects foreign-language SERP noise for English tech queries", () => {
+    const results = finalizeSearchResults(
+      "what is webrtc",
+      [
+        {
+          title: "&#214;vergripande analys gav geh&#246;r",
+          href: "https://www.lipus.se/report",
+          domain: "lipus.se",
+          brand: "generic",
+        },
+        {
+          title: "Translate Swedish to English",
+          href: "https://www.translate.com/",
+          domain: "translate.com",
+          brand: "generic",
+        },
+      ],
+      8,
+    );
+    expect(results).toHaveLength(0);
+  });
+});
 
 describe("filterIrrelevantNewsHomepages", () => {
   it("removes generic news homepages when the query is not about news", () => {

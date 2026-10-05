@@ -19,7 +19,7 @@ describe("normalizeUserQueryForSearch", () => {
       normalizeUserQueryForSearch(
         "what is webrtc , do websearch to get latest context",
       ),
-    ).toBe("webrtc");
+    ).toBe("what is webrtc");
   });
 
   it("extracts latest news topic from conversational prompts", () => {

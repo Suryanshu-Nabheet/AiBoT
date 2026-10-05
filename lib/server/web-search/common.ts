@@ -13,16 +13,33 @@ export const BROWSER_HEADERS = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
 };
 
-export function stripHtml(text: string): string {
+/** Decode numeric and named HTML entities (Bing/Brave SERPs often ship &#214; in titles). */
+export function decodeHtmlEntities(text: string): string {
   return text
-    .replace(/<[^>]+>/g, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      const code = Number.parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const code = Number.parseInt(dec, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/&nbsp;/g, " ");
+}
+
+export function stripHtml(text: string): string {
+  return decodeHtmlEntities(
+    text
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
 }
 
 export function pushUniqueResult(
@@ -45,11 +62,11 @@ export function sourceFromHref(
 ): WebSearchSource {
   const domain = domainFromUrl(href);
   return {
-    title,
+    title: decodeHtmlEntities(stripHtml(title)),
     href,
     domain,
     brand: brandFromDomain(domain),
-    snippet,
+    snippet: snippet ? decodeHtmlEntities(stripHtml(snippet)) : undefined,
   };
 }
 

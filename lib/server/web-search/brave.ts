@@ -66,7 +66,12 @@ export async function searchBrave(
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const url = `${BRAVE_SEARCH}?${new URLSearchParams({ q: trimmed })}`;
+    const url = `${BRAVE_SEARCH}?${new URLSearchParams({
+      q: trimmed,
+      country: "US",
+      search_lang: "en",
+      source: "web",
+    })}`;
     const response = await fetch(url, {
       headers: {
         ...BROWSER_HEADERS,

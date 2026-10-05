@@ -16,12 +16,12 @@ function extractTopicQuery(raw: string): string | null {
 
   const whatIs = trimmed.match(/\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i);
   if (whatIs?.[1] && whatIs[1].length <= 120) {
-    return whatIs[1].trim().replace(/\s+/g, " ");
+    return `what is ${whatIs[1].trim()}`.replace(/\s+/g, " ");
   }
 
   const whoIs = trimmed.match(/\bwho\s+is\s+(.+?)(?:[.?!,]|$)/i);
   if (whoIs?.[1] && whoIs[1].length <= 120) {
-    return whoIs[1].trim().replace(/\s+/g, " ");
+    return `who is ${whoIs[1].trim()}`.replace(/\s+/g, " ");
   }
 
   return null;
@@ -31,18 +31,15 @@ function extractSubjectFromHistory(
   recentUserMessages: string[],
 ): string | null {
   for (let i = recentUserMessages.length - 1; i >= 0; i -= 1) {
-    const topic = extractTopicQuery(recentUserMessages[i]);
-    if (topic) return topic;
-
-    const whoIs = recentUserMessages[i].match(
-      /\bwho\s+is\s+(.+?)(?:[.?!,]|$)/i,
-    );
+    const msg = recentUserMessages[i];
+    const whoIs = msg.match(/\bwho\s+is\s+(.+?)(?:[.?!,]|$)/i);
     if (whoIs?.[1]) return whoIs[1].trim().replace(/\s+/g, " ");
 
-    const whatIs = recentUserMessages[i].match(
-      /\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i,
-    );
+    const whatIs = msg.match(/\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i);
     if (whatIs?.[1]) return whatIs[1].trim().replace(/\s+/g, " ");
+
+    const topic = extractTopicQuery(msg);
+    if (topic) return topic;
   }
   return null;
 }
