@@ -130,7 +130,7 @@ Ensure the `OPENROUTER_API_KEY` is correctly set in the `.env` file. You can tes
 
 ### Web Search Returns No Results Locally
 
-Outbound HTML scraping can fail on some networks or when a provider serves a bot challenge. Production uses DuckDuckGo first with Brave/Bing fallbacks. Check server logs for `/api/web-search` and try a simpler query. Details: [Web Search — Deployment notes](web-search.md#deployment-notes).
+Outbound HTML scraping can fail on some networks or when a provider serves a bot challenge. Production runs keyless providers in parallel (DuckDuckGo, Brave HTML, Wikipedia, Bing) and merges filtered results. Check server logs for `/api/web-search` and try a simpler query. Details: [Web Search — Deployment notes](web-search.md#deployment-notes).
 
 ### Node.js Versions
 
