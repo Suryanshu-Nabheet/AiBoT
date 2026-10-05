@@ -52,9 +52,10 @@ Implemented in `lib/web-search/query.ts`—no extra LLM call.
 
 Order in `lib/server/web-search/search.ts`:
 
-1. **DuckDuckGo** — primary; best relevance in normal conditions.
-2. **Brave Search** (HTML) — fallback when DDG returns nothing or is blocked.
-3. **Bing** (HTML) — last resort; homepage noise filtered via `quality.ts`.
+1. **Brave Search API** (optional) — when `BRAVE_SEARCH_API_KEY` is set; recommended on Vercel.
+2. **DuckDuckGo** — primary keyless path; best relevance from non-datacenter IPs.
+3. **Brave Search** (HTML) — fallback when DDG returns nothing or is blocked.
+4. **Bing** (HTML) — last resort; redirects decoded, low-relevance batches rejected.
 
 Each query returns up to **8** results by default (configurable up to 12 on the API). Results include title, URL, domain, snippet, and a **brand** hint (Reddit, GitHub, Wikipedia, etc.) for UI badges.
 
@@ -102,7 +103,7 @@ Web search composes with **Thinking mode**, attachments, and arena side-by-side 
 
 - **Vercel / serverless:** If DuckDuckGo serves a bot challenge, Brave/Bing fallbacks still allow results without API keys.
 - **Timeouts:** Web search route `maxDuration` 30s; favicon route 10s.
-- **Environment:** Only `OPENROUTER_API_KEY` (and optional `NEXT_PUBLIC_APP_URL`) are required for the rest of the app; web search does not add mandatory env vars.
+- **Environment:** Web search works keyless locally; for production on Vercel set optional `BRAVE_SEARCH_API_KEY` (Brave Search API) so results stay reliable when DuckDuckGo blocks datacenter IPs.
 
 ---
 

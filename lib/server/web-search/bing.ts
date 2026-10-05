@@ -14,10 +14,18 @@ import {
 
 const BING_SEARCH = "https://www.bing.com/search";
 
+/** HTML SERPs encode query strings as `&amp;` — normalize before URL parsing. */
+export function normalizeBingHref(href: string): string {
+  return href
+    .replace(/&amp;/gi, "&")
+    .replace(/&#0*38;/gi, "&")
+    .trim();
+}
+
 /** Decode Bing redirect URLs (`/ck/a?...&u=a1<base64>`). */
 export function decodeBingRedirect(href: string): string {
   try {
-    const url = new URL(href, "https://www.bing.com");
+    const url = new URL(normalizeBingHref(href), "https://www.bing.com");
     const encoded = url.searchParams.get("u");
     if (encoded?.startsWith("a1")) {
       const decoded = Buffer.from(encoded.slice(2), "base64").toString("utf8");
@@ -50,11 +58,20 @@ export function parseBingSearchHtml(
     );
     if (!titleMatch) continue;
 
-    const href = decodeBingRedirect(titleMatch[1]);
+    let href = decodeBingRedirect(titleMatch[1]);
     const title = stripHtml(titleMatch[2]);
-    if (!title || !href.startsWith("http")) continue;
-    if (href.includes("bing.com/ck/") && !titleMatch[1].includes("u="))
-      continue;
+    if (!title) continue;
+
+    if (!href.startsWith("http") || href.includes("bing.com/ck/")) {
+      const citeMatch = block.match(
+        /<cite[^>]*>(https?:\/\/[^<]+)<\/cite>/i,
+      );
+      if (citeMatch?.[1]) {
+        href = citeMatch[1].replace(/\s*›\s*/g, "/").trim();
+      }
+    }
+
+    if (!href.startsWith("http") || /bing\.com/i.test(href)) continue;
 
     const snippetMatch = block.match(
       /<div class="b_caption"[^>]*>\s*<p[^>]*>([\s\S]*?)<\/p>/i,
@@ -88,6 +105,8 @@ export async function searchBing(
     const url = `${BING_SEARCH}?${new URLSearchParams({
       q: trimmed,
       setlang: "en-us",
+      cc: "US",
+      mkt: "en-US",
     })}`;
     const response = await fetch(url, {
       headers: {

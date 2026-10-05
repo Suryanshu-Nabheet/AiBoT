@@ -11,7 +11,10 @@ export type ChatComposerHostProps = {
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   onStop?: () => void;
-  onSendWhileLoading?: (prompt: string) => void;
+  onSendWhileLoading?: (
+    prompt: string,
+    attachments: ChatAttachment[],
+  ) => void;
   attachments: ChatAttachment[];
   setAttachments: React.Dispatch<React.SetStateAction<ChatAttachment[]>>;
   isListening?: boolean;
@@ -29,7 +32,7 @@ export type ChatComposerHostProps = {
   /** Thread mode: docked compact composer with optional queue */
   variant: "hero" | "thread";
   layoutContext?: ComposerLayoutContext;
-  onQueue?: (prompt: string) => void;
+  onQueue?: (prompt: string, attachments: ChatAttachment[]) => void;
   queuedPrompts?: QueuedPrompt[];
   onRemoveQueuedPrompt?: (id: string) => void;
   onSendQueuedPromptNow?: (item: QueuedPrompt) => void;

@@ -623,9 +623,14 @@ export function useChatSession({
     if (webSearchEnabled && currentQuery.trim()) {
       webSearchTrace = buildRunningWebSearchTrace(currentQuery);
       try {
+        const recentUserMessages = messages
+          .filter((m) => m.role === Role.User)
+          .map((m) => m.content)
+          .slice(-6);
         const searchResult = await runWebSearchForTurn(currentQuery, {
           signal: requestController.signal,
           locale,
+          recentUserMessages,
         });
         webSearchTrace = searchResult.trace;
         const contextBlock = searchResult.context;

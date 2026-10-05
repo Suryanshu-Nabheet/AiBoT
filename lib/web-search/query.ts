@@ -19,7 +19,58 @@ function extractTopicQuery(raw: string): string | null {
     return whatIs[1].trim().replace(/\s+/g, " ");
   }
 
+  const whoIs = trimmed.match(/\bwho\s+is\s+(.+?)(?:[.?!,]|$)/i);
+  if (whoIs?.[1] && whoIs[1].length <= 120) {
+    return whoIs[1].trim().replace(/\s+/g, " ");
+  }
+
   return null;
+}
+
+function extractSubjectFromHistory(recentUserMessages: string[]): string | null {
+  for (let i = recentUserMessages.length - 1; i >= 0; i -= 1) {
+    const topic = extractTopicQuery(recentUserMessages[i]);
+    if (topic) return topic;
+
+    const whoIs = recentUserMessages[i].match(/\bwho\s+is\s+(.+?)(?:[.?!,]|$)/i);
+    if (whoIs?.[1]) return whoIs[1].trim().replace(/\s+/g, " ");
+
+    const whatIs = recentUserMessages[i].match(/\bwhat\s+is\s+(.+?)(?:[.?!,]|$)/i);
+    if (whatIs?.[1]) return whatIs[1].trim().replace(/\s+/g, " ");
+  }
+  return null;
+}
+
+function needsContextualRewrite(query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+  if (/\b(him|her|them|they|this person|that person)\b/.test(q)) return true;
+  if (/^more\s+(info|information|details)\b/.test(q)) return true;
+  if (/^(tell me )?more about\b/.test(q)) return true;
+  return false;
+}
+
+/** Rewrite vague follow-ups ("more about him") using recent user turns. */
+export function resolveSearchQueryWithContext(
+  userQuery: string,
+  recentUserMessages: string[] = [],
+): string {
+  const normalized = normalizeUserQueryForSearch(userQuery);
+  if (!needsContextualRewrite(normalized)) return normalized;
+
+  const subject = extractSubjectFromHistory(recentUserMessages);
+  if (!subject) return normalized;
+
+  if (/^more\s+(info|information|details)\b/i.test(normalized)) {
+    return subject.slice(0, 500);
+  }
+
+  const rewritten = normalized
+    .replace(/\b(him|her|them|they|this person|that person)\b/gi, subject)
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return rewritten.slice(0, 500);
 }
 
 /** Strip chat instructions so search queries stay focused on the topic. */
@@ -65,8 +116,11 @@ export function normalizeUserQueryForSearch(userQuery: string): string {
 }
 
 /** Derive 1–2 keyless search queries from the user message (no LLM). */
-export function planWebSearchQueries(userQuery: string): string[] {
-  const primary = normalizeUserQueryForSearch(userQuery);
+export function planWebSearchQueries(
+  userQuery: string,
+  recentUserMessages: string[] = [],
+): string[] {
+  const primary = resolveSearchQueryWithContext(userQuery, recentUserMessages);
   if (!primary) return [];
 
   const year = new Date().getFullYear();

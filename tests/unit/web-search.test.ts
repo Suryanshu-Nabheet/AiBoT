@@ -5,8 +5,10 @@ import {
 } from "@/lib/web-search/query";
 import {
   decodeBingRedirect,
+  normalizeBingHref,
   parseBingSearchHtml,
 } from "@/lib/server/web-search/bing";
+import { finalizeSearchResults } from "@/lib/server/web-search/quality";
 import { parseBraveSearchHtml } from "@/lib/server/web-search/brave";
 import { isDuckDuckGoBlockedHtml } from "@/lib/server/web-search/common";
 import { parseDuckDuckGoHtml } from "@/lib/server/web-search/duckduckgo";
@@ -109,6 +111,39 @@ describe("decodeBingRedirect", () => {
     const href =
       "https://www.bing.com/ck/a?!&&p=x&u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS8&ntb=1";
     expect(decodeBingRedirect(href)).toBe("https://example.com/");
+  });
+
+  it("decodes URLs with HTML-escaped ampersands", () => {
+    const href =
+      "https://www.bing.com/ck/a?!&amp;&amp;p=x&amp;u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS8&amp;ntb=1";
+    expect(decodeBingRedirect(normalizeBingHref(href))).toBe("https://example.com/");
+  });
+});
+
+describe("planWebSearchQueries (context)", () => {
+  it("rewrites pronoun follow-ups using prior who-is questions", () => {
+    const queries = planWebSearchQueries("give me more info about him", [
+      "who is Suryanshu Nabheet",
+    ]);
+    expect(queries[0]).toBe("Suryanshu Nabheet");
+  });
+});
+
+describe("finalizeSearchResults", () => {
+  it("rejects dictionary spam for ambiguous queries", () => {
+    const results = finalizeSearchResults(
+      "more info about him",
+      [
+        {
+          title: "MORE Definition & Meaning - Merriam-Webster",
+          href: "https://www.merriam-webster.com/dictionary/more",
+          domain: "merriam-webster.com",
+          brand: "generic",
+        },
+      ],
+      8,
+    );
+    expect(results).toHaveLength(0);
   });
 });
 

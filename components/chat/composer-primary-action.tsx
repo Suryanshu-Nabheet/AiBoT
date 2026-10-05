@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/lib/i18n";
+import type { ChatAttachment } from "@/lib/chat/attachments";
 
 type Translate = (
   key: TranslationKey,
@@ -28,8 +29,12 @@ interface ComposerPrimaryActionProps {
   query: string;
   onSpeechToggle?: () => void;
   onStop?: () => void;
-  onSendWhileLoading?: (prompt: string) => void;
-  onClearQuery: () => void;
+  onSendWhileLoading?: (
+    prompt: string,
+    attachments: ChatAttachment[],
+  ) => void;
+  attachments: ChatAttachment[];
+  onClearDraft: () => void;
 }
 
 function actionButtonSize(density: "hero" | "thread") {
@@ -49,7 +54,8 @@ export function ComposerPrimaryAction({
   onSpeechToggle,
   onStop,
   onSendWhileLoading,
-  onClearQuery,
+  attachments,
+  onClearDraft,
 }: ComposerPrimaryActionProps) {
   const sizeClass = actionButtonSize(density);
 
@@ -88,15 +94,15 @@ export function ComposerPrimaryAction({
     );
   }
 
-  if (isLoading && query.trim() && onSendWhileLoading) {
+  if (isLoading && hasDraft && onSendWhileLoading) {
     return (
       <IconTooltip label={t("composer.sendNow")}>
         <Button
           type="button"
           size="icon"
           onClick={() => {
-            onSendWhileLoading(query);
-            onClearQuery();
+            onSendWhileLoading(query, attachments);
+            onClearDraft();
           }}
           aria-label={t("composer.sendNow")}
           title={t("composer.sendNow")}

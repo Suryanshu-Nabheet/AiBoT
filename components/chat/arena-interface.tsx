@@ -15,6 +15,7 @@ import { useChatSession } from "@/hooks/use-chat-session";
 import { ExecutionType } from "@/hooks/useExecution";
 import { ChatComposerHost } from "./chat-composer-host";
 import { usePromptQueue, type QueuedPrompt } from "@/hooks/use-prompt-queue";
+import type { ChatAttachment } from "@/lib/chat/attachments";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
 import { Message, Role } from "@/lib/types";
@@ -211,12 +212,17 @@ export default function ArenaInterface({
     ]);
   };
 
-  const promptQueue = usePromptQueue(isLoadingEither, async (prompt) => {
+  const promptQueue = usePromptQueue(isLoadingEither, async (item) => {
     await Promise.all([
-      leftChat.handleSend(prompt, [], undefined, leftThinking.thinkingEnabled),
+      leftChat.handleSend(
+        item.prompt,
+        item.attachments,
+        undefined,
+        leftThinking.thinkingEnabled,
+      ),
       rightChat.handleSend(
-        prompt,
-        [],
+        item.prompt,
+        item.attachments,
         undefined,
         rightThinking.thinkingEnabled,
       ),
@@ -225,8 +231,10 @@ export default function ArenaInterface({
 
   const handleQueueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    promptQueue.enqueue(query);
+    if (!query.trim() && attachments.length === 0) return;
+    promptQueue.enqueue(query, attachments);
     setQuery("");
+    setAttachments([]);
   };
 
   const handleSendNow = (item: QueuedPrompt) => {
@@ -234,14 +242,14 @@ export default function ArenaInterface({
     void Promise.all([
       leftChat.handleSend(
         item.prompt,
-        [],
+        item.attachments,
         undefined,
         leftThinking.thinkingEnabled,
         true,
       ),
       rightChat.handleSend(
         item.prompt,
-        [],
+        item.attachments,
         undefined,
         rightThinking.thinkingEnabled,
         true,
@@ -249,18 +257,21 @@ export default function ArenaInterface({
     ]);
   };
 
-  const handleSendDraftNow = (prompt: string) => {
+  const handleSendDraftNow = (
+    prompt: string,
+    draftAttachments: ChatAttachment[],
+  ) => {
     void Promise.all([
       leftChat.handleSend(
         prompt,
-        [],
+        draftAttachments,
         undefined,
         leftThinking.thinkingEnabled,
         true,
       ),
       rightChat.handleSend(
         prompt,
-        [],
+        draftAttachments,
         undefined,
         rightThinking.thinkingEnabled,
         true,

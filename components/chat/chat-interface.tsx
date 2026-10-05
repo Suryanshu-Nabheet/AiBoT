@@ -15,6 +15,7 @@ import { useChatSession } from "@/hooks/use-chat-session";
 import { Role } from "@/lib/types";
 import { ChatComposerHost } from "./chat-composer-host";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
+import type { ChatAttachment } from "@/lib/chat/attachments";
 import { ChatThread } from "./chat-thread";
 import { ChatThreadViewport } from "./chat-thread-viewport";
 import { useGlobalKeyPress } from "@/hooks/useGlobalKeyPress";
@@ -164,15 +165,16 @@ export default function ChatInterface({
     loading: isLoading,
   });
 
-  const promptQueue = usePromptQueue(isLoading, (prompt) =>
-    handleSend(prompt, [], undefined, isThinking),
+  const promptQueue = usePromptQueue(isLoading, (item) =>
+    handleSend(item.prompt, item.attachments, undefined, isThinking),
   );
 
   const handleCreateChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) {
-      promptQueue.enqueue(query);
+      promptQueue.enqueue(query, attachments);
       setQuery("");
+      setAttachments([]);
       return;
     }
     handleSend(undefined, undefined, undefined, isThinking);
@@ -184,8 +186,14 @@ export default function ChatInterface({
     onSubmit: handleCreateChat,
     isLoading,
     onStop: stopHelpers.stop,
-    onSendWhileLoading: (prompt: string) => {
-      void handleSend(prompt, [], undefined, isThinking, true);
+    onSendWhileLoading: (prompt: string, queuedAttachments: ChatAttachment[]) => {
+      void handleSend(
+        prompt,
+        queuedAttachments,
+        undefined,
+        isThinking,
+        true,
+      );
     },
     attachments,
     setAttachments,
@@ -270,7 +278,13 @@ export default function ChatInterface({
             onRemoveQueuedPrompt={promptQueue.remove}
             onSendQueuedPromptNow={(item) => {
               promptQueue.remove(item.id);
-              void handleSend(item.prompt, [], undefined, isThinking, true);
+              void handleSend(
+                item.prompt,
+                item.attachments,
+                undefined,
+                isThinking,
+                true,
+              );
             }}
             className="shrink-0"
           />

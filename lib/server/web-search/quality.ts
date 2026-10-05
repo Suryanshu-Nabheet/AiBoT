@@ -2,6 +2,127 @@ import "server-only";
 
 import type { WebSearchSource } from "@/lib/web-search/types";
 
+const SEARCH_ENGINE_DOMAINS = [
+  "bing.com",
+  "microsoft.com",
+  "duckduckgo.com",
+  "brave.com",
+  "google.com",
+  "yandex.com",
+];
+
+const DICTIONARY_NOISE =
+  /dictionary|merriam-webster|cambridge\.org|definitions?\.net|meaning of|vocabulary\.com/i;
+
+const QUERY_STOPWORDS = new Set([
+  "who",
+  "what",
+  "when",
+  "where",
+  "why",
+  "how",
+  "the",
+  "and",
+  "for",
+  "about",
+  "with",
+  "from",
+  "that",
+  "this",
+  "your",
+  "more",
+  "info",
+  "information",
+  "details",
+  "give",
+  "tell",
+  "latest",
+  "news",
+  "is",
+  "are",
+  "was",
+  "were",
+  "him",
+  "her",
+  "them",
+  "his",
+  "their",
+]);
+
+/** Drop search-engine redirect URLs and other non-destination links. */
+export function sanitizeSearchResults(
+  results: WebSearchSource[],
+): WebSearchSource[] {
+  return results.filter((result) => {
+    const domain = result.domain.toLowerCase();
+    if (SEARCH_ENGINE_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`))) {
+      return false;
+    }
+    if (/bing\.com|duckduckgo\.com|search\.brave\.com/i.test(result.href)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function meaningfulQueryTokens(query: string): string[] {
+  return query
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 2 && !QUERY_STOPWORDS.has(t));
+}
+
+/** Fraction of results whose title/snippet/domain mention at least one query token. */
+export function searchResultRelevanceRatio(
+  query: string,
+  results: WebSearchSource[],
+): number {
+  const tokens = meaningfulQueryTokens(query);
+  if (tokens.length === 0 || results.length === 0) return 1;
+
+  let matched = 0;
+  for (const result of results) {
+    const blob = `${result.title} ${result.snippet ?? ""} ${result.domain}`.toLowerCase();
+    if (tokens.some((token) => blob.includes(token))) matched += 1;
+  }
+  return matched / results.length;
+}
+
+export function isLowQualitySearchBatch(
+  query: string,
+  results: WebSearchSource[],
+): boolean {
+  const clean = sanitizeSearchResults(results);
+  if (clean.length === 0) return true;
+
+  const dictHits = clean.filter((r) =>
+    DICTIONARY_NOISE.test(`${r.title} ${r.domain}`),
+  );
+  if (dictHits.length >= Math.ceil(clean.length * 0.5)) return true;
+
+  const relevance = searchResultRelevanceRatio(query, clean);
+  if (meaningfulQueryTokens(query).length >= 2 && relevance < 0.2) {
+    return true;
+  }
+
+  return false;
+}
+
+export function finalizeSearchResults(
+  query: string,
+  results: WebSearchSource[],
+  maxResults: number,
+): WebSearchSource[] {
+  const clean = sanitizeSearchResults(results);
+  const newsFiltered = filterIrrelevantNewsHomepages(clean, query).slice(
+    0,
+    maxResults,
+  );
+  if (isLowQualitySearchBatch(query, newsFiltered)) return [];
+  return newsFiltered;
+}
+
 const GENERIC_NEWS_DOMAINS = [
   "foxnews.com",
   "cnn.com",

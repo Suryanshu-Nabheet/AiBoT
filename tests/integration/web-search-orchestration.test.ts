@@ -3,17 +3,21 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
 
 const searchBing = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchBrave = vi.fn<() => Promise<WebSearchApiResult>>();
+const searchBraveApi = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchDuckDuckGo = vi.fn<() => Promise<WebSearchApiResult>>();
 
 vi.mock("@/lib/server/web-search/bing", () => ({ searchBing }));
 vi.mock("@/lib/server/web-search/brave", () => ({ searchBrave }));
+vi.mock("@/lib/server/web-search/brave-api", () => ({ searchBraveApi }));
 vi.mock("@/lib/server/web-search/duckduckgo", () => ({ searchDuckDuckGo }));
 
 describe("searchWeb orchestration", () => {
   beforeEach(() => {
     searchBing.mockReset();
     searchBrave.mockReset();
+    searchBraveApi.mockReset();
     searchDuckDuckGo.mockReset();
+    searchBraveApi.mockResolvedValue({ query: "", results: [] });
   });
 
   it("prefers DuckDuckGo when it returns results", async () => {

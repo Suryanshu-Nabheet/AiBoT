@@ -45,8 +45,11 @@ interface ChatInputProps {
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   onStop?: () => void;
-  onQueue?: (prompt: string) => void;
-  onSendWhileLoading?: (prompt: string) => void;
+  onQueue?: (prompt: string, attachments: ChatAttachment[]) => void;
+  onSendWhileLoading?: (
+    prompt: string,
+    attachments: ChatAttachment[],
+  ) => void;
   queuedPrompts?: QueuedPrompt[];
   onRemoveQueuedPrompt?: (id: string) => void;
   onSendQueuedPromptNow?: (item: QueuedPrompt) => void;
@@ -153,9 +156,12 @@ export function ChatInput({
   const handleFormSubmit = (event: React.FormEvent) => {
     if (isLoading) {
       event.preventDefault();
-      if (query.trim()) {
-        onQueue?.(query);
-        if (onQueue) setQuery("");
+      if (query.trim() || attachments.length > 0) {
+        onQueue?.(query, attachments);
+        if (onQueue) {
+          setQuery("");
+          setAttachments([]);
+        }
       }
       return;
     }
@@ -376,7 +382,7 @@ export function ChatInput({
                     size="icon"
                     variant="ghost"
                     aria-label={t("composer.attach")}
-                    disabled={isProcessingFiles || isLoading}
+                    disabled={isProcessingFiles}
                     className={cn(
                       "shrink-0 rounded-full border border-border/50 bg-muted/70 text-muted-foreground transition-[background-color,border-color,box-shadow,color] duration-200 hover:border-foreground/20 hover:bg-muted hover:text-foreground hover:shadow-[0_1px_4px_rgb(0_0_0/0.12)] dark:hover:shadow-[0_1px_4px_rgb(0_0_0/0.3)]",
                       isThread ? "size-8 sm:size-9" : "size-9 sm:size-8",
@@ -435,7 +441,11 @@ export function ChatInput({
                   onSpeechToggle={onSpeechToggle}
                   onStop={onStop}
                   onSendWhileLoading={onSendWhileLoading}
-                  onClearQuery={() => setQuery("")}
+                  attachments={attachments}
+                  onClearDraft={() => {
+                    setQuery("");
+                    setAttachments([]);
+                  }}
                 />
               </div>
             </div>

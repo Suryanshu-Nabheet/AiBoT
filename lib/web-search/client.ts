@@ -14,9 +14,16 @@ export type WebSearchTurnResult = {
 
 export async function runWebSearchForTurn(
   userQuery: string,
-  options?: { signal?: AbortSignal; locale?: "en" | "hi" },
+  options?: {
+    signal?: AbortSignal;
+    locale?: "en" | "hi";
+    recentUserMessages?: string[];
+  },
 ): Promise<WebSearchTurnResult> {
-  const queries = planWebSearchQueries(userQuery);
+  const queries = planWebSearchQueries(
+    userQuery,
+    options?.recentUserMessages ?? [],
+  );
   const response = await fetch("/api/web-search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
