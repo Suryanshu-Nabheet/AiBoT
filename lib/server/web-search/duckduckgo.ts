@@ -14,6 +14,7 @@ import type {
 } from "@/lib/web-search/types";
 
 const DDG_HTML = "https://html.duckduckgo.com/html/";
+const DDG_LITE = "https://lite.duckduckgo.com/lite/";
 const DDG_INSTANT = "https://api.duckduckgo.com/";
 
 const DDG_HEADERS = {
@@ -77,6 +78,52 @@ export function parseDuckDuckGoHtml(
   }
 
   return results;
+}
+
+/** Parse DuckDuckGo Lite HTML (fallback when main HTML is blocked on serverless). */
+export function parseDuckDuckGoLiteHtml(
+  html: string,
+  maxResults: number,
+): WebSearchSource[] {
+  const results: WebSearchSource[] = [];
+  const seen = new Set<string>();
+
+  const linkRegex =
+    /<a\b[^>]*rel="nofollow"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+
+  let match: RegExpExecArray | null;
+  while (
+    (match = linkRegex.exec(html)) !== null &&
+    results.length < maxResults
+  ) {
+    const href = decodeDuckDuckGoRedirect(match[1]);
+    const title = stripHtml(match[2]);
+    if (!title || !href.startsWith("http")) continue;
+    if (href.includes("duckduckgo.com")) continue;
+
+    pushUniqueResult(results, seen, sourceFromHref(href, title), maxResults);
+  }
+
+  return results;
+}
+
+async function searchDuckDuckGoLite(
+  query: string,
+  maxResults: number,
+  signal?: AbortSignal,
+): Promise<WebSearchSource[]> {
+  const response = await fetch(DDG_LITE, {
+    method: "POST",
+    headers: DDG_HEADERS,
+    body: new URLSearchParams({ q: query }),
+    signal,
+    cache: "no-store",
+  });
+
+  if (!response.ok) return [];
+
+  const html = await response.text();
+  return parseDuckDuckGoLiteHtml(html, maxResults);
 }
 
 type InstantTopic = {
@@ -187,6 +234,14 @@ export async function searchDuckDuckGo(
       if (!isDuckDuckGoBlockedHtml(html)) {
         results = parseDuckDuckGoHtml(html, maxResults);
       }
+    }
+
+    if (results.length === 0) {
+      results = await searchDuckDuckGoLite(
+        trimmed,
+        maxResults,
+        controller.signal,
+      );
     }
 
     if (results.length === 0) {

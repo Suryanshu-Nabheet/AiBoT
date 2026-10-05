@@ -20,7 +20,7 @@ Pushes to the production branch trigger automatic deployments when the Vercel Gi
 ### Web search on Vercel
 
 - **No extra env vars** are required for search providers.
-- **`/api/web-search`** (`maxDuration` 30s): DuckDuckGo is tried first; if results are empty (e.g. bot challenge from datacenter IPs), Brave and Bing HTML fallbacks run automatically.
+- **`/api/web-search`** (`maxDuration` 30s): keyless DuckDuckGo, Brave HTML, Wikipedia, and Bing run in parallel; results are merged and filtered (no search API keys).
 - **`/api/favicon`**: Proxies favicons same-origin so source icons render under strict cross-origin policies (COEP/CORP).
 - **Rate limits**: Web search 30 req/min and favicon 120 req/min per client scope—adjust traffic or add edge rules if you expect heavy use.
 

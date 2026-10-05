@@ -3,13 +3,11 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
 
 const searchBing = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchBrave = vi.fn<() => Promise<WebSearchApiResult>>();
-const searchBraveApi = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchDuckDuckGo = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchWikipediaEn = vi.fn<() => Promise<WebSearchApiResult>>();
 
 vi.mock("@/lib/server/web-search/bing", () => ({ searchBing }));
 vi.mock("@/lib/server/web-search/brave", () => ({ searchBrave }));
-vi.mock("@/lib/server/web-search/brave-api", () => ({ searchBraveApi }));
 vi.mock("@/lib/server/web-search/duckduckgo", () => ({ searchDuckDuckGo }));
 vi.mock("@/lib/server/web-search/wikipedia", () => ({ searchWikipediaEn }));
 
@@ -17,14 +15,14 @@ describe("searchWeb orchestration", () => {
   beforeEach(() => {
     searchBing.mockReset();
     searchBrave.mockReset();
-    searchBraveApi.mockReset();
     searchDuckDuckGo.mockReset();
     searchWikipediaEn.mockReset();
-    searchBraveApi.mockResolvedValue({ query: "", results: [] });
+    searchBing.mockResolvedValue({ query: "", results: [] });
+    searchBrave.mockResolvedValue({ query: "", results: [] });
     searchWikipediaEn.mockResolvedValue({ query: "", results: [] });
   });
 
-  it("prefers DuckDuckGo when it returns results", async () => {
+  it("returns DuckDuckGo hits when they pass quality filters", async () => {
     searchDuckDuckGo.mockResolvedValue({
       query: "react",
       results: [
@@ -36,19 +34,16 @@ describe("searchWeb orchestration", () => {
         },
       ],
     });
-    searchBrave.mockResolvedValue({ query: "react", results: [] });
-    searchBing.mockResolvedValue({ query: "react", results: [] });
 
     const { searchWeb } = await import("@/lib/server/web-search/search");
     const batch = await searchWeb("react", 5);
 
     expect(batch.results).toHaveLength(1);
+    expect(batch.results[0]?.href).toBe("https://react.dev/");
     expect(searchDuckDuckGo).toHaveBeenCalledOnce();
-    expect(searchBrave).not.toHaveBeenCalled();
-    expect(searchBing).not.toHaveBeenCalled();
   });
 
-  it("falls through to Brave when DuckDuckGo is empty", async () => {
+  it("merges Brave results when DuckDuckGo is empty", async () => {
     searchDuckDuckGo.mockResolvedValue({ query: "vue", results: [] });
     searchBrave.mockResolvedValue({
       query: "vue",
@@ -61,18 +56,14 @@ describe("searchWeb orchestration", () => {
         },
       ],
     });
-    searchBing.mockResolvedValue({ query: "vue", results: [] });
 
     const { searchWeb } = await import("@/lib/server/web-search/search");
     const batch = await searchWeb("vue", 5);
 
     expect(batch.results[0]?.href).toBe("https://vuejs.org/");
-    expect(searchDuckDuckGo).toHaveBeenCalledOnce();
-    expect(searchBrave).toHaveBeenCalledOnce();
-    expect(searchBing).not.toHaveBeenCalled();
   });
 
-  it("falls through to Wikipedia when HTML providers are empty or rejected", async () => {
+  it("filters Bing noise and keeps Wikipedia for definitional queries", async () => {
     searchDuckDuckGo.mockResolvedValue({
       query: "what is webrtc",
       results: [],
@@ -105,6 +96,6 @@ describe("searchWeb orchestration", () => {
     const batch = await searchWeb("what is webrtc", 5);
 
     expect(batch.results[0]?.href).toContain("wikipedia.org/wiki/WebRTC");
-    expect(searchWikipediaEn).toHaveBeenCalledOnce();
+    expect(batch.results.some((r) => r.domain === "lipus.se")).toBe(false);
   });
 });

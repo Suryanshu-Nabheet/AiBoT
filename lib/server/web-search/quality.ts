@@ -155,6 +155,22 @@ export function isLowQualitySearchBatch(
   return false;
 }
 
+function filterResultsMissingQueryTokens(
+  query: string,
+  results: WebSearchSource[],
+): WebSearchSource[] {
+  const tokens = meaningfulQueryTokens(query);
+  if (tokens.length === 0) return results;
+
+  const matched = results.filter((result) => {
+    const blob =
+      `${result.title} ${result.snippet ?? ""} ${result.domain}`.toLowerCase();
+    return tokens.some((token) => blob.includes(token));
+  });
+
+  return matched.length > 0 ? matched : results;
+}
+
 export function finalizeSearchResults(
   query: string,
   results: WebSearchSource[],
@@ -164,7 +180,8 @@ export function finalizeSearchResults(
     query,
     sanitizeSearchResults(results),
   );
-  const newsFiltered = filterIrrelevantNewsHomepages(clean, query).slice(
+  const tokenAligned = filterResultsMissingQueryTokens(query, clean);
+  const newsFiltered = filterIrrelevantNewsHomepages(tokenAligned, query).slice(
     0,
     maxResults,
   );

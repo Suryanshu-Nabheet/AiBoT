@@ -2,7 +2,7 @@
 
 AiBoT can search the public web before the model replies, inject structured results into the chat request, and show a collapsible **trace** (queries, sources, and links) above the assistant answer—similar to the **Thinking** panel.
 
-Web search uses **keyless** HTML-based providers on the server. No Brave, Bing, or DuckDuckGo API keys are required.
+Web search uses **keyless** providers on the server (HTML scraping + public Wikipedia opensearch). **No search API keys** — the only required third-party key for AiBoT is **`OPENROUTER_API_KEY`** for chat models.
 
 ---
 
@@ -50,13 +50,12 @@ Implemented in `lib/web-search/query.ts`—no extra LLM call.
 
 ## Search providers (server)
 
-Order in `lib/server/web-search/search.ts`:
+`lib/server/web-search/search.ts` runs these **in parallel**, merges by URL, then applies quality filters:
 
-1. **Brave Search API** (optional) — when `BRAVE_SEARCH_API_KEY` is set; recommended on Vercel.
-2. **DuckDuckGo** — primary keyless path; best relevance from non-datacenter IPs.
-3. **Brave Search** (HTML) — fallback when DDG returns nothing or is blocked.
-4. **Bing** (HTML) — redirects decoded, low-relevance batches rejected.
-5. **English Wikipedia** (opensearch API) — stable last resort on Vercel when scrapers return locale/noise.
+1. **DuckDuckGo** — HTML SERP, then Lite HTML, then instant JSON when blocked on serverless.
+2. **Brave Search** (HTML, `country=US` / `search_lang=en`) — datacenter-friendly scraper.
+3. **English Wikipedia** (public opensearch) — reliable for “what/who is …” on Vercel.
+4. **Bing** (HTML, US market) — decoded redirect URLs; low-relevance hits discarded.
 
 Each query returns up to **8** results by default (configurable up to 12 on the API). Results include title, URL, domain, snippet, and a **brand** hint (Reddit, GitHub, Wikipedia, etc.) for UI badges.
 
@@ -102,9 +101,9 @@ Web search composes with **Thinking mode**, attachments, and arena side-by-side 
 
 ## Deployment notes
 
-- **Vercel / serverless:** If DuckDuckGo serves a bot challenge, Brave/Bing fallbacks still allow results without API keys.
+- **Vercel / serverless:** Parallel keyless providers + Wikipedia keep results useful when one scraper is blocked or returns locale noise.
 - **Timeouts:** Web search route `maxDuration` 30s; favicon route 10s.
-- **Environment:** Web search works keyless locally; for production on Vercel set optional `BRAVE_SEARCH_API_KEY` (Brave Search API) so results stay reliable when DuckDuckGo blocks datacenter IPs.
+- **Environment:** No extra env vars for search — only `OPENROUTER_API_KEY` (and optional `NEXT_PUBLIC_APP_URL`) for the app.
 
 ---
 

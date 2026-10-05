@@ -11,7 +11,10 @@ import {
 import { finalizeSearchResults } from "@/lib/server/web-search/quality";
 import { parseBraveSearchHtml } from "@/lib/server/web-search/brave";
 import { isDuckDuckGoBlockedHtml } from "@/lib/server/web-search/common";
-import { parseDuckDuckGoHtml } from "@/lib/server/web-search/duckduckgo";
+import {
+  parseDuckDuckGoHtml,
+  parseDuckDuckGoLiteHtml,
+} from "@/lib/server/web-search/duckduckgo";
 import { wikipediaSearchTerm } from "@/lib/server/web-search/wikipedia";
 
 describe("wikipediaSearchTerm", () => {
@@ -66,6 +69,17 @@ describe("planWebSearchQueries", () => {
       false,
     );
     expect(queries[0]).toContain("claude");
+  });
+});
+
+describe("parseDuckDuckGoLiteHtml", () => {
+  it("extracts external links from lite SERP markup", () => {
+    const html = `
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwebrtc.org%2F">WebRTC</a>
+    `;
+    const results = parseDuckDuckGoLiteHtml(html, 5);
+    expect(results).toHaveLength(1);
+    expect(results[0].href).toBe("https://webrtc.org/");
   });
 });
 
