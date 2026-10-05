@@ -4,6 +4,7 @@ import { searchBing } from "@/lib/server/web-search/bing";
 import { searchBraveApi } from "@/lib/server/web-search/brave-api";
 import { searchBrave } from "@/lib/server/web-search/brave";
 import { searchDuckDuckGo } from "@/lib/server/web-search/duckduckgo";
+import { searchWikipediaEn } from "@/lib/server/web-search/wikipedia";
 import { finalizeSearchResults } from "@/lib/server/web-search/quality";
 import type { WebSearchApiResult } from "@/lib/web-search/types";
 
@@ -35,6 +36,7 @@ export async function searchWeb(
     () => searchDuckDuckGo(trimmed, maxResults),
     () => searchBrave(trimmed, maxResults),
     () => searchBing(trimmed, maxResults),
+    () => searchWikipediaEn(trimmed, maxResults),
   ];
 
   for (const run of providers) {

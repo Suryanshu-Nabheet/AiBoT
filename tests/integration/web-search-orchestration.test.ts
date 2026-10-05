@@ -5,11 +5,13 @@ const searchBing = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchBrave = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchBraveApi = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchDuckDuckGo = vi.fn<() => Promise<WebSearchApiResult>>();
+const searchWikipediaEn = vi.fn<() => Promise<WebSearchApiResult>>();
 
 vi.mock("@/lib/server/web-search/bing", () => ({ searchBing }));
 vi.mock("@/lib/server/web-search/brave", () => ({ searchBrave }));
 vi.mock("@/lib/server/web-search/brave-api", () => ({ searchBraveApi }));
 vi.mock("@/lib/server/web-search/duckduckgo", () => ({ searchDuckDuckGo }));
+vi.mock("@/lib/server/web-search/wikipedia", () => ({ searchWikipediaEn }));
 
 describe("searchWeb orchestration", () => {
   beforeEach(() => {
@@ -17,7 +19,9 @@ describe("searchWeb orchestration", () => {
     searchBrave.mockReset();
     searchBraveApi.mockReset();
     searchDuckDuckGo.mockReset();
+    searchWikipediaEn.mockReset();
     searchBraveApi.mockResolvedValue({ query: "", results: [] });
+    searchWikipediaEn.mockResolvedValue({ query: "", results: [] });
   });
 
   it("prefers DuckDuckGo when it returns results", async () => {
@@ -66,5 +70,41 @@ describe("searchWeb orchestration", () => {
     expect(searchDuckDuckGo).toHaveBeenCalledOnce();
     expect(searchBrave).toHaveBeenCalledOnce();
     expect(searchBing).not.toHaveBeenCalled();
+  });
+
+  it("falls through to Wikipedia when HTML providers are empty or rejected", async () => {
+    searchDuckDuckGo.mockResolvedValue({
+      query: "what is webrtc",
+      results: [],
+    });
+    searchBrave.mockResolvedValue({ query: "what is webrtc", results: [] });
+    searchBing.mockResolvedValue({
+      query: "what is webrtc",
+      results: [
+        {
+          title: "&#214;vergripande analys",
+          href: "https://www.lipus.se/x",
+          domain: "lipus.se",
+          brand: "generic",
+        },
+      ],
+    });
+    searchWikipediaEn.mockResolvedValue({
+      query: "what is webrtc",
+      results: [
+        {
+          title: "WebRTC",
+          href: "https://en.wikipedia.org/wiki/WebRTC",
+          domain: "wikipedia.org",
+          brand: "wikipedia",
+        },
+      ],
+    });
+
+    const { searchWeb } = await import("@/lib/server/web-search/search");
+    const batch = await searchWeb("what is webrtc", 5);
+
+    expect(batch.results[0]?.href).toContain("wikipedia.org/wiki/WebRTC");
+    expect(searchWikipediaEn).toHaveBeenCalledOnce();
   });
 });

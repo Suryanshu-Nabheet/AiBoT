@@ -55,7 +55,8 @@ Order in `lib/server/web-search/search.ts`:
 1. **Brave Search API** (optional) — when `BRAVE_SEARCH_API_KEY` is set; recommended on Vercel.
 2. **DuckDuckGo** — primary keyless path; best relevance from non-datacenter IPs.
 3. **Brave Search** (HTML) — fallback when DDG returns nothing or is blocked.
-4. **Bing** (HTML) — last resort; redirects decoded, low-relevance batches rejected.
+4. **Bing** (HTML) — redirects decoded, low-relevance batches rejected.
+5. **English Wikipedia** (opensearch API) — stable last resort on Vercel when scrapers return locale/noise.
 
 Each query returns up to **8** results by default (configurable up to 12 on the API). Results include title, URL, domain, snippet, and a **brand** hint (Reddit, GitHub, Wikipedia, etc.) for UI badges.
 

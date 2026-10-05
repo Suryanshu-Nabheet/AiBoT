@@ -12,6 +12,14 @@ import { finalizeSearchResults } from "@/lib/server/web-search/quality";
 import { parseBraveSearchHtml } from "@/lib/server/web-search/brave";
 import { isDuckDuckGoBlockedHtml } from "@/lib/server/web-search/common";
 import { parseDuckDuckGoHtml } from "@/lib/server/web-search/duckduckgo";
+import { wikipediaSearchTerm } from "@/lib/server/web-search/wikipedia";
+
+describe("wikipediaSearchTerm", () => {
+  it("strips what-is phrasing for opensearch", () => {
+    expect(wikipediaSearchTerm("what is webrtc")).toBe("webrtc");
+    expect(wikipediaSearchTerm("who is Ada Lovelace")).toBe("Ada Lovelace");
+  });
+});
 
 describe("normalizeUserQueryForSearch", () => {
   it("strips web search instructions from the prompt", () => {
