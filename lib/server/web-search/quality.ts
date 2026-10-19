@@ -79,6 +79,12 @@ export function sanitizeSearchResults(
         (d) => domain === d || domain.endsWith(`.${d}`),
       )
     ) {
+      if (
+        domain === "news.google.com" &&
+        result.href.includes("/rss/articles/")
+      ) {
+        return true;
+      }
       return false;
     }
     if (/bing\.com|duckduckgo\.com|search\.brave\.com/i.test(result.href)) {

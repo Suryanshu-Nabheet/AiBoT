@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!upstream.ok) {
-      return new NextResponse(null, { status: 502 });
+      return new NextResponse(null, { status: 404 });
     }
 
     const bytes = await upstream.arrayBuffer();
@@ -48,6 +48,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch {
-    return new NextResponse(null, { status: 502 });
+    return new NextResponse(null, { status: 404 });
   }
 }

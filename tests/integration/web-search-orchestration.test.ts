@@ -4,11 +4,13 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
 const searchBing = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchBrave = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchDuckDuckGo = vi.fn<() => Promise<WebSearchApiResult>>();
+const searchGoogleNews = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchWikipediaEn = vi.fn<() => Promise<WebSearchApiResult>>();
 
 vi.mock("@/lib/server/web-search/bing", () => ({ searchBing }));
 vi.mock("@/lib/server/web-search/brave", () => ({ searchBrave }));
 vi.mock("@/lib/server/web-search/duckduckgo", () => ({ searchDuckDuckGo }));
+vi.mock("@/lib/server/web-search/google-news", () => ({ searchGoogleNews }));
 vi.mock("@/lib/server/web-search/wikipedia", () => ({ searchWikipediaEn }));
 
 describe("searchWeb orchestration", () => {
@@ -16,9 +18,11 @@ describe("searchWeb orchestration", () => {
     searchBing.mockReset();
     searchBrave.mockReset();
     searchDuckDuckGo.mockReset();
+    searchGoogleNews.mockReset();
     searchWikipediaEn.mockReset();
     searchBing.mockResolvedValue({ query: "", results: [] });
     searchBrave.mockResolvedValue({ query: "", results: [] });
+    searchGoogleNews.mockResolvedValue({ query: "", results: [] });
     searchWikipediaEn.mockResolvedValue({ query: "", results: [] });
   });
 
@@ -97,5 +101,32 @@ describe("searchWeb orchestration", () => {
 
     expect(batch.results[0]?.href).toContain("wikipedia.org/wiki/WebRTC");
     expect(batch.results.some((r) => r.domain === "lipus.se")).toBe(false);
+  });
+
+  it("returns Google News hits on serverless when other providers are empty", async () => {
+    searchDuckDuckGo.mockResolvedValue({ query: "nextjs news", results: [] });
+    searchBrave.mockResolvedValue({ query: "nextjs news", results: [] });
+    searchBing.mockResolvedValue({ query: "nextjs news", results: [] });
+    searchWikipediaEn.mockResolvedValue({ query: "nextjs news", results: [] });
+    searchGoogleNews.mockResolvedValue({
+      query: "nextjs news",
+      results: [
+        {
+          title: "Next.js 15 Release Announcement",
+          href: "https://news.google.com/articles/123",
+          domain: "vercel.com",
+          brand: "generic",
+          snippet:
+            "Next.js 15 has been officially released with React 19 support.",
+        },
+      ],
+    });
+
+    const { searchWeb } = await import("@/lib/server/web-search/search");
+    const batch = await searchWeb("nextjs news", 5);
+
+    expect(batch.results).toHaveLength(1);
+    expect(batch.results[0]?.title).toBe("Next.js 15 Release Announcement");
+    expect(batch.results[0]?.domain).toBe("vercel.com");
   });
 });

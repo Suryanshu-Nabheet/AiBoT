@@ -24,6 +24,15 @@ export async function runWebSearchForTurn(
     userQuery,
     options?.recentUserMessages ?? [],
   );
+
+  if (queries.length === 0) {
+    return {
+      batches: [],
+      trace: buildWebSearchTraceFromResults([], "complete"),
+      context: "",
+    };
+  }
+
   const response = await fetch("/api/web-search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

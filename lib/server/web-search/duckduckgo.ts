@@ -219,20 +219,52 @@ export async function searchDuckDuckGo(
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(DDG_HTML, {
-      method: "POST",
-      headers: DDG_HEADERS,
-      body: new URLSearchParams({ q: trimmed, b: "", kl: "us-en" }),
-      signal: controller.signal,
-      cache: "no-store",
-    });
-
     let results: WebSearchSource[] = [];
 
-    if (response.ok) {
-      const html = await response.text();
-      if (!isDuckDuckGoBlockedHtml(html)) {
-        results = parseDuckDuckGoHtml(html, maxResults);
+    // 1. Try GET on duckduckgo.com/html/?q=... (less aggressive bot filtering than POST)
+    try {
+      const getUrl = `https://duckduckgo.com/html/?${new URLSearchParams({
+        q: trimmed,
+        kl: "us-en",
+      })}`;
+      const getResponse = await fetch(getUrl, {
+        method: "GET",
+        headers: {
+          ...BROWSER_HEADERS,
+          Referer: "https://duckduckgo.com/",
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+      if (getResponse.ok) {
+        const getHtml = await getResponse.text();
+        if (!isDuckDuckGoBlockedHtml(getHtml)) {
+          results = parseDuckDuckGoHtml(getHtml, maxResults);
+        }
+      }
+    } catch {
+      // Ignore and continue to POST fallbacks
+    }
+
+    // 2. Try POST on html.duckduckgo.com/html/
+    if (results.length === 0) {
+      try {
+        const response = await fetch(DDG_HTML, {
+          method: "POST",
+          headers: DDG_HEADERS,
+          body: new URLSearchParams({ q: trimmed, b: "", kl: "us-en" }),
+          signal: controller.signal,
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          const html = await response.text();
+          if (!isDuckDuckGoBlockedHtml(html)) {
+            results = parseDuckDuckGoHtml(html, maxResults);
+          }
+        }
+      } catch {
+        // Ignore and continue to lite fallback
       }
     }
 

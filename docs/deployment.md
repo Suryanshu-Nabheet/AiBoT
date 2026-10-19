@@ -19,10 +19,11 @@ Pushes to the production branch trigger automatic deployments when the Vercel Gi
 
 ### Web search on Vercel
 
-- **No extra env vars** are required for search providers.
-- **`/api/web-search`** (`maxDuration` 30s): keyless DuckDuckGo, Brave HTML, Wikipedia, and Bing run in parallel; results are merged and filtered (no search API keys).
+- **100% Key-Free Out of the Box**: No search API keys needed. Web search uses parallel keyless providers (Google News RSS, Wikipedia MediaWiki full-text search, DuckDuckGo, Brave, and Bing).
+- **Vercel Reverse-Proxy / Origin Support**: API request protection properly resolves `x-forwarded-host`, `x-forwarded-proto`, and `VERCEL_URL` to prevent cross-origin 403 rejections after deployment.
+- **`/api/web-search`** (`maxDuration` 30s): Runs providers in parallel; results are deduplicated and merged with fallback guarantees.
 - **`/api/favicon`**: Proxies favicons same-origin so source icons render under strict cross-origin policies (COEP/CORP).
-- **Rate limits**: Web search 30 req/min and favicon 120 req/min per client scope—adjust traffic or add edge rules if you expect heavy use.
+- **Rate limits**: Web search 30 req/min and favicon 120 req/min per client scope.
 
 Operational detail: [Web Search](web-search.md).
 

@@ -16,4 +16,20 @@ describe.skipIf(!runLiveSearch)("searchWeb (live, keyless)", () => {
       expect(result.brand).toBeTruthy();
     }
   }, 30_000);
+
+  it("returns news and recent context for current events", async () => {
+    const { results } = await searchWeb(
+      "latest artificial intelligence news",
+      5,
+    );
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].title.length).toBeGreaterThan(0);
+    expect(results[0].href).toMatch(/^https?:\/\//);
+  }, 30_000);
+
+  it("returns factual results for entity questions", async () => {
+    const { results } = await searchWeb("who is Ada Lovelace", 5);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((r) => r.domain.includes("wikipedia.org"))).toBe(true);
+  }, 30_000);
 });

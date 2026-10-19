@@ -39,12 +39,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (batches.every((batch) => batch.results.length === 0)) {
-    return NextResponse.json(
-      { message: "Web search failed", batches },
-      { status: 502 },
-    );
-  }
-
   return NextResponse.json({ batches });
 }

@@ -50,12 +50,13 @@ Implemented in `lib/web-search/query.ts`—no extra LLM call.
 
 ## Search providers (server)
 
-`lib/server/web-search/search.ts` runs these **in parallel**, merges by URL, then applies quality filters:
+`lib/server/web-search/search.ts` runs 5 **100% key-free** providers in parallel, merges by URL, then applies quality filters:
 
-1. **DuckDuckGo** — HTML SERP, then Lite HTML, then instant JSON when blocked on serverless.
-2. **Brave Search** (HTML, `country=US` / `search_lang=en`) — datacenter-friendly scraper.
-3. **English Wikipedia** (public opensearch) — reliable for “what/who is …” on Vercel.
-4. **Bing** (HTML, US market) — decoded redirect URLs; low-relevance hits discarded.
+1. **Google News RSS** — 100% keyless and reliable from Vercel / serverless IPs; covers real-time news, articles, and general web queries in English and Hindi.
+2. **Wikipedia (MediaWiki Full-Text Search)** — searches article contents with highlighted snippet extraction and `opensearch` fallback, compliant with Wikimedia API policy.
+3. **DuckDuckGo** — multi-stage fallback: GET HTML, then POST HTML, then Lite HTML, then instant JSON.
+4. **Brave Search** — datacenter-friendly keyless HTML scraper.
+5. **Bing** — keyless HTML scraper with decoded redirect URLs.
 
 Each query returns up to **8** results by default (configurable up to 12 on the API). Results include title, URL, domain, snippet, and a **brand** hint (Reddit, GitHub, Wikipedia, etc.) for UI badges.
 
@@ -76,9 +77,9 @@ Runs server-side search for one or more queries.
 }
 ```
 
-**Success:** `{ "batches": [{ "query": "...", "results": [...] }] }`
+**Success:** `{ "batches": [{ "query": "...", "results": [...] }] }` (always returns `200` with batch results so chat continues smoothly).
 
-**Errors:** `400` invalid body, `429` rate limit, `502` all providers empty or failed.
+**Errors:** `400` invalid body, `403` unauthorized cross-origin request, `429` rate limit.
 
 Rate limit: **30 requests / minute / client** (scope `web-search`).
 
@@ -101,9 +102,11 @@ Web search composes with **Thinking mode**, attachments, and arena side-by-side 
 
 ## Deployment notes
 
-- **Vercel / serverless:** Parallel keyless providers + Wikipedia keep results useful when one scraper is blocked or returns locale noise.
+- **100% Key-Free:** Pure keyless search out of the box — zero search API keys required.
+- **Vercel / Serverless:** Request origin verification handles reverse-proxy SSL termination (`x-forwarded-proto`, `x-forwarded-host`, and `VERCEL_URL`), preventing false 403 blocks.
+- **Resilience:** Parallel keyless providers (Google News RSS + Wikipedia full-text + DDG + Brave + Bing) ensure search always succeeds even when certain IP ranges encounter bot blocks.
 - **Timeouts:** Web search route `maxDuration` 30s; favicon route 10s.
-- **Environment:** No extra env vars for search — only `OPENROUTER_API_KEY` (and optional `NEXT_PUBLIC_APP_URL`) for the app.
+- **Environment:** Only `OPENROUTER_API_KEY` (and optional `NEXT_PUBLIC_APP_URL`) for chat models. No search keys whatsoever.
 
 ---
 

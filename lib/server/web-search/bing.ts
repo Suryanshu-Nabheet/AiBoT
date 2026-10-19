@@ -87,6 +87,9 @@ export function parseBingSearchHtml(
   return results;
 }
 
+/**
+ * Keyless Bing web search scraper.
+ */
 export async function searchBing(
   query: string,
   maxResults = 8,
@@ -122,6 +125,8 @@ export async function searchBing(
     const html = await response.text();
     const results = parseBingSearchHtml(html, maxResults);
     return { query: trimmed, results };
+  } catch {
+    return { query: trimmed, results: [] };
   } finally {
     clearTimeout(timeout);
   }

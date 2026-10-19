@@ -53,6 +53,9 @@ export function parseBraveSearchHtml(
   return results;
 }
 
+/**
+ * Keyless Brave web search scraper.
+ */
 export async function searchBrave(
   query: string,
   maxResults = 8,
@@ -81,13 +84,15 @@ export async function searchBrave(
       cache: "no-store",
     });
 
-    const html = await response.text();
-    if (!response.ok && response.status !== 429) {
+    if (!response.ok) {
       return { query: trimmed, results: [] };
     }
 
+    const html = await response.text();
     const results = parseBraveSearchHtml(html, maxResults);
     return { query: trimmed, results };
+  } catch {
+    return { query: trimmed, results: [] };
   } finally {
     clearTimeout(timeout);
   }

@@ -15,6 +15,7 @@ import {
   parseDuckDuckGoHtml,
   parseDuckDuckGoLiteHtml,
 } from "@/lib/server/web-search/duckduckgo";
+import { parseGoogleNewsRss } from "@/lib/server/web-search/google-news";
 import { wikipediaSearchTerm } from "@/lib/server/web-search/wikipedia";
 
 describe("wikipediaSearchTerm", () => {
@@ -202,5 +203,30 @@ describe("parseBraveSearchHtml", () => {
     expect(results[0].href).toBe("https://example.com/page");
     expect(results[0].snippet).toBe("A helpful snippet about the page.");
     expect(results[0].domain).toBe("example.com");
+  });
+});
+
+describe("parseGoogleNewsRss", () => {
+  it("extracts title, publisher domain, and snippet from Google News RSS", () => {
+    const xml = `
+      <rss version="2.0">
+        <channel>
+          <item>
+            <title>Next.js 15 Is Now Generally Available - Vercel</title>
+            <link>https://news.google.com/rss/articles/CBMi123</link>
+            <description>&lt;a href="https://news.google.com/articles/123"&gt;Next.js 15 Is Now Generally Available&lt;/a&gt; with React 19 support</description>
+            <source url="https://vercel.com">Vercel</source>
+          </item>
+        </channel>
+      </rss>
+    `;
+    const results = parseGoogleNewsRss(xml, 5);
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("Next.js 15 Is Now Generally Available");
+    expect(results[0].href).toBe(
+      "https://news.google.com/rss/articles/CBMi123",
+    );
+    expect(results[0].domain).toBe("vercel.com");
+    expect(results[0].snippet).toContain("React 19 support");
   });
 });
