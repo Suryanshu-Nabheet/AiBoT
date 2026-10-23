@@ -29,7 +29,9 @@ describe("evaluateWebSearchIntent", () => {
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(false);
+        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(
+          false,
+        );
         expect(result.reason).toBe("skip_self_identity");
         expect(result.queries).toEqual([]);
       }
@@ -45,7 +47,9 @@ describe("evaluateWebSearchIntent", () => {
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(false);
+        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(
+          false,
+        );
         expect(result.reason).toBe("skip_conversational");
       }
     });
@@ -61,7 +65,9 @@ describe("evaluateWebSearchIntent", () => {
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(false);
+        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(
+          false,
+        );
         expect(result.reason).toBe("skip_basic_math");
       }
     });
@@ -77,7 +83,9 @@ describe("evaluateWebSearchIntent", () => {
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(false);
+        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(
+          false,
+        );
         expect(result.reason).toBe("skip_chitchat");
       }
     });
@@ -91,7 +99,9 @@ describe("evaluateWebSearchIntent", () => {
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(false);
+        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(
+          false,
+        );
         expect(result.reason).toBe("skip_creative");
       }
     });
@@ -105,7 +115,9 @@ describe("evaluateWebSearchIntent", () => {
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(false);
+        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(
+          false,
+        );
         expect(result.reason).toBe("skip_basic_code");
       }
     });
@@ -119,7 +131,9 @@ describe("evaluateWebSearchIntent", () => {
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(false);
+        expect(result.shouldSearch, `Expected "${query}" to skip search`).toBe(
+          false,
+        );
         expect(result.reason).toBe("skip_general_knowledge");
       }
     });
@@ -178,7 +192,10 @@ describe("evaluateWebSearchIntent", () => {
   describe("Contextual pronoun and command resolution", () => {
     it("resolves pronouns from previous conversation turn", () => {
       const recent = ["who is Sam Altman?"];
-      const queries = extractCleanSearchQueries("what is his latest news?", recent);
+      const queries = extractCleanSearchQueries(
+        "what is his latest news?",
+        recent,
+      );
       expect(queries.some((q) => /Sam Altman/i.test(q))).toBe(true);
     });
 
@@ -230,9 +247,12 @@ describe("evaluateWebSearchIntent", () => {
         },
       ];
 
-      const result = evaluateWebSearchIntent("do web search to get more context", {
-        conversationHistory: history,
-      });
+      const result = evaluateWebSearchIntent(
+        "do web search to get more context",
+        {
+          conversationHistory: history,
+        },
+      );
       expect(result.shouldSearch).toBe(true);
       expect(result.queries.length).toBeGreaterThan(0);
       expect(
@@ -240,7 +260,9 @@ describe("evaluateWebSearchIntent", () => {
         `Expected queries to contain Suryanshu Nabheet, got: ${JSON.stringify(result.queries)}`,
       ).toBe(true);
 
-      const isNeeded = isWebSearchRequestedOrNeeded("do web search to get more context");
+      const isNeeded = isWebSearchRequestedOrNeeded(
+        "do web search to get more context",
+      );
       expect(isNeeded).toBe(true);
     });
 
@@ -254,7 +276,10 @@ describe("evaluateWebSearchIntent", () => {
 
       for (const query of explicitCases) {
         const result = evaluateWebSearchIntent(query);
-        expect(result.shouldSearch, `Expected "${query}" to trigger search`).toBe(true);
+        expect(
+          result.shouldSearch,
+          `Expected "${query}" to trigger search`,
+        ).toBe(true);
         expect(result.reason).toBe("explicit_request");
         expect(
           result.queries.some((q) => /Suryanshu Nabheet/i.test(q)),
@@ -286,9 +311,15 @@ describe("evaluateWebSearchIntent", () => {
     it("strips leading conjunctions and conversational transitions from search queries", () => {
       const cases = [
         { raw: "and who is Elon Musk", expected: "Elon Musk" },
-        { raw: "and what about Tesla stock price", expected: "Tesla stock price" },
+        {
+          raw: "and what about Tesla stock price",
+          expected: "Tesla stock price",
+        },
         { raw: "so what happened with OpenAI today", expected: "OpenAI today" },
-        { raw: "can you please search online and tell me latest NASA news", expected: "latest NASA news" },
+        {
+          raw: "can you please search online and tell me latest NASA news",
+          expected: "latest NASA news",
+        },
       ];
       for (const { raw, expected } of cases) {
         const queries = extractCleanSearchQueries(raw);
@@ -310,18 +341,25 @@ describe("isWebSearchRequestedOrNeeded", () => {
   });
 
   it("detects explicit search in user query", () => {
-    expect(isWebSearchRequestedOrNeeded("search the web for the latest movies")).toBe(true);
-    expect(isWebSearchRequestedOrNeeded("can you google this for me?")).toBe(true);
+    expect(
+      isWebSearchRequestedOrNeeded("search the web for the latest movies"),
+    ).toBe(true);
+    expect(isWebSearchRequestedOrNeeded("can you google this for me?")).toBe(
+      true,
+    );
   });
 
   it("detects when assistant indicates it cannot browse or search is off", () => {
     const assistantReply =
       "I cannot browse the live web or access real-time internet. Web search is currently turned off.";
-    expect(isWebSearchRequestedOrNeeded("tell me today's news", assistantReply)).toBe(true);
+    expect(
+      isWebSearchRequestedOrNeeded("tell me today's news", assistantReply),
+    ).toBe(true);
   });
 
   it("returns false for basic questions without search intent or assistant denial", () => {
-    expect(isWebSearchRequestedOrNeeded("what is 2 + 2", "2 + 2 is 4.")).toBe(false);
+    expect(isWebSearchRequestedOrNeeded("what is 2 + 2", "2 + 2 is 4.")).toBe(
+      false,
+    );
   });
 });
-

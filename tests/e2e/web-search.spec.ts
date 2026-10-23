@@ -62,11 +62,16 @@ test.describe("Web search mode", () => {
       localStorage.setItem("aibot_web_search_enabled", "false");
     });
     await mockWebSearchApi(page);
-    await mockChatStream(page, "Suryanshu Nabheet is the founder and creator of AiBoT.");
+    await mockChatStream(
+      page,
+      "Suryanshu Nabheet is the founder and creator of AiBoT.",
+    );
 
     await page.goto("/");
     const composer = page.getByPlaceholder(/message aibot/i);
-    await composer.fill("find more info of your founder do web search and get more context");
+    await composer.fill(
+      "find more info of your founder do web search and get more context",
+    );
     await page.getByRole("button", { name: /send message/i }).click();
 
     // Verify the sleek interactive bar appears

@@ -38,24 +38,18 @@ function normalizeMath(markdown: string): string {
 
   // 1. Explicit display math: \[ ... \] -> $$ ... $$
   // Prevent runaway matches across blank lines or markdown headings
-  result = result.replace(
-    /\\\[([^\n]+|\n(?!\s*\n)[^\n]+)*?\\\]/g,
-    (match) => {
-      const formula = match.slice(2, -2).trim();
-      if (!formula || /\n\s*\n|\n\s*#{1,6}\s/.test(formula)) return match;
-      return `$$\n${formula}\n$$`;
-    },
-  );
+  result = result.replace(/\\\[([^\n]+|\n(?!\s*\n)[^\n]+)*?\\\]/g, (match) => {
+    const formula = match.slice(2, -2).trim();
+    if (!formula || /\n\s*\n|\n\s*#{1,6}\s/.test(formula)) return match;
+    return `$$\n${formula}\n$$`;
+  });
 
   // 2. Explicit inline math: \( ... \) -> $...$ (or $$ if multiline)
-  result = result.replace(
-    /\\\(([\s\S]*?)\\\)/g,
-    (match, formula: string) => {
-      const trimmed = formula.trim();
-      if (!trimmed || /\n\s*\n/.test(trimmed)) return match;
-      return trimmed.includes("\n") ? `$$\n${trimmed}\n$$` : `$${trimmed}$`;
-    },
-  );
+  result = result.replace(/\\\(([\s\S]*?)\\\)/g, (match, formula: string) => {
+    const trimmed = formula.trim();
+    if (!trimmed || /\n\s*\n/.test(trimmed)) return match;
+    return trimmed.includes("\n") ? `$$\n${trimmed}\n$$` : `$${trimmed}$`;
+  });
 
   // 3. Bracketed display equations on their own lines: [ ... ]
   // ONLY match compact, single-formula blocks without markdown paragraphs or lists

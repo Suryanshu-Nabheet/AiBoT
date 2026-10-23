@@ -214,7 +214,9 @@ export function useChatSession({
   const hydratedConversationIdRef = useRef<string | null>(null);
   const messagesRef = useRef(messages);
   const streamPersistTickRef = useRef(0);
-  const webSearchDecisionResolverRef = useRef<((approved: boolean) => void) | null>(null);
+  const webSearchDecisionResolverRef = useRef<
+    ((approved: boolean) => void) | null
+  >(null);
 
   const confirmWebSearchPrompt = useCallback((approved: boolean) => {
     if (webSearchDecisionResolverRef.current) {
@@ -742,9 +744,7 @@ export function useChatSession({
           if (pendingAssistantId) {
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === pendingAssistantId
-                  ? { ...m, webSearchTrace }
-                  : m,
+                m.id === pendingAssistantId ? { ...m, webSearchTrace } : m,
               ),
             );
           }
@@ -779,9 +779,7 @@ export function useChatSession({
           if (pendingAssistantId) {
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === pendingAssistantId
-                  ? { ...m, webSearchTrace }
-                  : m,
+                m.id === pendingAssistantId ? { ...m, webSearchTrace } : m,
               ),
             );
           }
@@ -804,9 +802,7 @@ export function useChatSession({
         if (pendingAssistantId) {
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === pendingAssistantId
-                ? { ...m, webSearchTrace }
-                : m,
+              m.id === pendingAssistantId ? { ...m, webSearchTrace } : m,
             ),
           );
         }
@@ -1123,7 +1119,10 @@ export function useChatSession({
         if (thinkingRequested) {
           const tempId = pendingAssistantId ?? newAssistantMessageId();
           setMessages((prev) => {
-            if (pendingAssistantId && prev.some((m) => m.id === pendingAssistantId)) {
+            if (
+              pendingAssistantId &&
+              prev.some((m) => m.id === pendingAssistantId)
+            ) {
               return prev.map((m) =>
                 m.id === tempId
                   ? {
@@ -1238,7 +1237,10 @@ export function useChatSession({
         ];
 
         setMessages((prev) => {
-          if (pendingAssistantId && prev.some((m) => m.id === pendingAssistantId)) {
+          if (
+            pendingAssistantId &&
+            prev.some((m) => m.id === pendingAssistantId)
+          ) {
             return prev.map((m) =>
               m.id === tempId
                 ? {
@@ -1389,7 +1391,9 @@ export function useChatSession({
       let targetAttachments: ChatAttachment[] = [];
 
       setMessages((prev) => {
-        const assistantIndex = prev.findIndex((m) => m.id === assistantMessageId);
+        const assistantIndex = prev.findIndex(
+          (m) => m.id === assistantMessageId,
+        );
         if (assistantIndex > 0) {
           const prevMsg = prev[assistantIndex - 1];
           if (prevMsg && prevMsg.role === Role.User) {

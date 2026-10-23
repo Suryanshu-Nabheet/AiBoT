@@ -75,7 +75,10 @@ export function WebSearchPromptBar({
             )}
             {countdown > 0 && !isSearching && (
               <span className="text-xs text-muted-foreground/80 font-normal shrink-0">
-                ({t("chat.webSearch.proceedingIn", { count: countdown }) || `proceeding in ${countdown}s...`})
+                (
+                {t("chat.webSearch.proceedingIn", { count: countdown }) ||
+                  `proceeding in ${countdown}s...`}
+                )
               </span>
             )}
           </div>

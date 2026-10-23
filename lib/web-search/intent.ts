@@ -111,7 +111,8 @@ export function evaluateWebSearchIntent(
     };
   }
 
-  const history = options?.conversationHistory ?? options?.recentUserMessages ?? [];
+  const history =
+    options?.conversationHistory ?? options?.recentUserMessages ?? [];
 
   const hasExplicitSearchRequest =
     EXPLICIT_SEARCH_REGEX.test(trimmed) ||
@@ -176,7 +177,10 @@ export function evaluateWebSearchIntent(
   }
 
   // Creative writing requests without temporal/news anchors
-  if (CREATIVE_WRITING_REGEX.test(trimmed) && !FRESHNESS_KEYWORDS_REGEX.test(trimmed)) {
+  if (
+    CREATIVE_WRITING_REGEX.test(trimmed) &&
+    !FRESHNESS_KEYWORDS_REGEX.test(trimmed)
+  ) {
     return {
       shouldSearch: false,
       reason: "skip_creative",
@@ -320,20 +324,26 @@ export function extractSubjectFromConversationHistory(
     const headerMatch = cleaned.match(/^#{1,3}\s+([^.\n]{3,80})/m);
     if (headerMatch?.[1]) {
       const candidate = headerMatch[1].replace(/[:*#_]+/g, "").trim();
-      if (candidate.length >= 4 && !/clarification|status|note|warning|aibot/i.test(candidate)) {
+      if (
+        candidate.length >= 4 &&
+        !/clarification|status|note|warning|aibot/i.test(candidate)
+      ) {
         return candidate.slice(0, 80);
       }
     }
 
     // 3. Check for bolded entities: e.g. **SpaceX** or **Suryanshu Nabheet**
-    const boldMatches = Array.from(cleaned.matchAll(/\*\*([A-Z0-9][a-zA-Z0-9\s._-]{2,40})\*\*/g));
+    const boldMatches = Array.from(
+      cleaned.matchAll(/\*\*([A-Z0-9][a-zA-Z0-9\s._-]{2,40})\*\*/g),
+    );
     if (boldMatches.length > 0) {
       const entities = boldMatches
         .map((m) => m[1].trim())
         .filter(
           (e) =>
-            !/important|clarification|note|status|warning|merger|acquisition|aibot|assistant/i.test(e) &&
-            !/^(your|my)\s+/i.test(e),
+            !/important|clarification|note|status|warning|merger|acquisition|aibot|assistant/i.test(
+              e,
+            ) && !/^(your|my)\s+/i.test(e),
         );
       if (entities.length > 0) {
         return entities[0].slice(0, 80);
@@ -341,7 +351,9 @@ export function extractSubjectFromConversationHistory(
     }
 
     // 4. Check for named company/person entities (e.g. Suryanshu Nabheet, SpaceX, xAI, Elon Musk, Tesla, Sam Altman, OpenAI)
-    const entityMatches = cleaned.match(/\b([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){0,2}|xAI|SpaceX|OpenAI|DeepSeek)\b/g);
+    const entityMatches = cleaned.match(
+      /\b([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){0,2}|xAI|SpaceX|OpenAI|DeepSeek)\b/g,
+    );
     if (entityMatches && entityMatches.length > 0) {
       const filtered = entityMatches.filter(
         (e) =>
@@ -355,18 +367,26 @@ export function extractSubjectFromConversationHistory(
           return multiWordPerson.slice(0, 80);
         }
         const unique = Array.from(new Set(filtered)).slice(0, 3);
-        const topicWord = cleaned.match(/\b(merger|acquisition|deals?|stock|revenue|launch|features?|release|updates?)\b/i);
-        const subject = topicWord ? `${unique.join(" ")} ${topicWord[1]}` : unique.join(" ");
+        const topicWord = cleaned.match(
+          /\b(merger|acquisition|deals?|stock|revenue|launch|features?|release|updates?)\b/i,
+        );
+        const subject = topicWord
+          ? `${unique.join(" ")} ${topicWord[1]}`
+          : unique.join(" ");
         return subject.slice(0, 80);
       }
     }
 
     // 5. Check for explicit "who is / what is / about" pattern for external entities (ignoring assistant identity)
-    const whoWhatMatch = cleaned.match(/\b(?:who\s+is|what\s+is|about)\s+([^.?!,]{3,80})/i);
+    const whoWhatMatch = cleaned.match(
+      /\b(?:who\s+is|what\s+is|about)\s+([^.?!,]{3,80})/i,
+    );
     if (whoWhatMatch?.[1]) {
       const candidate = whoWhatMatch[1].trim();
       if (
-        !/\b(you|your|yourself|u|ur|founder|founer|creator|aibot|assistant)\b/i.test(candidate) &&
+        !/\b(you|your|yourself|u|ur|founder|founer|creator|aibot|assistant)\b/i.test(
+          candidate,
+        ) &&
         candidate.length >= 3
       ) {
         return candidate.slice(0, 80);
@@ -452,7 +472,10 @@ export function extractCleanSearchQueries(
       /\b(?:search\s+(?:the\s+)?(?:web|internet)|search\s+online|look\s+up\s+online|browse\s+the\s+web)\s+(?:for|about|and\s+tell\s+me|and\s+find)?/gi,
       "",
     )
-    .replace(/\b(?:and\s+then\s+)?(?:give|tell|show)\s+(?:me\s+)?(?:the\s+)?/gi, "")
+    .replace(
+      /\b(?:and\s+then\s+)?(?:give|tell|show)\s+(?:me\s+)?(?:the\s+)?/gi,
+      "",
+    )
     .replace(
       /\b(?:to\s+(?:get|find|see|learn)|and\s+(?:get|find|see|learn)|for|about)\s+(?:the\s+)?(?:more\s+|latest\s+|recent\s+|up-to-date\s+)?(?:context|information|info|details|updates?|data|facts?)\b/gi,
       "",
@@ -503,7 +526,10 @@ export function extractCleanSearchQueries(
 
   // 4. Strip trailing conversational fluff
   cleaned = cleaned
-    .replace(/\s+(?:for\s+me|and\s+tell\s+me|and\s+explain|to\s+me|please)\s*[.?!]*$/gi, "")
+    .replace(
+      /\s+(?:for\s+me|and\s+tell\s+me|and\s+explain|to\s+me|please)\s*[.?!]*$/gi,
+      "",
+    )
     .trim();
 
   // 5. Remove leading/trailing punctuation

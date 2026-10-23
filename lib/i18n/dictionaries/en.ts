@@ -193,7 +193,8 @@ export const en = {
   "chat.webSearch.showMore": "Show {count} more",
   "chat.webSearch.showLess": "Show less",
   "chat.webSearch.offTitle": "Web search is turned off",
-  "chat.webSearch.offDescription": "This question asked for web search or live information, but Web Search is currently off.",
+  "chat.webSearch.offDescription":
+    "This question asked for web search or live information, but Web Search is currently off.",
   "chat.webSearch.turnOnAndSearch": "Turn on Web Search & Search Now",
   "chat.webSearch.searchingProgress": "Searching web...",
   "chat.webSearch.proactiveHint": "Web search is off. Click to turn on.",

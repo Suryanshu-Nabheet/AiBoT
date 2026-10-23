@@ -36,7 +36,9 @@ a^2 + b^2 = c^2
 where $c$ is the hypotenuse, and $a$ and $b$ are the other two sides.
 `;
     const out = preprocessAssistantMarkdown(raw);
-    expect(out).toContain("$$\n\\text{Angle A} + \\text{Angle B} + \\text{Angle C} = 180^\\circ\n$$");
+    expect(out).toContain(
+      "$$\n\\text{Angle A} + \\text{Angle B} + \\text{Angle C} = 180^\\circ\n$$",
+    );
     expect(out).toContain("$$\na^2 + b^2 = c^2\n$$");
     expect(out).toContain("- **Pythagorean Theorem**:");
     expect(out).not.toContain("$$\n\\text{Angle A}[\\s\\S]*where");
@@ -58,7 +60,9 @@ Finding missing sides.
 ]
 `;
     const out = preprocessAssistantMarkdown(raw);
-    expect(out).toContain("$$\n\\text{Area} = \\frac{1}{2} \\times \\text{base} \\times \\text{height}\n$$");
+    expect(out).toContain(
+      "$$\n\\text{Area} = \\frac{1}{2} \\times \\text{base} \\times \\text{height}\n$$",
+    );
     expect(out).toContain("### Practical Examples");
     expect(out).not.toContain("$$\\n2. \\*\\*Mathematical Problems");
   });
@@ -167,7 +171,7 @@ where the base is any one of the sides, and the height is the perpendicular dist
     expect(html).not.toContain("#cc0000");
 
     // All formulas converted to beautiful KaTeX math
-    expect(html).toContain("class=\"katex\"");
+    expect(html).toContain('class="katex"');
     expect(html).toContain("Definition of a Triangle</h1>");
     expect(html).toContain("Types of Triangles</h1>");
     expect(html).toContain("Properties of a Triangle</h1>");

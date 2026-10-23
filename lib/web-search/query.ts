@@ -69,7 +69,12 @@ function needsContextualRewrite(query: string): boolean {
   if (/^more\s+(info|information|details)\b/.test(q)) return true;
   if (/^(tell me )?more about\b/.test(q)) return true;
   if (/^(?:to\s+get\s+)?more\s+context\b/.test(q)) return true;
-  if (/^(?:context|more\s+context|information|more\s+info|details|more\s+details)$/.test(q)) return true;
+  if (
+    /^(?:context|more\s+context|information|more\s+info|details|more\s+details)$/.test(
+      q,
+    )
+  )
+    return true;
   return false;
 }
 
@@ -160,7 +165,9 @@ export function planWebSearchQueries(
   if (planned.length > 0) return planned;
 
   const userMessages = history.map((h) =>
-    typeof h === "string" ? h : String((h as { content?: unknown })?.content ?? ""),
+    typeof h === "string"
+      ? h
+      : String((h as { content?: unknown })?.content ?? ""),
   );
   const primary = resolveSearchQueryWithContext(userQuery, userMessages);
   if (!primary) return [];
@@ -186,4 +193,3 @@ export {
   type SearchIntentReason,
   type SearchIntentResult,
 } from "./intent";
-
