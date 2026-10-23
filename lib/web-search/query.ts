@@ -1,5 +1,23 @@
+import { extractCleanSearchQueries } from "./intent";
+
 function extractTopicQuery(raw: string): string | null {
-  const trimmed = raw.trim();
+  let trimmed = raw.trim();
+
+  // Guard against assistant self-identity lookups
+  if (
+    /\b(?:who\s+is\s+your\s+founder|who\s+created\s+you|who\s+made\s+you|who\s+built\s+you|who\s+is\s+aibot)\b/i.test(
+      trimmed,
+    )
+  ) {
+    return null;
+  }
+
+  // Strip leading conversational conjunctions (e.g. "and who is", "so what is")
+  trimmed = trimmed.replace(
+    /^(?:and|so|also|then|but|now|well|okay|ok|hey|actually)\s+/i,
+    "",
+  );
+
   const newsOf = trimmed.match(
     /\b(?:latest|recent|current|today'?s?)\s+news\s+(?:of|in|about|from)\s+(.+?)(?:[.?!,]|$)/i,
   );
@@ -50,6 +68,8 @@ function needsContextualRewrite(query: string): boolean {
   if (/\b(him|her|them|they|this person|that person)\b/.test(q)) return true;
   if (/^more\s+(info|information|details)\b/.test(q)) return true;
   if (/^(tell me )?more about\b/.test(q)) return true;
+  if (/^(?:to\s+get\s+)?more\s+context\b/.test(q)) return true;
+  if (/^(?:context|more\s+context|information|more\s+info|details|more\s+details)$/.test(q)) return true;
   return false;
 }
 
@@ -78,10 +98,23 @@ export function resolveSearchQueryWithContext(
 
 /** Strip chat instructions so search queries stay focused on the topic. */
 export function normalizeUserQueryForSearch(userQuery: string): string {
-  const topic = extractTopicQuery(userQuery);
+  let q = userQuery.trim().replace(/\s+/g, " ");
+
+  q = q.replace(
+    /\b(?:your\s+founder|the\s+founder\s+of\s+aibot|aibot'?s?\s+founder|your\s+creator|creator\s+of\s+aibot)\b/gi,
+    "Suryanshu Nabheet",
+  );
+
+  const topic = extractTopicQuery(q);
   if (topic) return topic.slice(0, 500);
 
-  let q = userQuery.trim().replace(/\s+/g, " ");
+  q = q
+    .replace(/^(?:and|so|also|then|but|now|well|okay|ok|hey|actually)\s+/gi, "")
+    .replace(
+      /^(?:can\s+you\s+(?:please\s+)?(?:tell\s+me|find|show\s+me|give\s+me|search|look\s+up)?|could\s+you\s+(?:please\s+)?(?:tell\s+me|find|show\s+me|give\s+me|search|look\s+up)?|please\s+(?:tell\s+me|find|show\s+me|give\s+me|search|look\s+up)?|tell\s+me\s+(?:about|what\s+is|who\s+is)?|find\s+(?:out\s+)?(?:more\s+)?(?:info|information|details|context)?\s*(?:of|about|on)?|i\s+(?:want|need)\s+to\s+know|do\s+you\s+know|what\s+about|how\s+about)\s+/gi,
+      "",
+    )
+    .replace(/^(?:and|so|also|then|but|now|well|okay|ok|hey)\s+/gi, "");
 
   q = q
     .replace(
@@ -93,7 +126,7 @@ export function normalizeUserQueryForSearch(userQuery: string): string {
     .replace(/\bgive\s+(?:me\s+)?(?:the\s+)?/gi, "")
     .replace(/\bsearch\s+the\s+web\s+for\b/gi, "")
     .replace(
-      /\bto\s+get\s+(the\s+)?(latest|recent|up-to-date)\s+context\b/gi,
+      /\b(?:to\s+(?:get|find|see|learn)|and\s+(?:get|find|see|learn)|for|about)\s+(?:the\s+)?(?:more\s+|latest\s+|recent\s+|up-to-date\s+)?(?:context|information|info|details|updates?|data|facts?)\b/gi,
       "",
     )
     .replace(/\b(get\s+)?(latest|recent|up-to-date)\s+context\b/gi, "")
@@ -121,9 +154,15 @@ export function normalizeUserQueryForSearch(userQuery: string): string {
 /** Derive 1–2 keyless search queries from the user message (no LLM). */
 export function planWebSearchQueries(
   userQuery: string,
-  recentUserMessages: string[] = [],
+  history: (string | { role?: string; content?: unknown })[] = [],
 ): string[] {
-  const primary = resolveSearchQueryWithContext(userQuery, recentUserMessages);
+  const planned = extractCleanSearchQueries(userQuery, history);
+  if (planned.length > 0) return planned;
+
+  const userMessages = history.map((h) =>
+    typeof h === "string" ? h : String((h as { content?: unknown })?.content ?? ""),
+  );
+  const primary = resolveSearchQueryWithContext(userQuery, userMessages);
   if (!primary) return [];
 
   const year = new Date().getFullYear();
@@ -139,3 +178,12 @@ export function planWebSearchQueries(
 
   return queries.slice(0, 2);
 }
+
+export {
+  evaluateWebSearchIntent,
+  extractCleanSearchQueries,
+  isWebSearchRequestedOrNeeded,
+  type SearchIntentReason,
+  type SearchIntentResult,
+} from "./intent";
+

@@ -224,6 +224,11 @@ export type Message = {
   shouldAnimate?: boolean;
   /** Agent web-search trace shown above the assistant reply. */
   webSearchTrace?: WebSearchTrace;
+  /** Active web-search confirmation prompt during response time. */
+  webSearchPrompt?: {
+    active: boolean;
+    query?: string;
+  };
 };
 
 export type Messages = Message[];

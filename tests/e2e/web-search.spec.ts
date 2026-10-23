@@ -54,4 +54,35 @@ test.describe("Web search mode", () => {
       content.indexOf("Web search context"),
     );
   });
+
+  test("shows inline search confirmation bar when web search is off and user asks for search", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("aibot_web_search_enabled", "false");
+    });
+    await mockWebSearchApi(page);
+    await mockChatStream(page, "Suryanshu Nabheet is the founder and creator of AiBoT.");
+
+    await page.goto("/");
+    const composer = page.getByPlaceholder(/message aibot/i);
+    await composer.fill("find more info of your founder do web search and get more context");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    // Verify the sleek interactive bar appears
+    const searchWebBtn = page.getByRole("button", { name: /search web/i });
+    await expect(searchWebBtn).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/web search requested/i)).toBeVisible();
+
+    // Click Search Web
+    await searchWebBtn.click();
+
+    // Verify search trace is shown and answer appears
+    await expect(page.getByTestId("web-search-trace")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByText(/suryanshu nabheet is the founder/i),
+    ).toBeVisible({ timeout: 15_000 });
+  });
 });

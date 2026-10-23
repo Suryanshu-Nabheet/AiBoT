@@ -37,8 +37,21 @@ export function buildWebSearchTraceFromResults(
 
   for (const batch of batches) {
     if (!batch.query.trim()) continue;
+    const hasExplicitBrandInQuery =
+      /\b(?:youtube|reddit|github|twitter|x\.com)\b/i.test(batch.query);
+    const allSameBrand =
+      batch.results.length > 0 &&
+      batch.results.every(
+        (r) =>
+          r.brand &&
+          r.brand === batch.results[0]?.brand &&
+          r.brand !== "generic",
+      );
+
     const topBrand =
-      batch.results[0]?.brand && batch.results[0].brand !== "generic"
+      (hasExplicitBrandInQuery || allSameBrand) &&
+      batch.results[0]?.brand &&
+      batch.results[0].brand !== "generic"
         ? batch.results[0].brand
         : undefined;
     const label = labelForSearchStep(topBrand);

@@ -34,10 +34,18 @@ const customKeysSchema = z
   })
   .optional();
 
-export const webSearchRequestSchema = z.object({
-  queries: z.array(z.string().trim().min(1).max(500)).min(1).max(3),
-  maxResults: z.number().int().min(1).max(12).optional(),
-});
+export const webSearchRequestSchema = z.union([
+  z.object({
+    queries: z.array(z.string().trim().min(1).max(500)).min(1).max(3),
+    maxResults: z.number().int().min(1).max(12).optional(),
+  }),
+  z.object({
+    query: z.string().trim().min(1).max(2000),
+    recentUserMessages: z.array(z.string().trim().max(1000)).max(10).optional(),
+    maxResults: z.number().int().min(1).max(12).optional(),
+    force: z.boolean().optional(),
+  }),
+]);
 
 export const chatRequestSchema = z.object({
   messages: z

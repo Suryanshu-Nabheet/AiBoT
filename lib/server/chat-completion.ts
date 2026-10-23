@@ -200,6 +200,9 @@ export async function openChatUpstreamStream(
         }),
       ],
       stream: true,
+      options: {
+        num_ctx: 8192,
+      },
     };
 
     let response = await fetch(`${targetUrl}/api/chat`, {

@@ -8,17 +8,33 @@ Web search uses **keyless** providers on the server (HTML scraping + public Wiki
 
 ## User flow
 
-1. Open the **model menu** in the composer (same area as **Thinking**).
+1. Open the **model menu** in the composer (same area as **Thinking**), or click the proactive prompt when typing a search request.
 2. Turn on **Web search** (“Search the web before replying for fresher facts and sources”).
 3. Send a message as usual.
 
+### Agentic Search Decision & Execution
+
 On each turn with web search enabled:
 
-1. The UI shows a running trace (“Searching the web…”).
-2. The client calls `POST /api/web-search` with one or two derived queries.
-3. Search results are formatted as **Web search context** and appended to the user message sent to `/api/chat`.
-4. The trace updates to **Ran N search(es) · M sources** with expandable query rows and source links.
-5. The model streams its answer; the trace stays on the assistant message in history.
+1. **Agentic intent classification:** `evaluateWebSearchIntent` in `lib/web-search/intent.ts` evaluates whether the query actually requires live web information.
+   - **Skip basic questions:** Elementary math (e.g. `2 + 2`), greetings, standard coding tasks (e.g. reverse a string, binary search), and static universal knowledge skip web search to prevent unnecessary latency and unnatural searches.
+   - **Trigger real-time search:** Current events, breaking news, live prices (stocks, crypto), sports, weather, upcoming releases, and explicit search requests (`search the web for...`) trigger targeted search.
+2. **Autonomous Query Formulation:** Cleans conversational phrasing, resolves contextual pronouns from previous turns, and extracts high-precision keyword search queries.
+3. The UI shows a running trace (“Searching the web…”).
+4. The client calls `POST /api/web-search` with the derived queries.
+5. Search results are formatted as **Web search context** and appended to the user message sent to `/api/chat`.
+6. The trace updates to **Ran N search(es) · M sources** with expandable query rows and source links.
+7. The model streams its answer; the trace stays on the assistant message in history.
+
+### When Web Search is OFF (Interactive Bar)
+
+If a user sends a message requiring web search or asking to search the web while Web Search is turned off:
+- The assistant message displays a sleek interactive **Web Search Prompt Bar** (`WebSearchPromptBar`) with an animated countdown timer and one-click `[ Search Web ]` confirmation. Once search begins or the timer elapses, the prompt cleanly transitions into the live trace and leaves no dead artifacts.
+- Displays a clear indicator: **Web search is turned off**.
+- Offers a one-click button: **Turn on Web Search & Search Now**.
+- Clicking the button enables Web Search globally, persists it, and immediately executes the search and streams the answer with live sources.
+- Non-technical users never face dead-end answers or have to hunt through settings.
+- In the composer, typing an explicit search query when search is disabled also surfaces a proactive toggle pill.
 
 The preference is stored in `localStorage` (`aibot_web_search_enabled`; arena panes use separate keys).
 

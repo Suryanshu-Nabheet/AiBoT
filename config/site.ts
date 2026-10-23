@@ -96,8 +96,8 @@ export const siteConfig: Metadata = {
     "AI platform",
     "language models",
   ],
-  authors: [{ name: "AiBoT Team" }],
-  creator: "AiBoT Team",
+  authors: [{ name: "Suryanshu Nabheet" }],
+  creator: "Suryanshu Nabheet",
   publisher: "AiBoT",
   formatDetection: {
     email: false,

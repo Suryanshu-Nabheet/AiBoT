@@ -1,5 +1,9 @@
 import { formatWebSearchContextForModel } from "@/lib/web-search/context";
 import { planWebSearchQueries } from "@/lib/web-search/query";
+import {
+  evaluateWebSearchIntent,
+  type HistoryMessage,
+} from "@/lib/web-search/intent";
 import { buildWebSearchTraceFromResults } from "@/lib/web-search/trace";
 import type {
   WebSearchApiResult,
@@ -10,6 +14,8 @@ export type WebSearchTurnResult = {
   trace: WebSearchTrace;
   context: string;
   batches: WebSearchApiResult[];
+  skipped?: boolean;
+  reason?: string;
 };
 
 export async function runWebSearchForTurn(
@@ -17,15 +23,41 @@ export async function runWebSearchForTurn(
   options?: {
     signal?: AbortSignal;
     locale?: "en" | "hi";
+    conversationHistory?: HistoryMessage[];
     recentUserMessages?: string[];
+    force?: boolean;
+    queriesOverride?: string[];
   },
 ): Promise<WebSearchTurnResult> {
-  const queries = planWebSearchQueries(
-    userQuery,
-    options?.recentUserMessages ?? [],
-  );
+  let targetQueries: string[] = options?.queriesOverride ?? [];
 
-  if (queries.length === 0) {
+  if (targetQueries.length === 0) {
+    const intent = evaluateWebSearchIntent(userQuery, {
+      conversationHistory: options?.conversationHistory,
+      recentUserMessages: options?.recentUserMessages,
+      force: options?.force,
+    });
+
+    if (!intent.shouldSearch) {
+      return {
+        skipped: true,
+        reason: intent.reason,
+        batches: [],
+        trace: buildWebSearchTraceFromResults([], "complete"),
+        context: "",
+      };
+    }
+
+    targetQueries =
+      intent.queries.length > 0
+        ? intent.queries
+        : planWebSearchQueries(
+            userQuery,
+            options?.conversationHistory ?? options?.recentUserMessages ?? [],
+          );
+  }
+
+  if (targetQueries.length === 0) {
     return {
       batches: [],
       trace: buildWebSearchTraceFromResults([], "complete"),
@@ -36,7 +68,7 @@ export async function runWebSearchForTurn(
   const response = await fetch("/api/web-search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ queries, maxResults: 8 }),
+    body: JSON.stringify({ queries: targetQueries, maxResults: 8 }),
     signal: options?.signal,
   });
 

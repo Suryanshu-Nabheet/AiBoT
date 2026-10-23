@@ -93,6 +93,7 @@ export function normalizeStoredMessages(messages: unknown[]): Message[] {
       content,
       shouldAnimate: false,
       webSearchTrace: normalizeWebSearchTrace(raw.webSearchTrace),
+      webSearchPrompt: undefined,
     };
 
     if (isEmptyAssistant(message)) continue;

@@ -56,13 +56,24 @@ export default function ChatInterface({
     attachments,
     setAttachments,
     handleSend,
+    retryWithWebSearch,
+    confirmWebSearchPrompt,
     stopHelpers,
   } = useChatSession({
     conversationId: initialConversationId,
     storageKey,
     viewMode: "direct",
     webSearchEnabled: webSearchOn,
+    onWebSearchChange: setWebSearchOn,
   });
+
+  const handleRetryWithWebSearch = useCallback(
+    async (messageId: string, userQuery: string) => {
+      setWebSearchOn(true);
+      await retryWithWebSearch(messageId, userQuery);
+    },
+    [setWebSearchOn, retryWithWebSearch],
+  );
   const isSearchingWeb =
     webSearchOn &&
     isLoading &&
@@ -248,6 +259,8 @@ export default function ChatInterface({
                 isLoading={isLoading}
                 loadingStatus={loadingStatus}
                 endRef={messagesEndRef}
+                onRetryWithWebSearch={handleRetryWithWebSearch}
+                onConfirmWebSearchPrompt={confirmWebSearchPrompt}
               />
             </div>
           </ChatThreadViewport>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchWeb } from "@/lib/server/web-search/search";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { webSearchRequestSchema } from "@/lib/server/request-schemas";
+import { evaluateWebSearchIntent } from "@/lib/web-search/intent";
 
 export const maxDuration = 30;
 
@@ -31,7 +32,28 @@ export async function POST(req: NextRequest) {
   const maxResults = parsed.data.maxResults ?? 8;
   const batches = [];
 
-  for (const query of parsed.data.queries) {
+  let targetQueries: string[] = [];
+
+  if ("queries" in parsed.data) {
+    targetQueries = parsed.data.queries;
+  } else {
+    const intent = evaluateWebSearchIntent(parsed.data.query, {
+      recentUserMessages: parsed.data.recentUserMessages,
+      force: parsed.data.force,
+    });
+
+    if (!intent.shouldSearch) {
+      return NextResponse.json({
+        batches: [],
+        skipped: true,
+        reason: intent.reason,
+      });
+    }
+
+    targetQueries = intent.queries;
+  }
+
+  for (const query of targetQueries) {
     try {
       batches.push(await searchWeb(query, maxResults));
     } catch {

@@ -31,6 +31,7 @@ import {
 import { ChatErrorBanner } from "@/components/chat/chat-error-banner";
 import { ThinkingPanel } from "@/components/chat/thinking-panel";
 import { WebSearch } from "@/components/web-search/web-search";
+import { WebSearchPromptBar } from "@/components/web-search/web-search-prompt-bar";
 import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
@@ -67,6 +68,7 @@ export const ChatMessage = memo(
     layout = "thread",
     pdfFileName = "ai-response.pdf",
     pdfTitle = "AI Response",
+    onConfirmWebSearchPrompt,
   }: {
     message: Message;
     onCopy: (content: string) => void;
@@ -77,6 +79,9 @@ export const ChatMessage = memo(
     layout?: ChatMessageLayout;
     pdfFileName?: string;
     pdfTitle?: string;
+    onRetryWithWebSearch?: (messageId: string, userQuery: string) => void;
+    previousUserMessage?: string;
+    onConfirmWebSearchPrompt?: (approved: boolean) => void;
   }) => {
     const { t } = useTranslation();
     const [isCopied, setIsCopied] = useState(false);
@@ -244,6 +249,11 @@ export const ChatMessage = memo(
     const compactAssistantContentClass =
       "bg-transparent text-foreground px-0 shadow-none border-none";
 
+    const isPromptActive =
+      !isUser &&
+      Boolean(message.webSearchPrompt?.active) &&
+      !message.content?.trim();
+
     return (
       <div className="w-full">
         <div className={shellPadding}>
@@ -294,6 +304,15 @@ export const ChatMessage = memo(
                       {loadingStatus}
                     </TextShimmer>
                   </div>
+                )}
+
+                {isPromptActive && (
+                  <WebSearchPromptBar
+                    query={message.webSearchPrompt?.query}
+                    onSearch={() => onConfirmWebSearchPrompt?.(true)}
+                    onSkip={() => onConfirmWebSearchPrompt?.(false)}
+                    className="mb-2"
+                  />
                 )}
 
                 {message.webSearchTrace && (

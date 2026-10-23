@@ -425,3 +425,21 @@ html {
 .dark .brand-icon-mono {
   filter: invert(1) brightness(1.1);
 }
+
+/* KaTeX error fallback: keep user text clean and uncorrupted, NEVER harsh red */
+.katex-error,
+span.katex-error,
+div.katex-error {
+  color: inherit !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+.katex-display {
+  margin: 0.75rem 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}

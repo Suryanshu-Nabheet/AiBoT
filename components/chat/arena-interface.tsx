@@ -45,6 +45,8 @@ function ArenaPanel({
   isLoading,
   loadingStatus,
   onCopy,
+  onRetryWithWebSearch,
+  onConfirmWebSearchPrompt,
 }: {
   model: string;
   onModelChange: (model: string) => void;
@@ -58,6 +60,8 @@ function ArenaPanel({
   isLoading: boolean;
   loadingStatus: string;
   onCopy: (content: string) => void;
+  onRetryWithWebSearch?: (messageId: string, userQuery: string) => void;
+  onConfirmWebSearchPrompt?: (approved: boolean) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -92,6 +96,8 @@ function ArenaPanel({
           pdfFileName="arena-response.pdf"
           pdfTitle="Arena Response"
           endRef={endRef}
+          onRetryWithWebSearch={onRetryWithWebSearch}
+          onConfirmWebSearchPrompt={onConfirmWebSearchPrompt}
         />
       </ChatThreadViewport>
     </div>
@@ -119,6 +125,7 @@ export default function ArenaInterface({
     executionType: ExecutionType.ARENA,
     viewMode: "side-by-side",
     webSearchEnabled: webSearchOn,
+    onWebSearchChange: setWebSearchOn,
   });
   const rightChat = useChatSession({
     storageKey: "arena-b",
@@ -127,6 +134,7 @@ export default function ArenaInterface({
     executionType: ExecutionType.ARENA,
     viewMode: "side-by-side",
     webSearchEnabled: webSearchOn,
+    onWebSearchChange: setWebSearchOn,
   });
 
   // --- Shared Input State ---
@@ -256,6 +264,22 @@ export default function ArenaInterface({
       ),
     ]);
   };
+
+  const handleLeftRetryWithWebSearch = useCallback(
+    async (messageId: string, userQuery: string) => {
+      setWebSearchOn(true);
+      await leftChat.retryWithWebSearch(messageId, userQuery);
+    },
+    [setWebSearchOn, leftChat],
+  );
+
+  const handleRightRetryWithWebSearch = useCallback(
+    async (messageId: string, userQuery: string) => {
+      setWebSearchOn(true);
+      await rightChat.retryWithWebSearch(messageId, userQuery);
+    },
+    [setWebSearchOn, rightChat],
+  );
 
   const handleSendDraftNow = (
     prompt: string,
@@ -403,6 +427,8 @@ export default function ArenaInterface({
           isLoading={leftChat.isLoading}
           loadingStatus={leftLoadingStatus}
           onCopy={handleCopy}
+          onRetryWithWebSearch={handleLeftRetryWithWebSearch}
+          onConfirmWebSearchPrompt={leftChat.confirmWebSearchPrompt}
         />
         <ArenaPanel
           model={rightChat.model}
@@ -417,6 +443,8 @@ export default function ArenaInterface({
           isLoading={rightChat.isLoading}
           loadingStatus={rightLoadingStatus}
           onCopy={handleCopy}
+          onRetryWithWebSearch={handleRightRetryWithWebSearch}
+          onConfirmWebSearchPrompt={rightChat.confirmWebSearchPrompt}
         />
       </div>
 

@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { cn } from "@/lib/utils";
+import type { Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
@@ -784,12 +785,24 @@ export const useMarkdown = (options: UseMarkdownOptions = {}) => {
   );
 
   // Remark and rehype plugins
-  const remarkPlugins = useMemo(
+  const remarkPlugins = useMemo<NonNullable<Options["remarkPlugins"]>>(
     () => [remarkGfm, remarkBreaks, remarkMath],
     [],
   );
-  const rehypePlugins = useMemo(
-    () => [rehypeRaw, rehypeSanitize, rehypeKatex],
+  const rehypePlugins = useMemo<NonNullable<Options["rehypePlugins"]>>(
+    () => [
+      rehypeRaw,
+      rehypeSanitize,
+      [
+        rehypeKatex,
+        {
+          throwOnError: false,
+          errorColor: "inherit",
+          strict: false,
+          trust: true,
+        },
+      ] as any,
+    ],
     [],
   );
 

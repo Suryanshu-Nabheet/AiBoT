@@ -30,6 +30,8 @@ export const ChatThread = memo(
     pdfTitle,
     className,
     endRef,
+    onRetryWithWebSearch,
+    onConfirmWebSearchPrompt,
   }: {
     messages: Message[];
     isLoading: boolean;
@@ -41,6 +43,8 @@ export const ChatThread = memo(
     pdfTitle?: string;
     className?: string;
     endRef?: React.Ref<HTMLDivElement>;
+    onRetryWithWebSearch?: (messageId: string, userQuery: string) => void;
+    onConfirmWebSearchPrompt?: (approved: boolean) => void;
   }) => {
     const statusPadding = CHAT_THREAD_HORIZONTAL_INSET;
     let latestUserRequestedDocument = false;
@@ -84,6 +88,13 @@ export const ChatThread = memo(
                 pdfFileName={pdfFileName}
                 pdfTitle={pdfTitle}
                 isDocumentRequest={documentRequestMessages.has(i)}
+                onRetryWithWebSearch={onRetryWithWebSearch}
+                onConfirmWebSearchPrompt={onConfirmWebSearchPrompt}
+                previousUserMessage={
+                  i > 0 && messages[i - 1]?.role === Role.User
+                    ? messages[i - 1].content
+                    : undefined
+                }
               />
             </React.Fragment>
           );

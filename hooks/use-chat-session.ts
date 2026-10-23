@@ -27,6 +27,7 @@ import {
   resolveConversationPersistId,
 } from "@/lib/chat/load-conversation-messages";
 import { runWebSearchForTurn } from "@/lib/web-search/client";
+import { evaluateWebSearchIntent } from "@/lib/web-search/intent";
 import { buildRunningWebSearchTrace } from "@/lib/web-search/trace";
 import type { WebSearchTrace } from "@/lib/web-search/types";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
@@ -112,6 +113,7 @@ export interface UseChatSessionOptions {
   executionType?: ExecutionType;
   viewMode?: "direct" | "side-by-side";
   webSearchEnabled?: boolean;
+  onWebSearchChange?: (enabled: boolean) => void;
 }
 
 export function useChatSession({
@@ -121,6 +123,7 @@ export function useChatSession({
   executionType,
   viewMode,
   webSearchEnabled = false,
+  onWebSearchChange,
 }: UseChatSessionOptions = {}) {
   // --- State ---
   const { modelId: persistedModelId, setModelId } = useModel({
@@ -211,6 +214,14 @@ export function useChatSession({
   const hydratedConversationIdRef = useRef<string | null>(null);
   const messagesRef = useRef(messages);
   const streamPersistTickRef = useRef(0);
+  const webSearchDecisionResolverRef = useRef<((approved: boolean) => void) | null>(null);
+
+  const confirmWebSearchPrompt = useCallback((approved: boolean) => {
+    if (webSearchDecisionResolverRef.current) {
+      webSearchDecisionResolverRef.current(approved);
+      webSearchDecisionResolverRef.current = null;
+    }
+  }, []);
 
   const conversationPersistId = getConversationPersistId(conversationId, {
     sessionId,
@@ -227,6 +238,10 @@ export function useChatSession({
 
   useEffect(() => {
     return () => {
+      if (webSearchDecisionResolverRef.current) {
+        webSearchDecisionResolverRef.current(false);
+        webSearchDecisionResolverRef.current = null;
+      }
       abortControllerRef.current?.abort();
       if (conversationPersistId && messagesRef.current.length > 0) {
         flushPersistConversationSnapshot(
@@ -296,6 +311,21 @@ export function useChatSession({
         }
         return next;
       });
+    } else {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? {
+                ...m,
+                isThinkingRequested,
+                ...(options?.webSearchTrace
+                  ? { webSearchTrace: options.webSearchTrace }
+                  : {}),
+                webSearchPrompt: undefined,
+              }
+            : m,
+        ),
+      );
     }
 
     const reader = response.body.getReader();
@@ -548,6 +578,10 @@ export function useChatSession({
     systemInstruction?: string,
     isThinking?: boolean,
     interruptCurrent = false,
+    sendOptions?: {
+      forceWebSearch?: boolean;
+      isRetry?: boolean;
+    },
   ) => {
     const inputQuery = manualQuery || query;
     const currentAttachments = (manualAttachments || attachments).map((a) =>
@@ -599,45 +633,158 @@ export function useChatSession({
       }
     }
 
-    const userMessage: Message = {
-      id: `user-${sessionId ?? "chat"}-${Date.now()}`,
-      role: Role.User,
-      content: currentQuery || "(attachment)",
-      attachments: [...currentAttachments],
-    };
+    if (!sendOptions?.isRetry) {
+      const userMessage: Message = {
+        id: `user-${sessionId ?? "chat"}-${Date.now()}`,
+        role: Role.User,
+        content: currentQuery || "(attachment)",
+        attachments: [...currentAttachments],
+      };
 
-    setMessages((prev) => {
-      const next = [...prev, userMessage];
-      if (conversationPersistId) {
-        queueConversationPersist(conversationPersistId, next, locale);
-      }
-      return next;
-    });
+      setMessages((prev) => {
+        const next = [...prev, userMessage];
+        if (conversationPersistId) {
+          queueConversationPersist(conversationPersistId, next, locale);
+        }
+        return next;
+      });
+    }
 
     // Only clear local query state if we are depending on it.
     setQuery("");
     setAttachments([]);
     setIsLoading(true);
 
+    const newAssistantMessageId = () =>
+      `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
     let webSearchTrace: WebSearchTrace | undefined;
-    if (webSearchEnabled && currentQuery.trim()) {
-      webSearchTrace = buildRunningWebSearchTrace(currentQuery);
-      try {
-        const recentUserMessages = messages
-          .filter((m) => m.role === Role.User)
-          .map((m) => m.content)
-          .slice(-6);
-        const searchResult = await runWebSearchForTurn(currentQuery, {
-          signal: requestController.signal,
-          locale,
-          recentUserMessages,
+    const recentUserMessages = messages
+      .filter((m) => m.role === Role.User)
+      .map((m) => m.content)
+      .slice(-6);
+
+    let activeWebSearch = Boolean(
+      webSearchEnabled || sendOptions?.forceWebSearch,
+    );
+    let promptApproved = false;
+    let pendingAssistantId: string | null = null;
+
+    if (!activeWebSearch && Boolean(currentQuery) && !sendOptions?.isRetry) {
+      const searchIntent = evaluateWebSearchIntent(currentQuery, {
+        recentUserMessages,
+        conversationHistory: messages,
+      });
+
+      if (searchIntent.shouldSearch) {
+        const promptId = newAssistantMessageId();
+        pendingAssistantId = promptId;
+        const searchTopic = searchIntent.queries[0] ?? currentQuery;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: promptId,
+            role: Role.Assistant,
+            content: "",
+            webSearchPrompt: {
+              active: true,
+              query: searchTopic,
+            },
+          },
+        ]);
+
+        const decisionPromise = new Promise<boolean>((resolve) => {
+          let timer: NodeJS.Timeout | null = null;
+          const handleResolve = (approved: boolean) => {
+            if (timer) clearTimeout(timer);
+            resolve(approved);
+          };
+          webSearchDecisionResolverRef.current = handleResolve;
+          timer = setTimeout(() => {
+            if (webSearchDecisionResolverRef.current === handleResolve) {
+              webSearchDecisionResolverRef.current = null;
+              resolve(false);
+            }
+          }, 5000);
         });
-        webSearchTrace = searchResult.trace;
-        const contextBlock = searchResult.context;
-        if (typeof apiContent === "string") {
-          apiContent = `${apiContent}\n\n${contextBlock}`;
-        } else {
-          apiContent = [...apiContent, { type: "text", text: contextBlock }];
+
+        promptApproved = await decisionPromise;
+        webSearchDecisionResolverRef.current = null;
+
+        if (promptApproved) {
+          activeWebSearch = true;
+          onWebSearchChange?.(true);
+        }
+
+        if (!isCurrentRequest()) return;
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === promptId ? { ...m, webSearchPrompt: undefined } : m,
+          ),
+        );
+      }
+    }
+
+    if (activeWebSearch && Boolean(currentQuery)) {
+      try {
+        const intent = evaluateWebSearchIntent(currentQuery, {
+          recentUserMessages,
+          conversationHistory: messages,
+          force: sendOptions?.forceWebSearch || promptApproved,
+        });
+
+        if (intent.shouldSearch) {
+          const displayQuery = intent.queries[0] ?? currentQuery;
+          webSearchTrace = buildRunningWebSearchTrace(displayQuery);
+
+          if (pendingAssistantId) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === pendingAssistantId
+                  ? { ...m, webSearchTrace }
+                  : m,
+              ),
+            );
+          }
+
+          const searchResult = await runWebSearchForTurn(currentQuery, {
+            signal: requestController.signal,
+            locale,
+            recentUserMessages,
+            conversationHistory: messages,
+            queriesOverride:
+              intent.queries.length > 0 ? intent.queries : undefined,
+            force: sendOptions?.forceWebSearch || promptApproved,
+          });
+
+          if (!searchResult.skipped) {
+            webSearchTrace = searchResult.trace;
+            const contextBlock = searchResult.context;
+            if (contextBlock) {
+              if (typeof apiContent === "string") {
+                apiContent = `${apiContent}\n\n${contextBlock}`;
+              } else {
+                apiContent = [
+                  ...apiContent,
+                  { type: "text", text: contextBlock },
+                ];
+              }
+            }
+          } else {
+            webSearchTrace = undefined;
+          }
+
+          if (pendingAssistantId) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === pendingAssistantId
+                  ? { ...m, webSearchTrace }
+                  : m,
+              ),
+            );
+          }
         }
       } catch (error) {
         const message =
@@ -654,6 +801,15 @@ export function useChatSession({
             },
           ],
         };
+        if (pendingAssistantId) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingAssistantId
+                ? { ...m, webSearchTrace }
+                : m,
+            ),
+          );
+        }
       }
     }
 
@@ -677,9 +833,6 @@ export function useChatSession({
       setExecutionCreated(true);
     }
 
-    const newAssistantMessageId = () =>
-      `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
     const pushAssistantHttpError = (status: number, errorText: string) => {
       if (!isCurrentRequest()) return;
       const err = assistantErrorFields(
@@ -689,17 +842,22 @@ export function useChatSession({
         apiKeys,
         errorText,
       );
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: Role.Assistant,
-          content: err.content,
-          errorTitle: err.errorTitle,
-          errorType: err.errorType,
-          isError: true,
-        },
-      ]);
+      setMessages((prev) => {
+        const filtered = pendingAssistantId
+          ? prev.filter((m) => m.id !== pendingAssistantId)
+          : prev;
+        return [
+          ...filtered,
+          {
+            id: `error-${Date.now()}`,
+            role: Role.Assistant,
+            content: err.content,
+            errorTitle: err.errorTitle,
+            errorType: err.errorType,
+            isError: true,
+          },
+        ];
+      });
       finishRequest();
     };
 
@@ -956,12 +1114,27 @@ export function useChatSession({
               }),
             ],
             stream: true,
+            options: {
+              num_ctx: 8192,
+            },
           };
         };
 
         if (thinkingRequested) {
-          const tempId = newAssistantMessageId();
+          const tempId = pendingAssistantId ?? newAssistantMessageId();
           setMessages((prev) => {
+            if (pendingAssistantId && prev.some((m) => m.id === pendingAssistantId)) {
+              return prev.map((m) =>
+                m.id === tempId
+                  ? {
+                      ...m,
+                      isThinkingRequested: true,
+                      webSearchTrace,
+                      webSearchPrompt: undefined,
+                    }
+                  : m,
+              );
+            }
             const next: Message[] = [
               ...prev,
               {
@@ -1012,6 +1185,9 @@ export function useChatSession({
             },
           ],
           stream: true,
+          options: {
+            num_ctx: 8192,
+          },
         };
 
         const res = await postOllamaChat(
@@ -1048,19 +1224,32 @@ export function useChatSession({
 
         await processStream(res, false, true, {
           requestId,
+          tempId: pendingAssistantId ?? undefined,
           webSearchTrace,
         });
         return;
       }
 
       if (thinkingRequested) {
-        const tempId = newAssistantMessageId();
+        const tempId = pendingAssistantId ?? newAssistantMessageId();
         const apiHistory = [
           ...historyForModel,
           { role: "user", content: apiContent },
         ];
 
         setMessages((prev) => {
+          if (pendingAssistantId && prev.some((m) => m.id === pendingAssistantId)) {
+            return prev.map((m) =>
+              m.id === tempId
+                ? {
+                    ...m,
+                    isThinkingRequested: true,
+                    webSearchTrace,
+                    webSearchPrompt: undefined,
+                  }
+                : m,
+            );
+          }
           const next: Message[] = [
             ...prev,
             {
@@ -1138,7 +1327,11 @@ export function useChatSession({
         return;
       }
 
-      await processStream(res, false, false, { requestId, webSearchTrace });
+      await processStream(res, false, false, {
+        requestId,
+        tempId: pendingAssistantId ?? undefined,
+        webSearchTrace,
+      });
     } catch (error: unknown) {
       if (!isCurrentRequest()) return;
       const isAbort = error instanceof Error && error.name === "AbortError";
@@ -1152,25 +1345,79 @@ export function useChatSession({
           message,
           "network",
         );
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `error-fetch-${Date.now()}`,
-            role: Role.Assistant,
-            content: err.content,
-            errorTitle: err.errorTitle,
-            errorType: err.errorType,
-            isError: true,
-          },
-        ]);
+        setMessages((prev) => {
+          const filtered = pendingAssistantId
+            ? prev.filter((m) => m.id !== pendingAssistantId)
+            : prev;
+          return [
+            ...filtered,
+            {
+              id: `error-fetch-${Date.now()}`,
+              role: Role.Assistant,
+              content: err.content,
+              errorTitle: err.errorTitle,
+              errorType: err.errorType,
+              isError: true,
+            },
+          ];
+        });
+      } else if (pendingAssistantId) {
+        setMessages((prev) => prev.filter((m) => m.id !== pendingAssistantId));
       }
       finishRequest();
     }
   };
 
   const stopHelpers = {
-    stop: () => abortControllerRef.current?.abort(),
+    stop: () => {
+      if (webSearchDecisionResolverRef.current) {
+        webSearchDecisionResolverRef.current(false);
+        webSearchDecisionResolverRef.current = null;
+      }
+      abortControllerRef.current?.abort();
+    },
   };
+
+  const handleSendRef = useRef(handleSend);
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
+
+  const retryWithWebSearch = useCallback(
+    async (assistantMessageId: string, fallbackQuery?: string) => {
+      let targetUserQuery = fallbackQuery?.trim() ?? "";
+      let targetAttachments: ChatAttachment[] = [];
+
+      setMessages((prev) => {
+        const assistantIndex = prev.findIndex((m) => m.id === assistantMessageId);
+        if (assistantIndex > 0) {
+          const prevMsg = prev[assistantIndex - 1];
+          if (prevMsg && prevMsg.role === Role.User) {
+            targetUserQuery = prevMsg.content;
+            targetAttachments = (prevMsg.attachments ?? []).map((a) =>
+              normalizeLegacyAttachment(a),
+            );
+          }
+        }
+        return prev.filter((m) => m.id !== assistantMessageId);
+      });
+
+      if (!targetUserQuery) {
+        targetUserQuery = fallbackQuery?.trim() ?? "";
+      }
+      if (!targetUserQuery) return;
+
+      await handleSendRef.current(
+        targetUserQuery,
+        targetAttachments,
+        undefined,
+        thinkingRequestedRef.current,
+        true,
+        { forceWebSearch: true, isRetry: true },
+      );
+    },
+    [],
+  );
 
   return {
     model,
@@ -1184,6 +1431,8 @@ export function useChatSession({
     attachments,
     setAttachments,
     handleSend,
+    retryWithWebSearch,
+    confirmWebSearchPrompt,
     stopHelpers,
     conversationId,
   };
