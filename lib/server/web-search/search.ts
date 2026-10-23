@@ -5,10 +5,7 @@ import { searchBrave } from "@/lib/server/web-search/brave";
 import { searchDuckDuckGo } from "@/lib/server/web-search/duckduckgo";
 import { searchGoogleNews } from "@/lib/server/web-search/google-news";
 import { searchWikipediaEn } from "@/lib/server/web-search/wikipedia";
-import {
-  finalizeSearchResults,
-  sanitizeSearchResults,
-} from "@/lib/server/web-search/quality";
+import { finalizeSearchResults } from "@/lib/server/web-search/quality";
 import { mergeWebSearchBatches } from "@/lib/web-search/merge";
 import type { WebSearchApiResult } from "@/lib/web-search/types";
 
@@ -53,16 +50,7 @@ export async function searchWeb(
   }
 
   const merged = mergeWebSearchBatches(batches, maxResults * 2);
-  let results = finalizeSearchResults(trimmed, merged, maxResults);
-
-  // Fallback protection: if strict token/locale filters pruned all items but
-  // merged had real hits, sanitize merged hits to ensure results are never lost.
-  if (results.length === 0 && merged.length > 0) {
-    const clean = sanitizeSearchResults(merged);
-    if (clean.length > 0) {
-      results = clean.slice(0, maxResults);
-    }
-  }
+  const results = finalizeSearchResults(trimmed, merged, maxResults);
 
   return { query: trimmed, results };
 }

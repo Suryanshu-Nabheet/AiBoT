@@ -120,6 +120,23 @@ function meaningfulQueryTokens(query: string): string[] {
     .filter((t) => t.length > 2 && !QUERY_STOPWORDS.has(t));
 }
 
+function matchesAnyQueryToken(
+  tokens: string[],
+  title: string,
+  snippet: string | undefined,
+  domain: string,
+): boolean {
+  const raw = `${title} ${snippet ?? ""} ${domain}`.toLowerCase();
+  const stripped = raw.replace(/[^\p{L}\p{N}]+/gu, "");
+  return tokens.some((token) => {
+    const cleanToken = token.replace(/[^\p{L}\p{N}]+/gu, "");
+    return (
+      raw.includes(token) ||
+      (cleanToken.length > 0 && stripped.includes(cleanToken))
+    );
+  });
+}
+
 /** Fraction of results whose title/snippet/domain mention at least one query token. */
 export function searchResultRelevanceRatio(
   query: string,
@@ -130,9 +147,11 @@ export function searchResultRelevanceRatio(
 
   let matched = 0;
   for (const result of results) {
-    const blob =
-      `${result.title} ${result.snippet ?? ""} ${result.domain}`.toLowerCase();
-    if (tokens.some((token) => blob.includes(token))) matched += 1;
+    if (
+      matchesAnyQueryToken(tokens, result.title, result.snippet, result.domain)
+    ) {
+      matched += 1;
+    }
   }
   return matched / results.length;
 }
@@ -168,13 +187,27 @@ function filterResultsMissingQueryTokens(
   const tokens = meaningfulQueryTokens(query);
   if (tokens.length === 0) return results;
 
-  const matched = results.filter((result) => {
-    const blob =
-      `${result.title} ${result.snippet ?? ""} ${result.domain}`.toLowerCase();
-    return tokens.some((token) => blob.includes(token));
-  });
+  return results.filter((result) =>
+    matchesAnyQueryToken(tokens, result.title, result.snippet, result.domain),
+  );
+}
 
-  return matched.length > 0 ? matched : results;
+/** Enforce domain diversity: prevent a single site from dominating search results. */
+export function limitResultsPerDomain(
+  results: WebSearchSource[],
+  maxPerDomain = 2,
+): WebSearchSource[] {
+  const counts = new Map<string, number>();
+  const diverse: WebSearchSource[] = [];
+  for (const r of results) {
+    const d = r.domain.toLowerCase();
+    const count = counts.get(d) ?? 0;
+    if (count < maxPerDomain) {
+      counts.set(d, count + 1);
+      diverse.push(r);
+    }
+  }
+  return diverse;
 }
 
 export function finalizeSearchResults(
@@ -187,7 +220,8 @@ export function finalizeSearchResults(
     sanitizeSearchResults(results),
   );
   const tokenAligned = filterResultsMissingQueryTokens(query, clean);
-  const newsFiltered = filterIrrelevantNewsHomepages(tokenAligned, query).slice(
+  const diverse = limitResultsPerDomain(tokenAligned, 2);
+  const newsFiltered = filterIrrelevantNewsHomepages(diverse, query).slice(
     0,
     maxResults,
   );

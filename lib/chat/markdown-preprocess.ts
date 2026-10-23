@@ -131,9 +131,8 @@ export function preprocessAssistantMarkdown(text: string): string {
             .replace(/^##\s+([^#\n]+):\s*$/gm, "### $1")
             .replace(/###\s*(\d+)\.\s*/g, "\n\n### $1. ")
             .replace(/([.!?])\s*###\s*/g, "$1\n\n### ")
-            // Bold asterisks normalization: e.g. "* * text * *" or "** text **" -> "**text**"
+            // Normalize spaced asterisks e.g. "* * text * *" -> "**text**" while keeping normal bold spaces intact
             .replace(/\*\s+\*\s*([^*\n]+?)\s*\*+\s*\*/g, "**$1**")
-            .replace(/\*\*\s+([^*\n]+?)\s+\*\*/g, "**$1**")
             .replace(/\*\*\s*:\s*/g, "**: ")
             // Definition / Example labeling
             .replace(/\s*-\s*Definition:/g, "\n\n**Definition:**")

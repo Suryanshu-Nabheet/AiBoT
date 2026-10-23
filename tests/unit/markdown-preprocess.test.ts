@@ -178,4 +178,11 @@ where the base is any one of the sides, and the height is the perpendicular dist
     expect(html).toContain("Practical Examples</h3>");
     expect(html).toContain("<strong>Pythagorean Theorem</strong>");
   });
+
+  it("preserves spaces between multiple bold segments in markdown prose", () => {
+    const raw =
+      "**Suryanshu Nabheet** is the **founder and creator** of **AiBoT**, the AI chat platform you're using right now.";
+    const processed = preprocessAssistantMarkdown(raw);
+    expect(processed).toBe(raw);
+  });
 });

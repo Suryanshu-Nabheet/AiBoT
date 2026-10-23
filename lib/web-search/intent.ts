@@ -35,7 +35,7 @@ export type HistoryMessage =
 
 /** Self-identity, founder, creator, architecture, or origin questions for AiBoT. */
 const ASSISTANT_SELF_IDENTITY_REGEX =
-  /\b(?:who\s+(?:are\s+you|created\s+you|made\s+you|built\s+you|developed\s+you|designed\s+you|owns\s+you|runs\s+you|programmed\s+you|founded\s+you)|who\s+is\s+your\s+(?:founder|creator|maker|developer|author|architect|owner|parent|boss)|who\s+(?:founded|created|built|made|owns|developed|designed)\s+aibot|who\s+is\s+(?:the\s+)?(?:founder|creator|developer|author|maker|architect|owner)\s+of\s+aibot|what\s+is\s+your\s+name|what\s+are\s+you|tell\s+me\s+about\s+(?:yourself|your\s+origins?|your\s+founder|your\s+creator)|what\s+is\s+aibot|who\s+is\s+aibot)\b/i;
+  /\b(?:who\s+(?:are\s+you|created\s+you|made\s+you|built\s+you|developed\s+you|designed\s+you|owns\s+you|runs\s+you|programmed\s+you|founded\s+you)|who\s+is\s+your\s+(?:founder|creator|maker|developer|author|architect|owner|parent|boss)|who\s+(?:founded|created|built|made|owns|developed|designed)\s+(?:aibot|this)|who\s+is\s+(?:the\s+)?(?:founder|creator|developer|author|maker|architect|owner)\s+(?:of\s+aibot|behind\s+aibot)?|what\s+is\s+your\s+name|what\s+are\s+you|tell\s+me\s+about\s+(?:yourself|your\s+origins?|your\s+founder|your\s+creator)|what\s+is\s+aibot|who\s+is\s+aibot|who\s+is\s+suryanshu(?:\s+nabheet)?|tell\s+me\s+about\s+suryanshu(?:\s+nabheet)?|what\s+do\s+you\s+know\s+about\s+suryanshu(?:\s+nabheet)?)\b/i;
 
 /** Conversational follow-ups, assistant-directed queries, and elaboration requests. */
 const ASSISTANT_CONVERSATIONAL_REGEX =

@@ -35,6 +35,66 @@ describe("finalizeSearchResults", () => {
     );
     expect(results).toHaveLength(0);
   });
+
+  it("discards completely unrelated commercial spam missing query tokens", () => {
+    const results = finalizeSearchResults(
+      "who is suryanshu nabheet",
+      [
+        {
+          title: "The Lumen Project — FireRock Products",
+          href: "https://firerockproducts.com/lumen",
+          domain: "firerockproducts.com",
+          brand: "generic",
+        },
+        {
+          title: "Vermont Gray Black - FireRock Products",
+          href: "https://firerockproducts.com/vermont",
+          domain: "firerockproducts.com",
+          brand: "generic",
+        },
+      ],
+      8,
+    );
+    expect(results).toHaveLength(0);
+  });
+
+  it("limits results per domain to at most 2", () => {
+    const results = finalizeSearchResults(
+      "react 19 tutorials",
+      [
+        {
+          title: "React 19 Hooks Tutorial",
+          href: "https://example.com/1",
+          domain: "example.com",
+          brand: "generic",
+        },
+        {
+          title: "React 19 Server Actions Tutorial",
+          href: "https://example.com/2",
+          domain: "example.com",
+          brand: "generic",
+        },
+        {
+          title: "React 19 Use Hook Tutorial",
+          href: "https://example.com/3",
+          domain: "example.com",
+          brand: "generic",
+        },
+        {
+          title: "React 19 Guide - Dev.to",
+          href: "https://dev.to/react-19",
+          domain: "dev.to",
+          brand: "generic",
+        },
+      ],
+      8,
+    );
+    expect(results).toHaveLength(3);
+    const exampleCount = results.filter(
+      (r) => r.domain === "example.com",
+    ).length;
+    expect(exampleCount).toBe(2);
+  });
 });
 
 describe("filterIrrelevantNewsHomepages", () => {
