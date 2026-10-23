@@ -66,13 +66,14 @@ Implemented in `lib/web-search/query.ts`—no extra LLM call.
 
 ## Search providers (server)
 
-`lib/server/web-search/search.ts` runs 5 **100% key-free** providers in parallel, merges by URL, then applies quality filters:
+`lib/server/web-search/search.ts` runs 6 **100% key-free** providers in parallel, merges by URL, then applies quality filters:
 
-1. **Google News RSS** — 100% keyless and reliable from Vercel / serverless IPs; covers real-time news, articles, and general web queries in English and Hindi.
-2. **Wikipedia (MediaWiki Full-Text Search)** — searches article contents with highlighted snippet extraction and `opensearch` fallback, compliant with Wikimedia API policy.
-3. **DuckDuckGo** — multi-stage fallback: GET HTML, then POST HTML, then Lite HTML, then instant JSON.
-4. **Brave Search** — datacenter-friendly keyless HTML scraper.
-5. **Bing** — keyless HTML scraper with decoded redirect URLs.
+1. **Tavily Search** — 100% keyless AI search engine optimized for LLMs (`X-Tavily-Access-Mode: keyless`), returning rich snippets and high-relevance pages with optional `TAVILY_API_KEY` upgrade support.
+2. **Google News RSS** — 100% keyless and reliable from Vercel / serverless IPs; covers real-time news, articles, and general web queries in English and Hindi.
+3. **Wikipedia (MediaWiki Full-Text Search)** — searches article contents with highlighted snippet extraction and `opensearch` fallback, compliant with Wikimedia API policy.
+4. **DuckDuckGo** — multi-stage fallback: GET HTML, then POST HTML, then Lite HTML, then instant JSON.
+5. **Brave Search** — datacenter-friendly keyless HTML scraper.
+6. **Bing** — keyless HTML scraper with decoded redirect URLs.
 
 Each query returns up to **8** results by default (configurable up to 12 on the API). Results include title, URL, domain, snippet, and a **brand** hint (Reddit, GitHub, Wikipedia, etc.) for UI badges.
 

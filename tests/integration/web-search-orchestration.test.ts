@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSearchApiResult } from "@/lib/web-search/types";
 
+const searchTavily = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchBing = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchBrave = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchDuckDuckGo = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchGoogleNews = vi.fn<() => Promise<WebSearchApiResult>>();
 const searchWikipediaEn = vi.fn<() => Promise<WebSearchApiResult>>();
 
+vi.mock("@/lib/server/web-search/tavily", () => ({ searchTavily }));
 vi.mock("@/lib/server/web-search/bing", () => ({ searchBing }));
 vi.mock("@/lib/server/web-search/brave", () => ({ searchBrave }));
 vi.mock("@/lib/server/web-search/duckduckgo", () => ({ searchDuckDuckGo }));
@@ -15,15 +17,41 @@ vi.mock("@/lib/server/web-search/wikipedia", () => ({ searchWikipediaEn }));
 
 describe("searchWeb orchestration", () => {
   beforeEach(() => {
+    searchTavily.mockReset();
     searchBing.mockReset();
     searchBrave.mockReset();
     searchDuckDuckGo.mockReset();
     searchGoogleNews.mockReset();
     searchWikipediaEn.mockReset();
+    searchTavily.mockResolvedValue({ query: "", results: [] });
+    searchDuckDuckGo.mockResolvedValue({ query: "", results: [] });
     searchBing.mockResolvedValue({ query: "", results: [] });
     searchBrave.mockResolvedValue({ query: "", results: [] });
     searchGoogleNews.mockResolvedValue({ query: "", results: [] });
     searchWikipediaEn.mockResolvedValue({ query: "", results: [] });
+  });
+
+  it("orchestrates Tavily hits with highest priority and rich snippets", async () => {
+    searchTavily.mockResolvedValue({
+      query: "patna weather",
+      results: [
+        {
+          title: "Patna Weather Today",
+          href: "https://indiatoday.in/weather/patna",
+          domain: "indiatoday.in",
+          brand: "generic",
+          snippet: "Patna temperature 24C with partly cloudy skies.",
+        },
+      ],
+    });
+
+    const { searchWeb } = await import("@/lib/server/web-search/search");
+    const batch = await searchWeb("patna weather", 5);
+
+    expect(batch.results).toHaveLength(1);
+    expect(batch.results[0]?.title).toBe("Patna Weather Today");
+    expect(batch.results[0]?.domain).toBe("indiatoday.in");
+    expect(searchTavily).toHaveBeenCalledOnce();
   });
 
   it("returns DuckDuckGo hits when they pass quality filters", async () => {

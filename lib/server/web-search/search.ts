@@ -1,9 +1,10 @@
 import "server-only";
 
-import { searchBing } from "@/lib/server/web-search/bing";
-import { searchBrave } from "@/lib/server/web-search/brave";
-import { searchDuckDuckGo } from "@/lib/server/web-search/duckduckgo";
+import { searchTavily } from "@/lib/server/web-search/tavily";
 import { searchGoogleNews } from "@/lib/server/web-search/google-news";
+import { searchDuckDuckGo } from "@/lib/server/web-search/duckduckgo";
+import { searchBrave } from "@/lib/server/web-search/brave";
+import { searchBing } from "@/lib/server/web-search/bing";
 import { searchWikipediaEn } from "@/lib/server/web-search/wikipedia";
 import { finalizeSearchResults } from "@/lib/server/web-search/quality";
 import { mergeWebSearchBatches } from "@/lib/web-search/merge";
@@ -11,6 +12,7 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
 
 /**
  * 100% key-free search providers running concurrently:
+ * - Tavily: Real-time keyless web search for LLMs (`X-Tavily-Access-Mode: keyless`).
  * - Google News RSS: Real-time web/news coverage, zero IP blocking on Vercel, supports English & Hindi.
  * - Wikipedia En/Hi: MediaWiki full-text search across millions of topics and concepts.
  * - DuckDuckGo: GET/POST HTML + Lite + Instant Answer.
@@ -18,10 +20,11 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
  * - Bing: US market HTML SERP with decoded click redirect URLs.
  */
 export const KEYLESS_PROVIDERS = [
+  searchTavily,
   searchGoogleNews,
-  searchWikipediaEn,
   searchDuckDuckGo,
   searchBrave,
+  searchWikipediaEn,
   searchBing,
 ] as const;
 
@@ -44,7 +47,12 @@ export async function searchWeb(
 
   const batches: WebSearchApiResult[] = [];
   for (const outcome of settled) {
-    if (outcome.status === "fulfilled" && outcome.value.results.length > 0) {
+    if (
+      outcome.status === "fulfilled" &&
+      outcome.value &&
+      Array.isArray(outcome.value.results) &&
+      outcome.value.results.length > 0
+    ) {
       batches.push(outcome.value);
     }
   }
