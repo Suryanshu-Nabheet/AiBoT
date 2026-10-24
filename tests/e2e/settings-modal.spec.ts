@@ -64,6 +64,70 @@ test.describe("Settings modal", () => {
     await expect(dialog.getByText(/0 chats · 0 user messages/i)).toBeVisible();
   });
 
+  test("lets the user edit profile memories and response rules", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const now = new Date().toISOString();
+      localStorage.setItem(
+        "aibot-user-guidance-v1",
+        JSON.stringify([
+          {
+            id: "profile-memory",
+            kind: "memory",
+            content: "I work on an education app.",
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: "profile-rule",
+            kind: "rule",
+            content: "Prefer concise answers.",
+            createdAt: now,
+            updatedAt: now,
+          },
+        ]),
+      );
+    });
+    await page.goto("/");
+    await page
+      .locator("header")
+      .getByRole("button", { name: /^settings$/i })
+      .click();
+    await page.getByRole("menuitem", { name: /app settings/i }).click();
+
+    const dialog = page.getByRole("dialog");
+    const guidance = dialog.getByRole("region", { name: /memories & rules/i });
+    await expect(
+      guidance.getByText("I work on an education app."),
+    ).toBeVisible();
+    await guidance.getByRole("button", { name: /edit about me/i }).click();
+    const editor = guidance.getByRole("textbox", { name: /edit about me/i });
+    await editor.fill("I work on an accessibility education app.");
+    await guidance.getByRole("button", { name: /^save$/i }).click();
+    await expect(
+      guidance.getByText("I work on an accessibility education app."),
+    ).toBeVisible();
+    await expect(guidance.getByText("Prefer concise answers.")).toBeVisible();
+
+    page.once("dialog", (nativeDialog) => nativeDialog.accept());
+    await guidance
+      .getByRole("button", { name: /remove how aibot should respond/i })
+      .click();
+    await expect(guidance.getByText("Prefer concise answers.")).toHaveCount(0);
+
+    await guidance
+      .getByRole("switch", { name: /use memories and rules in chats/i })
+      .click();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          localStorage.getItem("aibot-user-guidance-enabled"),
+        ),
+      )
+      .toBe("false");
+  });
+
   test("opens over chat and closes without losing the home composer", async ({
     page,
   }) => {

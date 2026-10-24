@@ -55,6 +55,38 @@ export const hi = {
   "general.memory.confirmClear":
     "इस ब्राउज़र से चैट के बीच की सहेजी गई मेमोरी मिटाएँ? मौजूदा चैट इतिहास बना रहेगा।",
   "general.memory.cleared": "चैट के बीच की सहेजी गई मेमोरी मिटा दी गई।",
+  "general.guidance.title": "मेमोरी और नियम",
+  "general.guidance.description":
+    "AiBoT को अपने बारे में स्थायी संदर्भ और भविष्य के जवाबों की प्राथमिकताएँ दें। यह केवल इसी ब्राउज़र में सहेजा जाता है और चालू होने पर ही चैट में शामिल होता है।",
+  "general.guidance.enabled": "चैट में मेमोरी और नियम उपयोग करें",
+  "general.guidance.enabledDescription":
+    "बंद होने पर सहेजी सामग्री यहीं रहेगी, लेकिन चैट अनुरोधों में नहीं जाएगी।",
+  "general.guidance.memories": "मेरे बारे में",
+  "general.guidance.rules": "AiBoT को कैसे जवाब देना चाहिए",
+  "general.guidance.entryCount": "{max} में से {count}",
+  "general.guidance.memoryPlaceholder":
+    "उदाहरण: मैं जलवायु ऐप पर काम करने वाला प्रोडक्ट डिज़ाइनर हूँ।",
+  "general.guidance.rulePlaceholder":
+    "उदाहरण: पहले छोटा सारांश दें, फिर संक्षिप्त जवाब।",
+  "general.guidance.add": "{title} जोड़ें",
+  "general.guidance.editLabel": "{title} संपादित करें",
+  "general.guidance.removeLabel": "{title} हटाएँ",
+  "general.guidance.draftLabel": "नया {title}",
+  "general.guidance.save": "सहेजें",
+  "general.guidance.cancel": "रद्द करें",
+  "general.guidance.empty": "अभी कोई {title} सहेजा नहीं है।",
+  "general.guidance.limit":
+    "सीमा पूरी ({max} प्रविष्टियाँ)। नई प्रविष्टि जोड़ने से पहले एक हटाएँ।",
+  "general.guidance.confirmRemove": "इस सहेजी गई जानकारी को हटाएँ?",
+  "general.guidance.saved": "वैयक्तिकरण सहेजा गया।",
+  "general.guidance.saveFailed": "वैयक्तिकरण सहेजा नहीं जा सका।",
+  "general.guidance.commandAdded":
+    "AiBoT ने यह {kind} आपकी प्रोफ़ाइल में सहेजा।",
+  "general.guidance.commandUpdated": "AiBoT ने आपका सहेजा {kind} अपडेट किया।",
+  "general.guidance.commandRemoved":
+    "AiBoT ने {count} सहेजी {kind} प्रविष्टियाँ हटाईं।",
+  "general.guidance.commandFailed":
+    "प्रोफ़ाइल बदलाव सहेजा नहीं जा सका। इसे सेटिंग्स में प्रबंधित करें।",
   "models.title": "मॉडल प्राथमिकताएँ",
   "models.subtitle": "चैट सिलेक्टर साफ़ रखने के लिए मॉडल चालू/बंद करें।",
   "models.platform": "AiBoT प्लेटफ़ॉर्म मॉडल",

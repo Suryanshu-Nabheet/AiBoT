@@ -79,6 +79,12 @@ import {
 import { translate, type Locale } from "@/lib/i18n";
 import { resolveChatError, type ChatErrorCode } from "@/lib/chat/chat-error";
 import type { CustomKeys } from "@/lib/chat/resolve-provider";
+import { toast } from "sonner";
+import {
+  applyExplicitUserGuidanceCommand,
+  buildUserGuidanceContext,
+  type UserGuidanceCommandResult,
+} from "@/lib/chat/user-guidance";
 
 function assistantErrorFields(
   locale: Locale,
@@ -620,6 +626,32 @@ export function useChatSession({
     setShowWelcome(false);
     const currentQuery = inputQuery.trim();
     let userMessageId: string | null = null;
+    let guidanceUpdate: UserGuidanceCommandResult = null;
+    if (!sendOptions?.isRetry) {
+      try {
+        guidanceUpdate = applyExplicitUserGuidanceCommand(currentQuery);
+      } catch {
+        toast.error(translate(locale, "general.guidance.commandFailed"));
+      }
+    }
+    const userGuidanceContext = buildUserGuidanceContext(
+      undefined,
+      guidanceUpdate,
+    );
+    if (guidanceUpdate) {
+      const toastKey =
+        guidanceUpdate.action === "added"
+          ? "general.guidance.commandAdded"
+          : guidanceUpdate.action === "updated"
+            ? "general.guidance.commandUpdated"
+            : "general.guidance.commandRemoved";
+      toast.success(
+        translate(locale, toastKey, {
+          kind: guidanceUpdate.kind,
+          count: "count" in guidanceUpdate ? guidanceUpdate.count : 1,
+        }),
+      );
+    }
 
     let apiContent = buildMultimodalUserContent(
       currentQuery,
@@ -662,6 +694,17 @@ export function useChatSession({
       } else {
         apiContent = [
           { type: "text", text: sharedChatContext.text },
+          ...apiContent,
+        ];
+      }
+    }
+
+    if (userGuidanceContext) {
+      if (typeof apiContent === "string") {
+        apiContent = `${apiContent}\n\n${userGuidanceContext}`;
+      } else {
+        apiContent = [
+          { type: "text", text: userGuidanceContext },
           ...apiContent,
         ];
       }

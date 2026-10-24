@@ -66,6 +66,7 @@ import {
   setSharedChatMemoryEnabled,
 } from "@/lib/chat/shared-chat-memory";
 import type { Conversation } from "@/lib/chat/conversation-store";
+import { UserGuidanceManager } from "@/components/settings/user-guidance-manager";
 
 export type { SettingsSection };
 
@@ -514,6 +515,9 @@ export function SettingsPanel({
                 </Button>
               </SettingsRow>
             </SettingsCard>
+            <div className="mt-6">
+              <UserGuidanceManager />
+            </div>
           </div>
         );
 

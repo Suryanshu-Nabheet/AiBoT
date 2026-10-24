@@ -58,6 +58,37 @@ export const en = {
   "general.memory.confirmClear":
     "Clear saved cross-chat memory from this browser? Existing chat histories will remain.",
   "general.memory.cleared": "Saved cross-chat memory cleared.",
+  "general.guidance.title": "Memories & rules",
+  "general.guidance.description":
+    "Give AiBoT durable context about you and preferences for future replies. Saved only in this browser and included only when enabled.",
+  "general.guidance.enabled": "Use memories and rules in chats",
+  "general.guidance.enabledDescription":
+    "When off, saved entries stay here but are not sent with chat requests.",
+  "general.guidance.memories": "About me",
+  "general.guidance.rules": "How AiBoT should respond",
+  "general.guidance.entryCount": "{count} of {max}",
+  "general.guidance.memoryPlaceholder":
+    "For example: I am a product designer working on a climate app.",
+  "general.guidance.rulePlaceholder":
+    "For example: Prefer concise answers with a short summary first.",
+  "general.guidance.add": "Add {title}",
+  "general.guidance.editLabel": "Edit {title}",
+  "general.guidance.removeLabel": "Remove {title}",
+  "general.guidance.draftLabel": "New {title}",
+  "general.guidance.save": "Save",
+  "general.guidance.cancel": "Cancel",
+  "general.guidance.empty": "No {title} saved yet.",
+  "general.guidance.limit":
+    "Limit reached ({max} entries). Remove an entry before adding another.",
+  "general.guidance.confirmRemove": "Remove this saved item?",
+  "general.guidance.saved": "Personalization saved.",
+  "general.guidance.saveFailed": "Could not save personalization.",
+  "general.guidance.commandAdded": "AiBoT saved that {kind} to your profile.",
+  "general.guidance.commandUpdated": "AiBoT updated your saved {kind}.",
+  "general.guidance.commandRemoved":
+    "AiBoT removed {count} saved {kind} item(s).",
+  "general.guidance.commandFailed":
+    "That profile change could not be saved. Manage it in Settings.",
 
   // Models
   "models.title": "Model Preferences",
