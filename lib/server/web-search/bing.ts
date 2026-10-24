@@ -93,6 +93,7 @@ export function parseBingSearchHtml(
 export async function searchBing(
   query: string,
   maxResults = 8,
+  externalSignal?: AbortSignal,
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -100,6 +101,9 @@ export async function searchBing(
   }
 
   const controller = new AbortController();
+  const signal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
@@ -114,7 +118,7 @@ export async function searchBing(
         ...BROWSER_HEADERS,
         Referer: "https://www.bing.com/",
       },
-      signal: controller.signal,
+      signal,
       cache: "no-store",
     });
 

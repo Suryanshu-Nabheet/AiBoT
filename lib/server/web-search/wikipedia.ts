@@ -25,6 +25,7 @@ export function wikipediaSearchTerm(query: string): string {
 export async function searchWikipediaEn(
   query: string,
   maxResults = 8,
+  externalSignal?: AbortSignal,
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -32,6 +33,9 @@ export async function searchWikipediaEn(
   }
 
   const controller = new AbortController();
+  const signal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
@@ -47,7 +51,7 @@ export async function searchWikipediaEn(
 
     const response = await fetch(url, {
       headers: { Accept: "application/json" },
-      signal: controller.signal,
+      signal,
       cache: "no-store",
     });
 

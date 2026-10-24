@@ -91,6 +91,7 @@ export function parseGoogleNewsRss(
 export async function searchGoogleNews(
   query: string,
   maxResults = 8,
+  externalSignal?: AbortSignal,
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -113,13 +114,16 @@ export async function searchGoogleNews(
       };
 
   const controller = new AbortController();
+  const signal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
     const url = `${GOOGLE_NEWS_RSS}?${new URLSearchParams(params)}`;
     const response = await fetch(url, {
       headers: GOOGLE_NEWS_HEADERS,
-      signal: controller.signal,
+      signal,
       cache: "no-store",
     });
 

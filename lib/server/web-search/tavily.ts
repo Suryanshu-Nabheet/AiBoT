@@ -29,6 +29,7 @@ interface TavilySearchResponse {
 export async function searchTavily(
   query: string,
   maxResults = 8,
+  externalSignal?: AbortSignal,
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -48,6 +49,9 @@ export async function searchTavily(
   }
 
   const controller = new AbortController();
+  const signal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   const timeout = setTimeout(
     () => controller.abort(),
     Math.min(FETCH_TIMEOUT_MS, 6_000),
@@ -66,7 +70,7 @@ export async function searchTavily(
       method: "POST",
       headers,
       body: JSON.stringify(body),
-      signal: controller.signal,
+      signal,
       cache: "no-store",
     });
 

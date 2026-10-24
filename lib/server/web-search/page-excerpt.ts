@@ -254,10 +254,15 @@ function trimExcerpt(text: string): string {
 
 export async function fetchPageExcerpt(
   href: string,
+  externalSignal?: AbortSignal,
 ): Promise<string | undefined> {
   if (!isSafePublicHttpUrl(href)) return undefined;
+  if (externalSignal?.aborted) return undefined;
 
   const controller = new AbortController();
+  const signal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   const timeout = setTimeout(() => controller.abort(), PAGE_TIMEOUT_MS);
 
   try {
@@ -268,14 +273,14 @@ export async function fetchPageExcerpt(
       if (!isSafePublicHttpUrl(currentUrl.toString())) return undefined;
       const addresses = await resolvePublicAddresses(
         currentUrl.hostname.replace(/^\[|\]$/g, ""),
-        controller.signal,
+        signal,
       );
       if (!addresses) return undefined;
 
       const pageResponse = await requestPublicPage(
         currentUrl,
         addresses,
-        controller.signal,
+        signal,
       );
       if (pageResponse.status < 300 || pageResponse.status >= 400) {
         response = pageResponse;

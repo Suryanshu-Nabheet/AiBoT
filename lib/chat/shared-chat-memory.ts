@@ -2,6 +2,7 @@ import type { Conversation } from "@/lib/chat/conversation-store";
 import { Role } from "@/lib/types";
 
 const STORAGE_KEY = "aibot-shared-chat-memory-v1";
+const ENABLED_KEY = "aibot-shared-chat-memory-enabled";
 const MAX_CONVERSATIONS = 24;
 const MAX_MESSAGES_PER_CONVERSATION = 20;
 const MAX_MESSAGE_CHARS = 680;
@@ -17,6 +18,58 @@ type MemoryRecord = {
 
 let memoryCache: MemoryRecord[] | null = null;
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
+let enabledOverride: boolean | null = null;
+
+export function isSharedChatMemoryEnabled(): boolean {
+  if (enabledOverride !== null) return enabledOverride;
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(ENABLED_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+export function setSharedChatMemoryEnabled(enabled: boolean): void {
+  enabledOverride = enabled;
+  if (!enabled && persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = undefined;
+    memoryCache = null;
+  }
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ENABLED_KEY, String(enabled));
+  } catch {
+    // The current setting still applies in memory for this page lifetime.
+  }
+}
+
+export function clearSharedChatMemory(): void {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = undefined;
+  memoryCache = [];
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // The in-memory index is cleared even when persistent storage is blocked.
+  }
+}
+
+export function getSharedChatMemorySummary(): {
+  conversationCount: number;
+  messageCount: number;
+} {
+  const records = readRecords(true);
+  return {
+    conversationCount: records.length,
+    messageCount: records.reduce(
+      (sum, record) => sum + record.messages.length,
+      0,
+    ),
+  };
+}
 
 function validRecord(value: unknown): value is MemoryRecord {
   if (!value || typeof value !== "object") return false;
@@ -117,7 +170,7 @@ function schedulePersist() {
 
 /** Persist only bounded, user-authored plain text for cross-session retrieval. */
 export function saveSharedChatMemory(conversation: Conversation): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !isSharedChatMemoryEnabled()) return;
   const messages = conversation.messages
     .filter((message) => message.role === Role.User)
     .slice(-MAX_MESSAGES_PER_CONVERSATION)
@@ -147,6 +200,7 @@ export function saveSharedChatMemory(conversation: Conversation): void {
 
 /** Read fresh localStorage state so memory written in another tab is visible. */
 export function listSharedChatMemories(): Conversation[] {
+  if (!isSharedChatMemoryEnabled()) return [];
   return readRecords(true).map((record) => ({
     id: record.id,
     title: record.title,
@@ -172,4 +226,5 @@ export function resetSharedChatMemoryForTests(): void {
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = undefined;
   memoryCache = null;
+  enabledOverride = null;
 }

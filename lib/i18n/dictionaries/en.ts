@@ -18,6 +18,7 @@ export const en = {
   "settings.footer.edition": "Edition",
   "general.group.preferences": "Preferences",
   "general.group.alerts": "Alerts",
+  "general.group.privacy": "Privacy & context",
 
   // General
   "general.title": "General",
@@ -42,6 +43,21 @@ export const en = {
   "general.sound.title": "Completion Sound",
   "general.sound.desc":
     "Play a short chime when a long response finishes (tab must be audible).",
+  "general.memory.title": "Cross-chat memory",
+  "general.memory.desc":
+    "Reuse relevant snippets from up to 24 chats for 180 days. Stored only in this browser; turn off to stop saving and using shared context.",
+  "general.memory.saved": "Saved on this device",
+  "general.memory.summary": "{chats} chats · {messages} user messages",
+  "general.memory.inspect": "Inspect saved memory",
+  "general.memory.hide": "Hide saved memory",
+  "general.memory.untitled": "Untitled chat",
+  "general.memory.clearTitle": "Delete saved memory",
+  "general.memory.clearDesc":
+    "Remove saved cross-chat context from this browser.",
+  "general.memory.clear": "Clear saved memory",
+  "general.memory.confirmClear":
+    "Clear saved cross-chat memory from this browser? Existing chat histories will remain.",
+  "general.memory.cleared": "Saved cross-chat memory cleared.",
 
   // Models
   "models.title": "Model Preferences",

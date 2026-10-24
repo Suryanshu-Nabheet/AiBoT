@@ -59,6 +59,7 @@ export function parseBraveSearchHtml(
 export async function searchBrave(
   query: string,
   maxResults = 8,
+  externalSignal?: AbortSignal,
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -66,6 +67,9 @@ export async function searchBrave(
   }
 
   const controller = new AbortController();
+  const signal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
@@ -80,7 +84,7 @@ export async function searchBrave(
         ...BROWSER_HEADERS,
         Referer: "https://search.brave.com/",
       },
-      signal: controller.signal,
+      signal,
       cache: "no-store",
     });
 

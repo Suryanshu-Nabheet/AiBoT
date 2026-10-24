@@ -29,6 +29,9 @@ import {
   Copy,
   MoonStars,
   SpeakerHigh,
+  Trash,
+  Eye,
+  EyeSlash,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -55,6 +58,14 @@ import {
 } from "@/components/settings/settings-ui";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { VOICE_MODEL_STORAGE_KEY } from "@/lib/voice/model";
+import {
+  clearSharedChatMemory,
+  getSharedChatMemorySummary,
+  isSharedChatMemoryEnabled,
+  listSharedChatMemories,
+  setSharedChatMemoryEnabled,
+} from "@/lib/chat/shared-chat-memory";
+import type { Conversation } from "@/lib/chat/conversation-store";
 
 export type { SettingsSection };
 
@@ -200,10 +211,35 @@ export function SettingsPanel({
     "macos",
   );
   const [themeReady, setThemeReady] = useState(false);
+  const [crossChatMemoryEnabled, setCrossChatMemoryEnabled] = useState(true);
+  const [sharedMemorySummary, setSharedMemorySummary] = useState({
+    conversationCount: 0,
+    messageCount: 0,
+  });
+  const [sharedMemoryRecords, setSharedMemoryRecords] = useState<
+    Conversation[]
+  >([]);
+  const [showSharedMemory, setShowSharedMemory] = useState(false);
 
   useEffect(() => {
     setThemeReady(true);
+    setCrossChatMemoryEnabled(isSharedChatMemoryEnabled());
+    setSharedMemorySummary(getSharedChatMemorySummary());
+    setSharedMemoryRecords(listSharedChatMemories());
   }, []);
+
+  const handleCrossChatMemoryToggle = (enabled: boolean) => {
+    setCrossChatMemoryEnabled(enabled);
+    setSharedChatMemoryEnabled(enabled);
+  };
+
+  const handleClearSharedMemory = () => {
+    if (!window.confirm(t("general.memory.confirmClear"))) return;
+    clearSharedChatMemory();
+    setSharedMemorySummary({ conversationCount: 0, messageCount: 0 });
+    setSharedMemoryRecords([]);
+    toast.success(t("general.memory.cleared"));
+  };
 
   const themeValue = useMemo(() => {
     if (!themeReady) return "system";
@@ -394,6 +430,88 @@ export function SettingsPanel({
                   onCheckedChange={setCompletionSound}
                   aria-label={t("general.sound.title")}
                 />
+              </SettingsRow>
+            </SettingsCard>
+
+            <SettingsSectionLabel className="mt-6">
+              {t("general.group.privacy")}
+            </SettingsSectionLabel>
+            <SettingsCard>
+              <SettingsRow
+                icon={<ShieldCheck className="size-4" weight="duotone" />}
+                label={t("general.memory.title")}
+                description={t("general.memory.desc")}
+              >
+                <Switch
+                  checked={crossChatMemoryEnabled}
+                  onCheckedChange={handleCrossChatMemoryToggle}
+                  aria-label={t("general.memory.title")}
+                />
+              </SettingsRow>
+              <SettingsRow
+                icon={<HardDrives className="size-4" weight="duotone" />}
+                label={t("general.memory.saved")}
+                description={t("general.memory.summary", {
+                  chats: sharedMemorySummary.conversationCount,
+                  messages: sharedMemorySummary.messageCount,
+                })}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSharedMemory((current) => !current)}
+                  disabled={sharedMemorySummary.conversationCount === 0}
+                  aria-expanded={showSharedMemory}
+                >
+                  {showSharedMemory ? (
+                    <EyeSlash className="size-3.5" />
+                  ) : (
+                    <Eye className="size-3.5" />
+                  )}
+                  {showSharedMemory
+                    ? t("general.memory.hide")
+                    : t("general.memory.inspect")}
+                </Button>
+              </SettingsRow>
+              {showSharedMemory ? (
+                <div
+                  aria-label={t("general.memory.inspect")}
+                  className="max-h-64 space-y-3 overflow-y-auto border-b border-border/40 px-4 py-3"
+                >
+                  {sharedMemoryRecords.map((record) => (
+                    <section key={record.id} className="space-y-1.5">
+                      <h4 className="text-xs font-medium text-foreground">
+                        {record.title || t("general.memory.untitled")}
+                      </h4>
+                      <ul className="space-y-1">
+                        {record.messages.map((message, index) => (
+                          <li
+                            key={`${record.id}-${index}`}
+                            className="break-words text-xs leading-relaxed text-muted-foreground"
+                          >
+                            {message.content}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              ) : null}
+              <SettingsRow
+                icon={<Trash className="size-4" weight="duotone" />}
+                label={t("general.memory.clearTitle")}
+                description={t("general.memory.clearDesc")}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearSharedMemory}
+                  disabled={sharedMemorySummary.conversationCount === 0}
+                >
+                  {t("general.memory.clear")}
+                </Button>
               </SettingsRow>
             </SettingsCard>
           </div>

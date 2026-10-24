@@ -19,6 +19,7 @@ export const hi = {
   "settings.footer.edition": "संस्करण",
   "general.group.preferences": "वरीयताएँ",
   "general.group.alerts": "अलर्ट",
+  "general.group.privacy": "गोपनीयता और संदर्भ",
   "general.title": "सामान्य",
   "general.subtitle": "भाषा, दिखावट और सूचनाएँ।",
   "general.language.title": "डिस्प्ले भाषा",
@@ -40,6 +41,20 @@ export const hi = {
   "general.sound.title": "पूर्णता ध्वनि",
   "general.sound.desc":
     "लंबा जवाब पूरा होने पर छोटी ध्वनि बजाएँ (टैब ऑडिबल होना चाहिए)।",
+  "general.memory.title": "चैट के बीच मेमोरी",
+  "general.memory.desc":
+    "180 दिनों तक अधिकतम 24 चैट के प्रासंगिक अंश उपयोग करें। डेटा केवल इस ब्राउज़र में रहता है; साझा संदर्भ को सहेजना और उपयोग करना बंद करने के लिए इसे बंद करें।",
+  "general.memory.saved": "इस डिवाइस पर सहेजा गया",
+  "general.memory.summary": "{chats} चैट · {messages} उपयोगकर्ता संदेश",
+  "general.memory.inspect": "सहेजी गई मेमोरी देखें",
+  "general.memory.hide": "सहेजी गई मेमोरी छिपाएँ",
+  "general.memory.untitled": "बिना शीर्षक की चैट",
+  "general.memory.clearTitle": "सहेजी गई मेमोरी हटाएँ",
+  "general.memory.clearDesc": "इस ब्राउज़र से चैट के बीच का संदर्भ मिटाएँ।",
+  "general.memory.clear": "सहेजी गई मेमोरी मिटाएँ",
+  "general.memory.confirmClear":
+    "इस ब्राउज़र से चैट के बीच की सहेजी गई मेमोरी मिटाएँ? मौजूदा चैट इतिहास बना रहेगा।",
+  "general.memory.cleared": "चैट के बीच की सहेजी गई मेमोरी मिटा दी गई।",
   "models.title": "मॉडल प्राथमिकताएँ",
   "models.subtitle": "चैट सिलेक्टर साफ़ रखने के लिए मॉडल चालू/बंद करें।",
   "models.platform": "AiBoT प्लेटफ़ॉर्म मॉडल",

@@ -8,6 +8,62 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Settings modal", () => {
+  test("lets the user disable and clear browser-local cross-chat memory", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "aibot-shared-chat-memory-v1",
+        JSON.stringify([
+          {
+            id: "saved-chat",
+            title: "Saved topic",
+            updatedAt: new Date().toISOString(),
+            messages: ["A saved user message for the memory settings test."],
+          },
+        ]),
+      );
+    });
+    await page.goto("/");
+    await page
+      .locator("header")
+      .getByRole("button", { name: /^settings$/i })
+      .click();
+    await page.getByRole("menuitem", { name: /app settings/i }).click();
+
+    const dialog = page.getByRole("dialog");
+    const memoryToggle = dialog.getByRole("switch", {
+      name: /cross-chat memory/i,
+    });
+    await expect(memoryToggle).toBeChecked();
+    await expect(dialog.getByText(/1 chats · 1 user messages/i)).toBeVisible();
+    await dialog.getByRole("button", { name: /inspect saved memory/i }).click();
+    await expect(
+      dialog.getByText("A saved user message for the memory settings test."),
+    ).toBeVisible();
+
+    await memoryToggle.click();
+    await expect(memoryToggle).not.toBeChecked();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          localStorage.getItem("aibot-shared-chat-memory-enabled"),
+        ),
+      )
+      .toBe("false");
+
+    page.on("dialog", (nativeDialog) => nativeDialog.accept());
+    await dialog.getByRole("button", { name: /clear saved memory/i }).click();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          localStorage.getItem("aibot-shared-chat-memory-v1"),
+        ),
+      )
+      .toBeNull();
+    await expect(dialog.getByText(/0 chats · 0 user messages/i)).toBeVisible();
+  });
+
   test("opens over chat and closes without losing the home composer", async ({
     page,
   }) => {

@@ -23,6 +23,7 @@ import {
 } from "@/lib/chat/persist-conversation-snapshot";
 import { listConversations } from "@/lib/chat/conversation-store";
 import { buildSharedChatContext } from "@/lib/chat/shared-chat-context";
+import { isSharedChatMemoryEnabled } from "@/lib/chat/shared-chat-memory";
 import {
   getConversationInitialState,
   loadConversationMessages,
@@ -624,11 +625,12 @@ export function useChatSession({
       currentQuery,
       currentAttachments,
     );
-    const sharedChatContext = buildSharedChatContext(
-      currentQuery,
-      listConversations(),
-      [conversationId ?? "", conversationPersistId ?? ""],
-    );
+    const sharedChatContext = isSharedChatMemoryEnabled()
+      ? buildSharedChatContext(currentQuery, listConversations(), [
+          conversationId ?? "",
+          conversationPersistId ?? "",
+        ])
+      : null;
     const sharedHistory = (sharedChatContext?.userMessages ?? []).map(
       (content) => ({ role: Role.User, content }),
     );

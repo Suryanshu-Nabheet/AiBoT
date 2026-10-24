@@ -11,16 +11,22 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
 export const maxDuration = 30;
 const SEARCH_QUERY_DEADLINE_MS = 24_000;
 
-async function searchWithDeadline(query: string, maxResults: number) {
+async function searchWithDeadline(
+  query: string,
+  maxResults: number,
+  externalSignal: AbortSignal,
+) {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadlineController = new AbortController();
+  const signal = AbortSignal.any([externalSignal, deadlineController.signal]);
   try {
     return await Promise.race([
-      searchWeb(query, maxResults, { enrichPageExcerpts: true }),
+      searchWeb(query, maxResults, { enrichPageExcerpts: true, signal }),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error("Search query deadline exceeded")),
-          SEARCH_QUERY_DEADLINE_MS,
-        );
+        timer = setTimeout(() => {
+          deadlineController.abort();
+          reject(new Error("Search query deadline exceeded"));
+        }, SEARCH_QUERY_DEADLINE_MS);
       }),
     ]);
   } finally {
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest) {
   const settledBatches = await Promise.all(
     targetQueries.map(async (query) => {
       try {
-        return await searchWithDeadline(query, maxResults);
+        return await searchWithDeadline(query, maxResults, req.signal);
       } catch {
         return { query, results: [] };
       }

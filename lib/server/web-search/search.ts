@@ -8,6 +8,7 @@ import { searchBing } from "@/lib/server/web-search/bing";
 import { searchWikipediaEn } from "@/lib/server/web-search/wikipedia";
 import { finalizeSearchResults } from "@/lib/server/web-search/quality";
 import { enrichSourcesWithPageExcerpts } from "@/lib/server/web-search/enrich";
+import { runProviderWithResilience } from "@/lib/server/web-search/provider-resilience";
 import { mergeWebSearchBatches } from "@/lib/web-search/merge";
 import type { WebSearchApiResult } from "@/lib/web-search/types";
 
@@ -21,39 +22,16 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
  * - Brave: Datacenter HTML scraper with graceful recovery.
  * - Bing: US market HTML SERP with decoded click redirect URLs.
  */
-export const KEYLESS_PROVIDERS = [
-  searchTavily,
-  searchGoogleNews,
-  searchDuckDuckGo,
-  searchBrave,
-  searchWikipediaEn,
-  searchBing,
+const PROVIDERS = [
+  { name: "tavily", search: searchTavily },
+  { name: "google_news", search: searchGoogleNews },
+  { name: "duckduckgo", search: searchDuckDuckGo },
+  { name: "brave", search: searchBrave },
+  { name: "wikipedia", search: searchWikipediaEn },
+  { name: "bing", search: searchBing },
 ] as const;
 
-const PROVIDER_DEADLINE_MS = 10_000;
-
-async function searchWithProviderDeadline(
-  provider: (query: string, maxResults?: number) => Promise<WebSearchApiResult>,
-  query: string,
-  maxResults: number,
-): Promise<WebSearchApiResult> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      provider(query, maxResults),
-      new Promise<WebSearchApiResult>((resolve) => {
-        timer = setTimeout(
-          () => resolve({ query, results: [] }),
-          PROVIDER_DEADLINE_MS,
-        );
-      }),
-    ]);
-  } catch {
-    return { query, results: [] };
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
+export const KEYLESS_PROVIDERS = PROVIDERS.map((provider) => provider.search);
 
 /**
  * Purely key-free web search. No search API keys required.
@@ -62,7 +40,7 @@ async function searchWithProviderDeadline(
 export async function searchWeb(
   query: string,
   maxResults = 8,
-  options?: { enrichPageExcerpts?: boolean },
+  options?: { enrichPageExcerpts?: boolean; signal?: AbortSignal },
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -70,6 +48,7 @@ export async function searchWeb(
   }
 
   maxResults = Math.min(12, Math.max(1, Math.floor(maxResults) || 8));
+  const startedAt = Date.now();
   const isFreshOrNews =
     /\b(latest|recent|current|today|yesterday|breaking|news|headlines|released?|updates?|price|weather|forecast|score|results|gpt[- ]?\d|claude|gemini|deepseek|sora|blackwell|nemotron)\b|\breact\s*19\b|\bnext\.?js\s*15\b|\btailwind\s*v?4\b/i.test(
       trimmed,
@@ -81,20 +60,28 @@ export async function searchWeb(
     /\b(latest|recent|current)\b.{0,50}\b(ai|technology|model|product|framework|software)\b/i.test(
       trimmed,
     );
-  const providers = KEYLESS_PROVIDERS.filter((provider) => {
-    if (provider === searchGoogleNews) return isNewsQuery;
-    if (provider === searchWikipediaEn) return !isFreshOrNews;
+  const providers = PROVIDERS.filter(({ search }) => {
+    if (search === searchGoogleNews) return isNewsQuery;
+    if (search === searchWikipediaEn) return !isFreshOrNews;
     return true;
   });
 
   const settled = await Promise.all(
-    providers.map((provider) =>
-      searchWithProviderDeadline(provider, trimmed, maxResults),
+    providers.map(({ name, search }) =>
+      runProviderWithResilience(
+        name,
+        trimmed,
+        maxResults,
+        search,
+        options?.signal,
+      ),
     ),
   );
-  const batches = settled.filter(
-    (batch) => Array.isArray(batch.results) && batch.results.length > 0,
-  );
+  const batches = settled
+    .map((result) => result.batch)
+    .filter(
+      (batch) => Array.isArray(batch.results) && batch.results.length > 0,
+    );
 
   // Keep all provider candidates until topic-aware ranking has run. A large
   // snippet alone must not crowd stronger results out before relevance checks.
@@ -106,9 +93,25 @@ export async function searchWeb(
   const enriched = options?.enrichPageExcerpts
     ? await enrichSourcesWithPageExcerpts(candidates, {
         maxPages: Math.min(3, maxResults),
+        signal: options.signal,
       })
     : candidates;
   const results = finalizeSearchResults(trimmed, enriched, maxResults);
+
+  // One privacy-safe structured event per search; never log the query, URLs,
+  // titles, snippets, user messages, or provider response bodies.
+  console.info(
+    JSON.stringify({
+      event: "aibot.web_search.providers",
+      durationMs: Date.now() - startedAt,
+      candidateCount: merged.length,
+      acceptedCount: results.length,
+      partial: settled.some((item) =>
+        ["timeout", "error", "circuit_open"].includes(item.observation.outcome),
+      ),
+      providers: settled.map((item) => item.observation),
+    }),
+  );
 
   return { query: trimmed, results };
 }

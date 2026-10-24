@@ -209,6 +209,7 @@ export async function searchDuckDuckGoInstant(
 export async function searchDuckDuckGo(
   query: string,
   maxResults = 8,
+  externalSignal?: AbortSignal,
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -216,6 +217,9 @@ export async function searchDuckDuckGo(
   }
 
   const controller = new AbortController();
+  const signal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
@@ -233,7 +237,7 @@ export async function searchDuckDuckGo(
           ...BROWSER_HEADERS,
           Referer: "https://duckduckgo.com/",
         },
-        signal: controller.signal,
+        signal,
         cache: "no-store",
       });
       if (getResponse.ok) {
@@ -253,7 +257,7 @@ export async function searchDuckDuckGo(
           method: "POST",
           headers: DDG_HEADERS,
           body: new URLSearchParams({ q: trimmed, b: "", kl: "us-en" }),
-          signal: controller.signal,
+          signal,
           cache: "no-store",
         });
 
@@ -272,7 +276,7 @@ export async function searchDuckDuckGo(
       results = await searchDuckDuckGoLite(
         trimmed,
         maxResults,
-        controller.signal,
+        signal,
       );
     }
 
@@ -280,7 +284,7 @@ export async function searchDuckDuckGo(
       const instant = await searchDuckDuckGoInstant(
         trimmed,
         maxResults,
-        controller.signal,
+        signal,
       );
       results = instant.slice(0, maxResults);
     }

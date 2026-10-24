@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  clearSharedChatMemory,
   flushSharedChatMemory,
+  isSharedChatMemoryEnabled,
   listSharedChatMemories,
   resetSharedChatMemoryForTests,
   saveSharedChatMemory,
+  setSharedChatMemoryEnabled,
 } from "@/lib/chat/shared-chat-memory";
 import { Role, type Message } from "@/lib/types";
 
@@ -14,6 +17,7 @@ function createWindowStub() {
     localStorage: {
       getItem: (key: string) => values.get(key) ?? null,
       setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
     },
   };
 }
@@ -105,5 +109,42 @@ describe("shared chat memory", () => {
         .map((chat) => chat.id)
         .sort(),
     ).toEqual(["chat-1", "chat-2"]);
+  });
+
+  it("stops reading and writing shared memory when disabled", () => {
+    vi.stubGlobal("window", createWindowStub());
+    setSharedChatMemoryEnabled(false);
+    saveSharedChatMemory({
+      id: "chat-1",
+      title: "Dashboard",
+      createdAt: "2026-10-24T00:00:00.000Z",
+      updatedAt: "2026-10-24T00:00:00.000Z",
+      messages: [
+        { role: Role.User, content: "A sufficiently long user message." },
+      ],
+    });
+
+    expect(isSharedChatMemoryEnabled()).toBe(false);
+    expect(listSharedChatMemories()).toEqual([]);
+    expect(values.has("aibot-shared-chat-memory-v1")).toBe(false);
+  });
+
+  it("clears persisted snippets without deleting conversation history", () => {
+    vi.stubGlobal("window", createWindowStub());
+    saveSharedChatMemory({
+      id: "chat-1",
+      title: "Dashboard",
+      createdAt: "2026-10-24T00:00:00.000Z",
+      updatedAt: "2026-10-24T00:00:00.000Z",
+      messages: [
+        { role: Role.User, content: "A sufficiently long user message." },
+      ],
+    });
+    flushSharedChatMemory();
+    clearSharedChatMemory();
+
+    expect(values.has("aibot-shared-chat-memory-v1")).toBe(false);
+    expect(listSharedChatMemories()).toEqual([]);
+    expect(isSharedChatMemoryEnabled()).toBe(true);
   });
 });
