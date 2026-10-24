@@ -273,11 +273,7 @@ export async function searchDuckDuckGo(
     }
 
     if (results.length === 0) {
-      results = await searchDuckDuckGoLite(
-        trimmed,
-        maxResults,
-        signal,
-      );
+      results = await searchDuckDuckGoLite(trimmed, maxResults, signal);
     }
 
     if (results.length === 0) {
