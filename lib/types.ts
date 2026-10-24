@@ -206,7 +206,7 @@ export type Message = {
   id?: string;
   content: string;
   role: Role;
-  /** Private reasoning (thinking mode); answer lives in `content`. */
+  /** Concise, user-safe planning summary shown in the expandable Thinking panel. */
   thinkingText?: string;
   isError?: boolean;
   isThinkingRequested?: boolean;
@@ -224,6 +224,8 @@ export type Message = {
   shouldAnimate?: boolean;
   /** Agent web-search trace shown above the assistant reply. */
   webSearchTrace?: WebSearchTrace;
+  /** Bounded, untrusted search evidence retained for follow-up turns. */
+  webSearchContext?: string;
   /** Active web-search confirmation prompt during response time. */
   webSearchPrompt?: {
     active: boolean;

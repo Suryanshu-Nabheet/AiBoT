@@ -1,4 +1,9 @@
 import type { Message } from "@/lib/types";
+import {
+  flushSharedChatMemory,
+  listSharedChatMemories,
+  saveSharedChatMemory,
+} from "@/lib/chat/shared-chat-memory";
 
 export interface Conversation {
   id: string;
@@ -38,6 +43,20 @@ export function readConversation(id: string): Conversation | null {
   return map[id] ?? null;
 }
 
+/** Local conversation snapshots currently available in this browser tab. */
+export function listConversations(): Conversation[] {
+  const conversations = new Map(
+    listSharedChatMemories().map((conversation) => [
+      conversation.id,
+      conversation,
+    ]),
+  );
+  for (const conversation of Object.values(loadCache())) {
+    conversations.set(conversation.id, conversation);
+  }
+  return Array.from(conversations.values());
+}
+
 function persistCacheToSessionStorage() {
   if (typeof window === "undefined" || cache === null) return;
   persistChain = persistChain.then(() => {
@@ -58,6 +77,7 @@ export function saveConversation(conversation: Conversation, debounceMs = 400) {
     ...conversation,
     updatedAt: new Date().toISOString(),
   };
+  saveSharedChatMemory(map[conversation.id]);
 
   const existing = saveTimers.get(conversation.id);
   if (existing) clearTimeout(existing);
@@ -73,10 +93,13 @@ export function saveConversation(conversation: Conversation, debounceMs = 400) {
 
 /** Persist only when debounced saves are pending (fast no-op on navigation). */
 export function flushPendingConversationSaves() {
-  if (typeof window === "undefined" || saveTimers.size === 0) return;
-  saveTimers.forEach((timer) => clearTimeout(timer));
-  saveTimers.clear();
-  persistCacheToSessionStorage();
+  if (typeof window === "undefined") return;
+  if (saveTimers.size > 0) {
+    saveTimers.forEach((timer) => clearTimeout(timer));
+    saveTimers.clear();
+    persistCacheToSessionStorage();
+  }
+  flushSharedChatMemory();
 }
 
 export function flushAllConversationSaves() {
@@ -91,6 +114,7 @@ export function flushSaveConversation(conversation: Conversation) {
     ...conversation,
     updatedAt: new Date().toISOString(),
   };
+  saveSharedChatMemory(map[conversation.id]);
 
   const pending = saveTimers.get(conversation.id);
   if (pending) {
@@ -98,6 +122,7 @@ export function flushSaveConversation(conversation: Conversation) {
     saveTimers.delete(conversation.id);
   }
   persistCacheToSessionStorage();
+  flushSharedChatMemory();
 }
 
 /** Test helper — reset module cache between tests. */

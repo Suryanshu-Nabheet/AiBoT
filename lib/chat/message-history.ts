@@ -30,10 +30,21 @@ export function messageContentForModelHistory(
     const attachments = (message.attachments ?? []).map((a) =>
       normalizeLegacyAttachment(a),
     ) as ChatAttachment[];
+    const searchContext = message.webSearchContext?.trim();
     if (attachments.length > 0) {
-      return buildMultimodalUserContent(message.content ?? "", attachments);
+      const content = buildMultimodalUserContent(
+        message.content ?? "",
+        attachments,
+      );
+      if (!searchContext) return content;
+      if (typeof content === "string") {
+        return `${content}\n\n${searchContext}`;
+      }
+      return [...content, { type: "text", text: searchContext }];
     }
-    return message.content;
+    return searchContext
+      ? `${message.content}\n\n${searchContext}`
+      : message.content;
   }
   const thinking = message.thinkingText?.trim() ?? "";
   const answer = normalizeAssistantMessageContent(message.content ?? "");

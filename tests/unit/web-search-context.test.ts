@@ -56,8 +56,8 @@ describe("formatWebSearchContextForModel", () => {
       },
     ]);
 
-    expect(text).toContain("Web search context");
-    expect(text).toContain("Query: react");
+    expect(text).toContain("WEB SEARCH EVIDENCE");
+    expect(text).toContain("Source 1 (query: react)");
     expect(text).toContain("https://react.dev/");
     expect(text).toContain("The library for web UIs.");
   });

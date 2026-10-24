@@ -93,6 +93,10 @@ export function normalizeStoredMessages(messages: unknown[]): Message[] {
       content,
       shouldAnimate: false,
       webSearchTrace: normalizeWebSearchTrace(raw.webSearchTrace),
+      webSearchContext:
+        typeof raw.webSearchContext === "string"
+          ? raw.webSearchContext.slice(0, 12_000)
+          : undefined,
       webSearchPrompt: undefined,
     };
 

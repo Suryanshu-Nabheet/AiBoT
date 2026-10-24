@@ -95,6 +95,25 @@ describe("finalizeSearchResults", () => {
     ).length;
     expect(exampleCount).toBe(2);
   });
+
+  it("ranks punctuation variants such as Next.js against nextjs queries", () => {
+    const results = finalizeSearchResults(
+      "nextjs news",
+      [
+        {
+          title: "Next.js 15 Release Announcement",
+          href: "https://vercel.com/blog/nextjs15",
+          domain: "vercel.com",
+          brand: "generic",
+          snippet: "The Next.js framework release includes new features.",
+        },
+      ],
+      5,
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.domain).toBe("vercel.com");
+  });
 });
 
 describe("filterIrrelevantNewsHomepages", () => {

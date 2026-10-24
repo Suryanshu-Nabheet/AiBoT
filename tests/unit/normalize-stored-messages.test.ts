@@ -39,10 +39,29 @@ describe("normalizeStoredMessages", () => {
           steps: [{ kind: "summary", label: "Searching the web…" }],
         },
       },
+      {
+        role: "user",
+        content: "What changed recently?",
+        webSearchContext:
+          "[WEB SEARCH EVIDENCE] Source URL: https://example.com/update",
+      },
     ]);
 
-    expect(messages).toHaveLength(2);
+    expect(messages).toHaveLength(3);
     expect(messages[0].role).toBe(Role.User);
     expect(messages[1].webSearchTrace?.status).toBe("complete");
+  });
+
+  it("keeps retained search context when restoring a session", () => {
+    const [message] = normalizeStoredMessages([
+      {
+        role: "user",
+        content: "What changed recently?",
+        webSearchContext:
+          "[WEB SEARCH EVIDENCE] Source URL: https://example.com/update",
+      },
+    ]);
+
+    expect(message.webSearchContext).toContain("https://example.com/update");
   });
 });

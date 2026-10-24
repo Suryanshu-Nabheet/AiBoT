@@ -9,6 +9,73 @@ import { test, expect } from "@playwright/test";
 import { mockChatStream, mockWebSearchApi } from "./helpers/mock-chat";
 
 test.describe("Web search mode", () => {
+  test("keeps search evidence in both Thinking stages", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("aibot_web_search_enabled", "true");
+      localStorage.setItem("aibot_thinking_enabled", "true");
+    });
+    await mockWebSearchApi(page);
+
+    const chatBodies: {
+      thinkingStage?: string;
+      messages?: { role: string; content: unknown }[];
+    }[] = [];
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      const body = route
+        .request()
+        .postDataJSON() as (typeof chatBodies)[number];
+      chatBodies.push(body);
+      const responseText =
+        body.thinkingStage === "thinking"
+          ? "- I should compare the relevant evidence and flag any gaps."
+          : "Region X's update takes effect this week ([source](https://example.com/news/region-x)).";
+      const sse = [
+        `data: ${JSON.stringify({ choices: [{ delta: { content: responseText } }] })}`,
+        "",
+        "data: [DONE]",
+        "",
+        "",
+      ].join("\n");
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: sse,
+      });
+    });
+
+    await page.goto("/");
+    await page
+      .getByPlaceholder(/message aibot/i)
+      .fill("latest news about Region X");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    await expect(page.getByText(/region x's update takes effect/i)).toBeVisible(
+      {
+        timeout: 15_000,
+      },
+    );
+    expect(chatBodies.map((body) => body.thinkingStage)).toEqual([
+      "thinking",
+      "final",
+    ]);
+    for (const body of chatBodies) {
+      const userMessage = body.messages?.find(
+        (message) => message.role === "user",
+      );
+      const content =
+        typeof userMessage?.content === "string"
+          ? userMessage.content
+          : JSON.stringify(userMessage?.content ?? "");
+      expect(content).toContain("WEB SEARCH EVIDENCE");
+      expect(content).toContain("Official update published today");
+      expect(content).toContain("https://example.com/news/region-x");
+    }
+  });
+
   test("appends web search context to the user message and shows sources", async ({
     page,
   }) => {
@@ -47,11 +114,11 @@ test.describe("Web search mode", () => {
         ? userMessage.content
         : JSON.stringify(userMessage?.content ?? "");
 
-    expect(content).toContain("Web search context");
+    expect(content).toContain("WEB SEARCH EVIDENCE");
     expect(content).toContain("Official update published today");
     expect(content).toContain("latest news about Region X");
     expect(content.indexOf("latest news about Region X")).toBeLessThan(
-      content.indexOf("Web search context"),
+      content.indexOf("WEB SEARCH EVIDENCE"),
     );
   });
 

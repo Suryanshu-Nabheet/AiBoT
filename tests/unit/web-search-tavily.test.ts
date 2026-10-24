@@ -53,4 +53,40 @@ describe("searchTavily (keyless & API key)", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("keeps its deadline active while reading a stalled response body", async () => {
+    vi.useFakeTimers();
+    let requestSignal: AbortSignal | undefined;
+    const fetchMock = vi.fn((_url: string, options: RequestInit) => {
+      requestSignal = options.signal as AbortSignal;
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          new Promise((_, reject) => {
+            requestSignal?.addEventListener(
+              "abort",
+              () => reject(new DOMException("Aborted", "AbortError")),
+              { once: true },
+            );
+          }),
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const resultPromise = searchTavily("slow response body");
+      await vi.advanceTimersByTimeAsync(6_001);
+      const result = await Promise.race([
+        resultPromise,
+        Promise.resolve("still pending"),
+      ]);
+
+      expect(requestSignal?.aborted).toBe(true);
+      expect(result).not.toBe("still pending");
+      expect(result).toMatchObject({ results: [] });
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
 });

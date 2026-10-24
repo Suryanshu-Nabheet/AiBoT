@@ -47,13 +47,13 @@ export async function searchTavily(
     headers["X-Tavily-Access-Mode"] = "keyless";
   }
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      Math.min(FETCH_TIMEOUT_MS, 6_000),
-    );
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    Math.min(FETCH_TIMEOUT_MS, 6_000),
+  );
 
+  try {
     const body: Record<string, unknown> = {
       query: trimmed,
       max_results: maxResults,
@@ -69,8 +69,6 @@ export async function searchTavily(
       signal: controller.signal,
       cache: "no-store",
     });
-
-    clearTimeout(timeout);
 
     if (!response.ok) {
       return { query: trimmed, results: [] };
@@ -100,5 +98,9 @@ export async function searchTavily(
     return { query: trimmed, results };
   } catch {
     return { query: trimmed, results: [] };
+  } finally {
+    // Keep the deadline active through response.json(); headers can arrive
+    // while a provider stalls the response body indefinitely.
+    clearTimeout(timeout);
   }
 }

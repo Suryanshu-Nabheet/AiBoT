@@ -21,6 +21,8 @@ import {
   flushPersistConversationSnapshot,
   persistConversationSnapshot,
 } from "@/lib/chat/persist-conversation-snapshot";
+import { listConversations } from "@/lib/chat/conversation-store";
+import { buildSharedChatContext } from "@/lib/chat/shared-chat-context";
 import {
   getConversationInitialState,
   loadConversationMessages,
@@ -616,11 +618,28 @@ export function useChatSession({
     streamPersistTickRef.current = 0;
     setShowWelcome(false);
     const currentQuery = inputQuery.trim();
+    let userMessageId: string | null = null;
 
     let apiContent = buildMultimodalUserContent(
       currentQuery,
       currentAttachments,
     );
+    const sharedChatContext = buildSharedChatContext(
+      currentQuery,
+      listConversations(),
+      [conversationId ?? "", conversationPersistId ?? ""],
+    );
+    const sharedHistory = (sharedChatContext?.userMessages ?? []).map(
+      (content) => ({ role: Role.User, content }),
+    );
+    const searchConversationHistory = [...sharedHistory, ...messages];
+    const searchRecentUserMessages = [
+      ...(sharedChatContext?.userMessages ?? []),
+      ...messages
+        .filter((message) => message.role === Role.User)
+        .map((message) => message.content)
+        .slice(-6),
+    ].slice(-10);
 
     const documentWorkActive =
       isDocumentWorkRequest(currentQuery, currentAttachments) ||
@@ -635,6 +654,17 @@ export function useChatSession({
       }
     }
 
+    if (sharedChatContext) {
+      if (typeof apiContent === "string") {
+        apiContent = `${apiContent}\n\n${sharedChatContext.text}`;
+      } else {
+        apiContent = [
+          { type: "text", text: sharedChatContext.text },
+          ...apiContent,
+        ];
+      }
+    }
+
     if (!sendOptions?.isRetry) {
       const userMessage: Message = {
         id: `user-${sessionId ?? "chat"}-${Date.now()}`,
@@ -642,6 +672,7 @@ export function useChatSession({
         content: currentQuery || "(attachment)",
         attachments: [...currentAttachments],
       };
+      userMessageId = userMessage.id ?? null;
 
       setMessages((prev) => {
         const next = [...prev, userMessage];
@@ -661,10 +692,7 @@ export function useChatSession({
       `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     let webSearchTrace: WebSearchTrace | undefined;
-    const recentUserMessages = messages
-      .filter((m) => m.role === Role.User)
-      .map((m) => m.content)
-      .slice(-6);
+    const recentUserMessages = searchRecentUserMessages;
 
     let activeWebSearch = Boolean(
       webSearchEnabled || sendOptions?.forceWebSearch,
@@ -675,7 +703,7 @@ export function useChatSession({
     if (!activeWebSearch && Boolean(currentQuery) && !sendOptions?.isRetry) {
       const searchIntent = evaluateWebSearchIntent(currentQuery, {
         recentUserMessages,
-        conversationHistory: messages,
+        conversationHistory: searchConversationHistory,
       });
 
       if (searchIntent.shouldSearch) {
@@ -731,10 +759,13 @@ export function useChatSession({
 
     if (activeWebSearch && Boolean(currentQuery)) {
       try {
+        const forceWebSearch = Boolean(
+          webSearchEnabled || sendOptions?.forceWebSearch || promptApproved,
+        );
         const intent = evaluateWebSearchIntent(currentQuery, {
           recentUserMessages,
-          conversationHistory: messages,
-          force: sendOptions?.forceWebSearch || promptApproved,
+          conversationHistory: searchConversationHistory,
+          force: forceWebSearch,
         });
 
         if (intent.shouldSearch) {
@@ -753,10 +784,10 @@ export function useChatSession({
             signal: requestController.signal,
             locale,
             recentUserMessages,
-            conversationHistory: messages,
+            conversationHistory: searchConversationHistory,
             queriesOverride:
               intent.queries.length > 0 ? intent.queries : undefined,
-            force: sendOptions?.forceWebSearch || promptApproved,
+            force: forceWebSearch,
           });
 
           if (!searchResult.skipped) {
@@ -770,6 +801,26 @@ export function useChatSession({
                   ...apiContent,
                   { type: "text", text: contextBlock },
                 ];
+              }
+
+              // Retain the exact bounded evidence block so follow-up turns can
+              // still answer questions about these sources after reload.
+              if (userMessageId) {
+                setMessages((prev) => {
+                  const next = prev.map((message) =>
+                    message.id === userMessageId
+                      ? { ...message, webSearchContext: contextBlock }
+                      : message,
+                  );
+                  if (conversationPersistId) {
+                    queueConversationPersist(
+                      conversationPersistId,
+                      next,
+                      locale,
+                    );
+                  }
+                  return next;
+                });
               }
             }
           } else {

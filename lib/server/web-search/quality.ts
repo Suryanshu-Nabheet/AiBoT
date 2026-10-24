@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isSafePublicHttpUrl } from "@/lib/server/web-search/page-excerpt";
 import type { WebSearchSource } from "@/lib/web-search/types";
 
 const SEARCH_ENGINE_DOMAINS = [
@@ -50,6 +51,39 @@ const QUERY_STOPWORDS = new Set([
   "them",
   "his",
   "their",
+  "me",
+  "best",
+  "top",
+  "near",
+  "recommend",
+  "recommendation",
+  "please",
+  "search",
+  "web",
+  "internet",
+  "online",
+  "latest",
+  "current",
+  "currently",
+  "recent",
+  "today",
+  "news",
+  "update",
+  "updates",
+  "information",
+  "details",
+  "context",
+  "find",
+  "look",
+  "tell",
+  "show",
+  "give",
+  "explain",
+  "summarize",
+  "summarise",
+  "about",
+  "online",
+  "please",
 ]);
 
 function isLikelyEnglishQuery(query: string): boolean {
@@ -117,7 +151,8 @@ function meaningfulQueryTokens(query: string): string[] {
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
     .map((t) => t.trim())
-    .filter((t) => t.length > 2 && !QUERY_STOPWORDS.has(t));
+    .filter((t) => t.length > 2 && !QUERY_STOPWORDS.has(t))
+    .filter((token, index, all) => all.indexOf(token) === index);
 }
 
 function matchesAnyQueryToken(
@@ -137,7 +172,31 @@ function matchesAnyQueryToken(
   });
 }
 
-/** Fraction of results whose title/snippet/domain mention at least one query token. */
+function countTokenHits(tokens: string[], text: string): number {
+  return tokens.filter((token) => matchesAnyQueryToken([token], text, "", ""))
+    .length;
+}
+
+function relevanceScore(query: string, result: WebSearchSource): number {
+  const tokens = meaningfulQueryTokens(query);
+  if (tokens.length === 0) return 1;
+
+  const title = result.title.toLowerCase();
+  const body =
+    `${result.snippet ?? ""} ${result.pageExcerpt ?? ""}`.toLowerCase();
+  // Keep scoring aligned with the punctuation-tolerant relevance filter
+  // (for example, a "Next.js" title should match a "nextjs" query token).
+  const titleHits = countTokenHits(tokens, title);
+  const bodyHits = countTokenHits(tokens, body);
+  const normalizedQuery = query.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const exactPhrase = [title, body].some((text) =>
+    text.replace(/[^\p{L}\p{N}]+/gu, "").includes(normalizedQuery),
+  );
+  const coverage = (titleHits * 2 + bodyHits) / (tokens.length * 2);
+  return coverage + (exactPhrase ? 0.35 : 0);
+}
+
+/** Fraction of results whose title/snippet/page text/domain mention query terms. */
 export function searchResultRelevanceRatio(
   query: string,
   results: WebSearchSource[],
@@ -148,7 +207,12 @@ export function searchResultRelevanceRatio(
   let matched = 0;
   for (const result of results) {
     if (
-      matchesAnyQueryToken(tokens, result.title, result.snippet, result.domain)
+      matchesAnyQueryToken(
+        tokens,
+        result.title,
+        `${result.snippet ?? ""} ${result.pageExcerpt ?? ""}`,
+        result.domain,
+      )
     ) {
       matched += 1;
     }
@@ -160,7 +224,9 @@ export function isLowQualitySearchBatch(
   query: string,
   results: WebSearchSource[],
 ): boolean {
-  const clean = sanitizeSearchResults(results);
+  const clean = sanitizeSearchResults(results).filter((r) =>
+    isSafePublicHttpUrl(r.href),
+  );
   if (clean.length === 0) return true;
 
   const dictHits = clean.filter((r) =>
@@ -173,7 +239,7 @@ export function isLowQualitySearchBatch(
   if (tokens.length === 1 && relevance === 0) {
     return true;
   }
-  if (tokens.length >= 2 && relevance < 0.2) {
+  if (tokens.length >= 2 && relevance < 0.25) {
     return true;
   }
 
@@ -187,9 +253,19 @@ function filterResultsMissingQueryTokens(
   const tokens = meaningfulQueryTokens(query);
   if (tokens.length === 0) return results;
 
-  return results.filter((result) =>
-    matchesAnyQueryToken(tokens, result.title, result.snippet, result.domain),
-  );
+  const ranked = results
+    .map((result) => ({ result, score: relevanceScore(query, result) }))
+    .filter(
+      ({ result, score }) =>
+        matchesAnyQueryToken(
+          tokens,
+          result.title,
+          `${result.snippet ?? ""} ${result.pageExcerpt ?? ""}`,
+          result.domain,
+        ) && score >= (tokens.length > 3 ? 0.3 : 0.25),
+    )
+    .sort((a, b) => b.score - a.score);
+  return ranked.map(({ result }) => result);
 }
 
 /** Enforce domain diversity: prevent a single site from dominating search results. */
@@ -217,7 +293,7 @@ export function finalizeSearchResults(
 ): WebSearchSource[] {
   const clean = filterLocaleAlignedResults(
     query,
-    sanitizeSearchResults(results),
+    sanitizeSearchResults(results).filter((r) => isSafePublicHttpUrl(r.href)),
   );
   const tokenAligned = filterResultsMissingQueryTokens(query, clean);
   const diverse = limitResultsPerDomain(tokenAligned, 2);

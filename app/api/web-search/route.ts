@@ -2,9 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchWeb } from "@/lib/server/web-search/search";
 import { protectApiRequest } from "@/lib/server/request-security";
 import { webSearchRequestSchema } from "@/lib/server/request-schemas";
-import { evaluateWebSearchIntent } from "@/lib/web-search/intent";
+import {
+  evaluateWebSearchIntent,
+  normalizeSearchQuery,
+} from "@/lib/web-search/intent";
+import type { WebSearchApiResult } from "@/lib/web-search/types";
 
 export const maxDuration = 30;
+const SEARCH_QUERY_DEADLINE_MS = 24_000;
+
+async function searchWithDeadline(query: string, maxResults: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      searchWeb(query, maxResults, { enrichPageExcerpts: true }),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("Search query deadline exceeded")),
+          SEARCH_QUERY_DEADLINE_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 export async function POST(req: NextRequest) {
   const blocked = protectApiRequest(req, {
@@ -29,8 +51,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const maxResults = parsed.data.maxResults ?? 8;
-  const batches = [];
+  const maxResults = Math.min(parsed.data.maxResults ?? 8, 8);
+  const batches: WebSearchApiResult[] = [];
 
   let targetQueries: string[] = [];
 
@@ -53,13 +75,28 @@ export async function POST(req: NextRequest) {
     targetQueries = intent.queries;
   }
 
-  for (const query of targetQueries) {
-    try {
-      batches.push(await searchWeb(query, maxResults));
-    } catch {
-      batches.push({ query, results: [] });
-    }
+  targetQueries = Array.from(
+    new Set(targetQueries.map(normalizeSearchQuery).filter(Boolean)),
+  ).slice(0, 2);
+
+  if (targetQueries.length === 0) {
+    return NextResponse.json({
+      batches: [],
+      skipped: true,
+      reason: "no_searchable_topic",
+    });
   }
+
+  const settledBatches = await Promise.all(
+    targetQueries.map(async (query) => {
+      try {
+        return await searchWithDeadline(query, maxResults);
+      } catch {
+        return { query, results: [] };
+      }
+    }),
+  );
+  batches.push(...settledBatches);
 
   return NextResponse.json({ batches });
 }

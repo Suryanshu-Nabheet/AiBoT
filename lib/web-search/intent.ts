@@ -33,6 +33,57 @@ export type HistoryMessage =
       content?: unknown;
     };
 
+const SEARCH_QUERY_MAX_CHARS = 220;
+
+/** Remove search wrappers and answer instructions while preserving the topic. */
+export function normalizeSearchQuery(rawQuery: string): string {
+  let query = rawQuery.replace(/\s+/g, " ").trim();
+  if (!query) return "";
+
+  query = query
+    .replace(
+      /^(?:please\s+)?(?:can|could)\s+you\s+(?:please\s+)?(?:search(?:\s+the)?\s+(?:web|internet|online)(?:\s+for)?|google(?:\s+(?:this|that|for))?|look\s+up(?:\s+online)?|look\s+online|check\s+online|browse(?:\s+the\s+web)?(?:\s+for)?)(?:\s+(?:for|about|if|whether))?\s*/i,
+      "",
+    )
+    .replace(
+      /^(?:please\s+)?(?:search\s+online|look\s+online|check\s+online|find\s+online)\s*(?:for|about|whether|if)?\s*/i,
+      "",
+    )
+    .replace(
+      /^(?:please\s+)?(?:do|run|perform)\s+(?:a\s+)?web\s*search\s*(?:for|about|on)?\s*/i,
+      "",
+    )
+    .replace(
+      /^(?:please\s+)?(?:a\s+)?(?:web\s+search|google\s+search|search\s+for|google)\s+/i,
+      "",
+    )
+    .replace(
+      /^(?:search\s+(?:the\s+)?(?:web|internet)\s+(?:for|about)?)\s*/i,
+      "",
+    )
+    .replace(
+      /^(?:please\s+)?(?:can\s+you\s+)?(?:tell\s+me\s+about|find\s+out\s+about|look\s+up|give\s+me\s+information\s+about)\s+/i,
+      "",
+    )
+    .replace(
+      /(?:[,;]|\s+and\s+(?:then\s+)?)(?:summari[sz]e|explain|tell\s+me|give\s+me|show\s+me)\b[\s\S]*$/i,
+      "",
+    )
+    .replace(/\s+so\s+(?:that\s+)?you\s+can\b[\s\S]*$/i, "")
+    .replace(/^(?:for|about|on)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s,;:.!?-]+|[\s,;:.!?-]+$/g, "")
+    .trim();
+
+  if (query.length > SEARCH_QUERY_MAX_CHARS) {
+    query = query
+      .slice(0, SEARCH_QUERY_MAX_CHARS)
+      .replace(/\s+\S*$/, "")
+      .trim();
+  }
+  return query;
+}
+
 /** Self-identity, founder, creator, architecture, or origin questions for AiBoT. */
 const ASSISTANT_SELF_IDENTITY_REGEX =
   /\b(?:who\s+(?:are\s+you|created\s+you|made\s+you|built\s+you|developed\s+you|designed\s+you|owns\s+you|runs\s+you|programmed\s+you|founded\s+you)|who\s+is\s+your\s+(?:founder|creator|maker|developer|author|architect|owner|parent|boss)|who\s+(?:founded|created|built|made|owns|developed|designed)\s+(?:aibot|this)|who\s+is\s+(?:the\s+)?(?:founder|creator|developer|author|maker|architect|owner)\s+(?:of\s+aibot|behind\s+aibot)?|what\s+is\s+your\s+name|what\s+are\s+you|tell\s+me\s+about\s+(?:yourself|your\s+origins?|your\s+founder|your\s+creator)|what\s+is\s+aibot|who\s+is\s+aibot|who\s+is\s+suryanshu(?:\s+nabheet)?|tell\s+me\s+about\s+suryanshu(?:\s+nabheet)?|what\s+do\s+you\s+know\s+about\s+suryanshu(?:\s+nabheet)?)\b/i;
@@ -119,14 +170,28 @@ export function evaluateWebSearchIntent(
     PURE_SEARCH_COMMAND_REGEX.test(trimmed) ||
     META_SEARCH_DIRECTIVE_REGEX.test(trimmed);
 
+  if (
+    options?.force &&
+    !hasExplicitSearchRequest &&
+    ASSISTANT_SELF_IDENTITY_REGEX.test(trimmed)
+  ) {
+    return {
+      shouldSearch: false,
+      reason: "skip_self_identity",
+      confidence: 1.0,
+      queries: [],
+    };
+  }
+
   // 1. Forced search or explicit search request by the user in their prompt
   if (options?.force || hasExplicitSearchRequest) {
     const planned = extractCleanSearchQueries(trimmed, history);
     return {
-      shouldSearch: true,
-      reason: "explicit_request",
+      shouldSearch: planned.length > 0,
+      reason:
+        planned.length > 0 ? "explicit_request" : "skip_general_knowledge",
       confidence: 1.0,
-      queries: planned.length > 0 ? planned : [trimmed.slice(0, 500)],
+      queries: planned,
     };
   }
 
@@ -273,7 +338,10 @@ export function evaluateWebSearchIntent(
 
 /**
  * Extracts the primary discussion subject from conversation history.
- * Seamlessly inspects headers, entities, and previous user turns.
+ * Resolves the most recent user topic first. Assistant history is only used as
+ * a narrow fallback for explicit identity attributions (for example, when the
+ * user asks to search after an assistant refusal); arbitrary assistant prose
+ * must not steer the search topic.
  */
 export function extractSubjectFromConversationHistory(
   history: HistoryMessage[] = [],
@@ -294,6 +362,10 @@ export function extractSubjectFromConversationHistory(
             : "";
 
     if (!text.trim()) continue;
+
+    // User turns are the source of topic intent. Assistant output may contain
+    // guesses, suggested links, or unrelated examples that should not steer search.
+    if (typeof item !== "string" && item.role && item.role !== "user") continue;
 
     const cleaned = text
       .replace(/```[\s\S]*?```/g, "")
@@ -352,12 +424,15 @@ export function extractSubjectFromConversationHistory(
 
     // 4. Check for named company/person entities (e.g. Suryanshu Nabheet, SpaceX, xAI, Elon Musk, Tesla, Sam Altman, OpenAI)
     const entityMatches = cleaned.match(
-      /\b([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){0,2}|xAI|SpaceX|OpenAI|DeepSeek)\b/g,
+      /\b((?!(?:[Ii]s|[Aa]re|[Ww]as|[Ww]ere|[Dd]o|[Dd]oes|[Dd]id|[Cc]an|[Cc]ould|[Ww]ould|[Ww]ill|[Ww]hat|[Ww]ho|[Ww]here|[Ww]hen|[Ww]hy|[Hh]ow)\b)[A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){0,2}|xAI|SpaceX|OpenAI|DeepSeek)\b/g,
     );
     if (entityMatches && entityMatches.length > 0) {
       const filtered = entityMatches.filter(
         (e) =>
           !/^(I|The|This|That|There|Here|However|If|When|Why|What|Who|Where|Although|Because|Therefore|AiBoT|Status|Disabled|How|Hello|Hey|Good|My|Your|Google|Bing|Search|Engine|Internet|Web|Browser)$/i.test(
+            e,
+          ) &&
+          !/^(?:is|are|was|were|do|does|did|can|could|would|will|what|who|where|when|why|how)\s/i.test(
             e,
           ),
       );
@@ -408,6 +483,23 @@ export function extractSubjectFromConversationHistory(
       !/\b(you|your|yourself|founder|founer|creator|aibot)\b/i.test(userTopic)
     ) {
       return userTopic.slice(0, 80);
+    }
+  }
+
+  // Assistant responses are noisy. Use only a clearly stated attribution as
+  // fallback; never mine generic assistant prose for named entities.
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const item = history[i];
+    if (typeof item === "string" || item?.role !== "assistant") continue;
+    const text = typeof item.content === "string" ? item.content : "";
+    const attributionMatch = text.match(
+      /\b(?:founder(?:\s+and\s+creator)?|creator|developer|author|architect|built\s+by|founded\s+by)\s*[, :]+(?:is\s+|was\s+|:\s*|-+\s*)?\*{0,2}([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){1,3})\*{0,2}/i,
+    );
+    if (attributionMatch?.[1]) {
+      const candidate = attributionMatch[1].trim();
+      if (!/^(AiBoT|Assistant|OpenAI|Google|Anthropic)$/i.test(candidate)) {
+        return candidate;
+      }
     }
   }
 
@@ -497,6 +589,8 @@ export function extractCleanSearchQueries(
       cleaned = historicalSubject;
     } else if (/\bfounder\b/i.test(rawQuery)) {
       cleaned = "Suryanshu Nabheet";
+    } else {
+      return [];
     }
   } else if (
     /\b(him|his|her|hers|them|their|theirs|they|it|its|this\s+(?:person|company|tool|model)|that\s+(?:person|company|tool|model))\b/i.test(
@@ -535,12 +629,13 @@ export function extractCleanSearchQueries(
   // 5. Remove leading/trailing punctuation
   cleaned = cleaned.replace(/^[,.\s;:?!]+|[,.\s;:?!]+$/g, "").trim();
 
+  cleaned = normalizeSearchQuery(cleaned);
   if (!cleaned) return [];
 
   const year = new Date().getFullYear();
   const wantsFresh = FRESHNESS_KEYWORDS_REGEX.test(rawQuery);
 
-  const queries = [cleaned.slice(0, 500)];
+  const queries = [cleaned];
   if (wantsFresh && !cleaned.includes(String(year))) {
     queries.push(`${cleaned} ${year}`.slice(0, 500));
   }

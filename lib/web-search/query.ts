@@ -1,4 +1,4 @@
-import { extractCleanSearchQueries } from "./intent";
+import { extractCleanSearchQueries, normalizeSearchQuery } from "./intent";
 
 function extractTopicQuery(raw: string): string | null {
   let trimmed = raw.trim();
@@ -169,7 +169,9 @@ export function planWebSearchQueries(
       ? h
       : String((h as { content?: unknown })?.content ?? ""),
   );
-  const primary = resolveSearchQueryWithContext(userQuery, userMessages);
+  const primary = normalizeSearchQuery(
+    resolveSearchQueryWithContext(userQuery, userMessages),
+  );
   if (!primary) return [];
 
   const year = new Date().getFullYear();

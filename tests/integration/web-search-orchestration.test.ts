@@ -54,6 +54,36 @@ describe("searchWeb orchestration", () => {
     expect(searchTavily).toHaveBeenCalledOnce();
   });
 
+  it("keeps fast provider results when another provider stalls", async () => {
+    searchTavily.mockResolvedValue({
+      query: "react",
+      results: [
+        {
+          title: "React",
+          href: "https://react.dev/",
+          domain: "react.dev",
+          brand: "generic",
+          snippet: "The library for building web user interfaces.",
+        },
+      ],
+    });
+    searchBrave.mockImplementation(
+      () => new Promise<WebSearchApiResult>(() => undefined),
+    );
+
+    vi.useFakeTimers();
+    try {
+      const { searchWeb } = await import("@/lib/server/web-search/search");
+      const resultPromise = searchWeb("react", 5);
+      await vi.advanceTimersByTimeAsync(10_001);
+      const batch = await resultPromise;
+
+      expect(batch.results[0]?.href).toBe("https://react.dev/");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("returns DuckDuckGo hits when they pass quality filters", async () => {
     searchDuckDuckGo.mockResolvedValue({
       query: "react",

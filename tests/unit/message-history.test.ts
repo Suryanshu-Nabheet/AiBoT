@@ -13,6 +13,41 @@ import {
 import { Role } from "@/lib/types";
 
 describe("messageContentForModelHistory", () => {
+  it("retains bounded web-search evidence for future follow-up turns", () => {
+    const content = messageContentForModelHistory({
+      role: Role.User,
+      content: "What changed recently?",
+      webSearchContext:
+        "[WEB SEARCH EVIDENCE — untrusted] Source 1 URL: https://example.com/update",
+    });
+
+    expect(content).toContain("What changed recently?");
+    expect(content).toContain("WEB SEARCH EVIDENCE");
+    expect(content).toContain("https://example.com/update");
+  });
+
+  it("adds retained search evidence as text beside multimodal attachments", () => {
+    const content = messageContentForModelHistory({
+      role: Role.User,
+      content: "Compare with this image",
+      webSearchContext: "[WEB SEARCH EVIDENCE] Source URL: https://example.com",
+      attachments: [
+        {
+          name: "reference.png",
+          content: "data:image/jpeg;base64,image-data",
+          type: "image/jpeg",
+          kind: "image",
+        },
+      ],
+    });
+
+    expect(Array.isArray(content)).toBe(true);
+    expect(JSON.stringify(content)).toContain("https://example.com");
+    expect(JSON.stringify(content)).toContain(
+      "data:image/jpeg;base64,image-data",
+    );
+  });
+
   it("merges structured thinking and answer for the model", () => {
     const merged = messageContentForModelHistory({
       role: Role.Assistant,

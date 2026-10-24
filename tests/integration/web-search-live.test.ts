@@ -32,4 +32,12 @@ describe.skipIf(!runLiveSearch)("searchWeb (live, keyless)", () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results.some((r) => r.domain.includes("wikipedia.org"))).toBe(true);
   }, 30_000);
+
+  it("keeps results for a stable topic when page excerpts are enabled", async () => {
+    const { results } = await searchWeb("what is React", 3, {
+      enrichPageExcerpts: true,
+    });
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((result) => /react/i.test(result.title))).toBe(true);
+  }, 30_000);
 });

@@ -49,7 +49,7 @@ describe("thinking system prompt stack", () => {
     expect(prompt).toContain("Suryanshu Nabheet");
     expect(prompt).toContain("## Active model");
     expect(prompt).toContain("## Thinking");
-    expect(prompt).toContain("internal self-talk");
+    expect(prompt).toContain("concise planning summary");
     expect(prompt).not.toContain("## Chat");
     expect(prompt).toContain(THINKING_NOTES_ROLE.slice(0, 20));
   });
@@ -412,9 +412,18 @@ describe("stage2 protocol boundary", () => {
     ).toBe(false);
   });
 
-  it("defines thinking as concise first-person internal planning", () => {
-    expect(THINKING_NOTES_ROLE).toContain("internal self-talk");
-    expect(THINKING_NOTES_ROLE).toContain("planning language");
+  it("accepts concise labeled Thinking summaries for the expandable panel", () => {
+    expect(
+      isValidThinkingNotes(
+        "- Request: Compare the available options.\n- Approach: Organize the tradeoffs and note assumptions.",
+      ),
+    ).toBe(true);
+  });
+
+  it("defines Thinking as a user-safe concise planning summary", () => {
+    expect(THINKING_NOTES_ROLE).toContain("expandable Thinking panel");
+    expect(THINKING_NOTES_ROLE).toContain("private chain-of-thought");
+    expect(THINKING_NOTES_ROLE).toContain("source URLs");
     expect(THINKING_NOTES_ROLE).not.toContain(
       "Speak in third-person planning language",
     );
@@ -644,6 +653,27 @@ describe("buildChatMessagesForThinkingStage", () => {
       priorReasoning: "Short greeting.",
     });
     expect(msgs.some((m) => m.role === "assistant")).toBe(true);
+  });
+
+  it("preserves web evidence in both Thinking stages", () => {
+    const evidence =
+      "[WEB SEARCH EVIDENCE] Source 1 URL: https://example.com/a";
+    const thinking = buildChatMessagesForThinkingStage({
+      history: [],
+      userContent: `Compare the latest options.\n\n${evidence}`,
+      stage: "thinking",
+    });
+    const final = buildChatMessagesForThinkingStage({
+      history: [],
+      userContent: `Compare the latest options.\n\n${evidence}`,
+      stage: "final",
+      priorReasoning: "Use relevant evidence and note uncertainty.",
+    });
+
+    expect(thinking[0]?.content).toContain(evidence);
+    expect(final.find((message) => message.role === "user")?.content).toContain(
+      evidence,
+    );
   });
 });
 
