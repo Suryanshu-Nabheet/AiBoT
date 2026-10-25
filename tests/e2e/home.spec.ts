@@ -59,6 +59,41 @@ test.describe("Home / empty chat", () => {
     ).toBeVisible();
   });
 
+  test("restores the selected home model after a page reload", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const localModel = "ollama/qwen3.5:2b";
+      localStorage.setItem(
+        "aibot_ollama_models",
+        JSON.stringify([
+          {
+            name: "qwen3.5:2b",
+            size: 2_741_192_820,
+            details: { parameter_size: "2.3B" },
+          },
+        ]),
+      );
+      localStorage.setItem(
+        "aibot_enabled_models",
+        JSON.stringify([localModel]),
+      );
+    });
+    await page.goto("/");
+
+    const modelSelector = page.getByRole("combobox").first();
+    await modelSelector.click();
+    await page.getByText("qwen3.5:2b", { exact: true }).click();
+    await expect(modelSelector).toHaveText(/qwen3.5:2b/);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("directModel")))
+      .toBe("ollama/qwen3.5:2b");
+
+    await page.reload();
+
+    await expect(page.getByRole("combobox").first()).toHaveText(/qwen3.5:2b/);
+  });
+
   test("keeps the last model reachable at short and narrow viewport sizes", async ({
     page,
   }) => {

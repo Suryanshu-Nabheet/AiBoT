@@ -188,16 +188,13 @@ export function ModelSelector({
   const { modelId: persistedModelId, setModelId } = useModel({
     initialModel: value ?? filteredModels[0]?.id,
     storageKey: modelStorageKey,
-    persistToLocalStorage: true,
+    // A controlled picker shares persistence with its owning chat session.
+    // Letting both hooks read and write the same key can restore a stale
+    // default over the user's selected model during hydration.
+    persistToLocalStorage: value === undefined,
   });
 
   const selectedModel = value ?? persistedModelId;
-
-  useEffect(() => {
-    if (value && value !== persistedModelId) {
-      setModelId(value);
-    }
-  }, [value, persistedModelId, setModelId]);
 
   const focusModelSearch = useCallback(() => {
     requestAnimationFrame(() => {
@@ -231,7 +228,7 @@ export function ModelSelector({
   }, [enablePickerShortcut, disabled, focusModelSearch]);
 
   const handleValueChange = (newValue: string) => {
-    setModelId(newValue);
+    if (value === undefined) setModelId(newValue);
     setOpen(false);
     onValueChange?.(newValue);
   };
