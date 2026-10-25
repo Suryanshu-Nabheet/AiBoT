@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { searchWeb } from "@/lib/server/web-search/search";
 import { POST } from "@/app/api/web-search/route";
 
 vi.mock("@/lib/server/web-search/search", () => ({
@@ -73,6 +74,28 @@ describe("POST /api/web-search route", () => {
     expect(submittedQueries.join(" ")).not.toMatch(
       /recommendation report|code samples|citations/i,
     );
+  });
+
+  it("limits page-excerpt fetching to one top source per query", async () => {
+    vi.mocked(searchWeb).mockClear();
+    const req = new NextRequest("http://localhost:3000/api/web-search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        host: "localhost:3000",
+      },
+      body: JSON.stringify({
+        query: "latest official React 19 updates",
+        force: true,
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(vi.mocked(searchWeb).mock.calls[0]?.[2]).toMatchObject({
+      enrichPageExcerpts: true,
+      maxExcerptPages: 1,
+    });
   });
 
   it("returns 200 gracefully without 502 error when search produces no results", async () => {

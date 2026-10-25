@@ -210,6 +210,26 @@ describe("evaluateWebSearchIntent", () => {
     expect(queries[0].length).toBeLessThan(prompt.length * 0.7);
   });
 
+  it("removes a generic compare-the-changes clause from the search topic", () => {
+    const prompt =
+      "Please use web search to research the latest official React 19 updates, compare the released changes, then write a concise report with citations.";
+    const queries = extractCleanSearchQueries(prompt);
+
+    expect(queries[0]).toMatch(/React\s+19/i);
+    expect(queries[0]).not.toMatch(
+      /compare|released changes|concise report|citations/i,
+    );
+  });
+
+  it("keeps comparison subjects when changes are tied to named versions", () => {
+    const queries = extractCleanSearchQueries(
+      "Research React 19 updates, compare the changes between React 18 and React 19.",
+    );
+
+    expect(queries[0]).toMatch(/React\s+18/i);
+    expect(queries[0]).toMatch(/React\s+19/i);
+  });
+
   describe("Contextual pronoun and command resolution", () => {
     it("resolves pronouns from previous conversation turn", () => {
       const recent = ["who is Sam Altman?"];

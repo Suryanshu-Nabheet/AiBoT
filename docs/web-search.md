@@ -9,20 +9,20 @@ Web search uses **keyless** providers on the server (HTML scraping + public Wiki
 ## User flow
 
 1. Open the **model menu** in the composer (same area as **Thinking**), or click the proactive prompt when typing a search request.
-2. Turn on **Web search** (“Search the web before replying for fresher facts and sources”).
+2. Turn on **Web search** to let AiBoT search for fresh facts and external sources when the request calls for them.
 3. Send a message as usual.
 
 ### Agentic Search Decision & Execution
 
-With Web Search enabled, the user's toggle forces a search for each non-empty topic, including queries that could otherwise be answered locally. Bare questions about AiBoT identity are kept local unless the user explicitly asks to search. With Web Search disabled, a deterministic intent classifier can offer a search prompt for requests that appear to need current or external information.
+The Web Search toggle makes search available to the agent; it does not send greetings or every ordinary prompt to a search provider. AiBoT checks whether a substantive request needs current or external evidence, while explicit requests to search are always honored. Bare questions about AiBoT identity stay local unless the user explicitly asks to search. With Web Search disabled, a deterministic intent classifier can offer a search prompt for requests that appear to need current or external information.
 
-1. **Intent classification when search is off:** `evaluateWebSearchIntent` in `lib/web-search/intent.ts` detects explicit search requests, freshness signals, factual lookups, and conversational turns. It uses deterministic rules; it does not make an LLM planning call.
-   - When search is disabled, elementary math (e.g. `2 + 2`), greetings, standard coding tasks (e.g. reverse a string, binary search), and static knowledge do not trigger a search prompt.
-   - Current events, live prices, sports, weather, upcoming releases, and explicit search requests can trigger the proactive search prompt.
+1. **Intent classification:** `evaluateWebSearchIntent` in `lib/web-search/intent.ts` detects explicit search requests, freshness signals, factual lookups, and conversational turns. It uses deterministic rules; it does not make an LLM planning call. When search is enabled, the same check avoids unnecessary searches. When search is disabled, it decides whether to show a prompt asking before search runs.
+   - Elementary math (e.g. `2 + 2`), greetings, standard coding tasks (e.g. reverse a string, binary search), and static knowledge do not trigger search.
+   - Current events, live prices, sports, weather, upcoming releases, and explicit search requests can trigger search or the proactive search prompt, depending on the toggle state.
 2. **Query formulation:** Removes search wrappers and answer instructions, caps each query, and resolves simple follow-ups from prior user turns in the current conversation. User turns are preferred; assistant text is used only as a narrow fallback for clearly stated identity attributions.
 3. The UI shows a running trace (“Searching the web…”).
 4. The client calls `POST /api/web-search` with the derived queries.
-5. The server normalizes queries again, searches up to two in parallel, ranks and filters candidates, and fetches short excerpts from up to three public pages per query when safe and available. Search context is bounded and labels external content as untrusted evidence.
+5. The server normalizes queries again, searches up to two in parallel, ranks and filters candidates, and fetches a short excerpt from at most one top-ranked public page per query when safe and available. Search context is bounded and labels external content as untrusted evidence.
 6. Search results are formatted as bounded, untrusted **web-search evidence** and appended to the user message sent to `/api/chat`. If no usable results remain, the model is told to say that and not fabricate search support.
 7. The trace updates to **Ran N search(es) · M sources** with expandable query rows and source links.
 8. The model streams its answer; the trace stays on the assistant message in history.
@@ -77,7 +77,7 @@ Implemented in `lib/web-search/query.ts`—no extra LLM call.
 5. **Brave Search** — datacenter-friendly keyless HTML scraper.
 6. **Bing** — keyless HTML scraper with decoded redirect URLs.
 
-Each API query returns up to **8** results. The API accepts no more than two queries per request and caps `maxResults` at 8. Results include title, URL, domain, snippet, and a **brand** hint (Reddit, GitHub, Wikipedia, etc.) for UI badges. Top results may include a bounded page excerpt.
+Each API query returns up to **8** results. The API accepts no more than two queries per request and caps `maxResults` at 8. Results include title, URL, domain, snippet, and a **brand** hint (Reddit, GitHub, Wikipedia, etc.) for UI badges. At most one top-ranked result per query may include a bounded page excerpt.
 
 ---
 

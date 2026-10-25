@@ -10,6 +10,7 @@ import type { WebSearchApiResult } from "@/lib/web-search/types";
 
 export const maxDuration = 30;
 const SEARCH_QUERY_DEADLINE_MS = 24_000;
+const MAX_SOURCE_EXCERPTS_PER_QUERY = 1;
 
 async function searchWithDeadline(
   query: string,
@@ -21,7 +22,11 @@ async function searchWithDeadline(
   const signal = AbortSignal.any([externalSignal, deadlineController.signal]);
   try {
     return await Promise.race([
-      searchWeb(query, maxResults, { enrichPageExcerpts: true, signal }),
+      searchWeb(query, maxResults, {
+        enrichPageExcerpts: true,
+        maxExcerptPages: MAX_SOURCE_EXCERPTS_PER_QUERY,
+        signal,
+      }),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           deadlineController.abort();

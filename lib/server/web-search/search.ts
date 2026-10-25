@@ -43,7 +43,11 @@ export const KEYLESS_PROVIDERS = PROVIDERS.map((provider) => provider.search);
 export async function searchWeb(
   query: string,
   maxResults = 8,
-  options?: { enrichPageExcerpts?: boolean; signal?: AbortSignal },
+  options?: {
+    enrichPageExcerpts?: boolean;
+    maxExcerptPages?: number;
+    signal?: AbortSignal;
+  },
 ): Promise<WebSearchApiResult> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -106,7 +110,10 @@ export async function searchWeb(
   const candidates = finalizeSearchResults(trimmed, merged, maxResults);
   const enriched = options?.enrichPageExcerpts
     ? await enrichSourcesWithPageExcerpts(candidates, {
-        maxPages: Math.min(3, maxResults),
+        maxPages: Math.min(
+          maxResults,
+          Math.max(0, Math.floor(options.maxExcerptPages ?? 3)),
+        ),
         signal: options.signal,
       })
     : candidates;

@@ -42,6 +42,23 @@ const QUERY_STOPWORDS = new Set([
   "tell",
   "latest",
   "news",
+  "official",
+  "release",
+  "released",
+  "changes",
+  "compare",
+  "comparison",
+  "differences",
+  "updates",
+  "update",
+  "summarize",
+  "summarise",
+  "summary",
+  "recommend",
+  "recommendation",
+  "report",
+  "sources",
+  "citations",
   "is",
   "are",
   "was",
@@ -151,8 +168,41 @@ function meaningfulQueryTokens(query: string): string[] {
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
     .map((t) => t.trim())
-    .filter((t) => t.length > 2 && !QUERY_STOPWORDS.has(t))
+    .filter(
+      (t) => (t.length > 2 || /^\d{2,}$/.test(t)) && !QUERY_STOPWORDS.has(t),
+    )
     .filter((token, index, all) => all.indexOf(token) === index);
+}
+
+/** Keep numbered product/framework searches anchored to the requested version. */
+function queryVersionMarkers(query: string): string[] {
+  const markers: string[] = [];
+  const versionedEntity =
+    /\b([\p{L}][\p{L}\p{N}]*(?:[.-][\p{L}\p{N}]+)*)\s+v?(\d{1,3}(?:\.\d+){0,2})\b/giu;
+  for (const match of query.matchAll(versionedEntity)) {
+    const entity = match[1]?.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+    const version = match[2]?.replace(/\.$/, "");
+    if (entity && version) markers.push(`${entity}${version}`);
+  }
+  return markers;
+}
+
+function containsQueryVersionMarkers(
+  query: string,
+  result: WebSearchSource,
+): boolean {
+  const markers = queryVersionMarkers(query);
+  if (markers.length === 0) return true;
+  const searchableText = [
+    result.title,
+    result.snippet ?? "",
+    result.pageExcerpt ?? "",
+    result.href,
+  ]
+    .join(" ")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+  return markers.every((marker) => searchableText.includes(marker));
 }
 
 function matchesAnyQueryToken(
@@ -194,6 +244,32 @@ function relevanceScore(query: string, result: WebSearchSource): number {
   );
   const coverage = (titleHits * 2 + bodyHits) / (tokens.length * 2);
   return coverage + (exactPhrase ? 0.35 : 0);
+}
+
+/** Prefer the topic owner's own site when the user explicitly asks for official sources. */
+function officialSourceBoost(query: string, result: WebSearchSource): number {
+  if (!/\bofficial\b/i.test(query)) return 0;
+
+  const topicTokens = meaningfulQueryTokens(query).filter(
+    (token) => /\p{L}/u.test(token) && token.length >= 4,
+  );
+  const hostLabel = result.domain
+    .toLowerCase()
+    .split(".")
+    .slice(0, -1)
+    .join("")
+    .replace(/[^\p{L}\p{N}]/gu, "");
+  const topicOwnedDomain = topicTokens.some((token) =>
+    hostLabel.includes(token.replace(/[^\p{L}\p{N}]/gu, "")),
+  );
+  const officialLanguage = /\bofficial\b/i.test(result.title);
+  const publicInstitution = /\.(?:gov|edu)(?:\.[a-z]{2})?$/i.test(
+    result.domain,
+  );
+
+  if (topicOwnedDomain) return 0.75;
+  if (officialLanguage || publicInstitution) return 0.35;
+  return 0;
 }
 
 /** Fraction of results whose title/snippet/page text/domain mention query terms. */
@@ -254,17 +330,23 @@ function filterResultsMissingQueryTokens(
   if (tokens.length === 0) return results;
 
   const ranked = results
-    .map((result) => ({ result, score: relevanceScore(query, result) }))
+    .map((result) => ({
+      result,
+      score: relevanceScore(query, result),
+      officialBoost: officialSourceBoost(query, result),
+    }))
     .filter(
       ({ result, score }) =>
+        containsQueryVersionMarkers(query, result) &&
         matchesAnyQueryToken(
           tokens,
           result.title,
           `${result.snippet ?? ""} ${result.pageExcerpt ?? ""}`,
           result.domain,
-        ) && score >= (tokens.length > 3 ? 0.3 : 0.25),
+        ) &&
+        score >= (tokens.length > 3 ? 0.3 : 0.25),
     )
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score + b.officialBoost - (a.score + a.officialBoost));
   return ranked.map(({ result }) => result);
 }
 

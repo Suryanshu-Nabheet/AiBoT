@@ -656,6 +656,10 @@ export function extractCleanSearchQueries(
   // 4. Strip trailing conversational fluff
   cleaned = removeSearchPresentationInstructions(cleaned)
     .replace(
+      /(?:,?\s+(?:and\s+)?|;\s*)(?:then\s+)?(?:compare|summari[sz]e|analy[sz]e|evaluate|review)\s+(?:(?:the|these|those|all)\s+)?(?:(?:released|current|latest|recent|official|factual)\s+)*(?:changes|updates|differences|details|information|facts|sources|results|options|trade[- ]offs?|recommendations)\b(?=\s*(?:,?\s*(?:then\s+)?(?:write|provide|give|create|draft|prepare|produce)\b|[.!?]*$))[\s\S]*$/i,
+      "",
+    )
+    .replace(
       /\s+(?:for\s+me|and\s+tell\s+me|and\s+explain|to\s+me|please)\s*[.?!]*$/gi,
       "",
     )

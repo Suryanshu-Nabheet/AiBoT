@@ -114,6 +114,64 @@ describe("finalizeSearchResults", () => {
     expect(results).toHaveLength(1);
     expect(results[0]?.domain).toBe("vercel.com");
   });
+
+  it("rejects version-mismatched and keyword-overlap noise", () => {
+    const results = finalizeSearchResults(
+      "the latest official React 19 updates, compare the released changes",
+      [
+        {
+          title: "Amazon Changes Website Font, Customers React",
+          href: "https://www.businessinsider.com/amazon-customers-react-2018",
+          domain: "businessinsider.com",
+          brand: "generic",
+          snippet: "Customers react to a website font change.",
+        },
+        {
+          title: "React 18 upgrade guide",
+          href: "https://example.com/react-18",
+          domain: "example.com",
+          brand: "generic",
+          snippet: "A guide to React 18 updates and changes.",
+        },
+        {
+          title: "React 19",
+          href: "https://react.dev/blog/2024/12/05/react-19",
+          domain: "react.dev",
+          brand: "generic",
+          snippet: "React 19 introduces new features and changes.",
+        },
+      ],
+      8,
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.domain).toBe("react.dev");
+  });
+
+  it("prioritizes the topic owner's site when official sources are requested", () => {
+    const results = finalizeSearchResults(
+      "latest official React 19 updates",
+      [
+        {
+          title: "Every React 19 Change In 6 Minutes",
+          href: "https://youtube.com/watch?v=example",
+          domain: "youtube.com",
+          brand: "generic",
+          snippet: "A video about React 19 changes.",
+        },
+        {
+          title: "React v19 – React",
+          href: "https://react.dev/blog/2024/12/05/react-19",
+          domain: "react.dev",
+          brand: "generic",
+          snippet: "React 19 introduces new features and changes.",
+        },
+      ],
+      8,
+    );
+
+    expect(results[0]?.domain).toBe("react.dev");
+  });
 });
 
 describe("filterIrrelevantNewsHomepages", () => {
