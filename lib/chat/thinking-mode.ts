@@ -356,44 +356,6 @@ export function shouldRetryThinkingAnswer(text: string): boolean {
   );
 }
 
-/**
- * Very short social turns do not benefit from a multi-call planning loop.
- * Bypassing it prevents greetings from becoming retries, refusals, or model
- * identity dumps while preserving thinking mode for substantive requests.
- */
-export function shouldSkipThinkingForQuery(query: string): boolean {
-  const normalized = query
-    .trim()
-    .toLowerCase()
-    .replace(/[.!?,。！？]+$/u, "")
-    .trim();
-  if (!normalized || normalized.length > 32) return false;
-  return /^(?:hi|hello|hey|yo|hiya|good morning|good afternoon|good evening|thanks|thank you|bye|goodbye|how are you)$/i.test(
-    normalized,
-  );
-}
-
-/**
- * Skip planning only for a genuinely standalone social turn. Attachments and
- * caller-supplied instructions can carry substantive intent even when the
- * visible caption is just "hi".
- */
-export function shouldSkipThinkingForTurn({
-  query,
-  hasAttachments,
-  hasSystemInstruction,
-}: {
-  query: string;
-  hasAttachments: boolean;
-  hasSystemInstruction: boolean;
-}): boolean {
-  return (
-    !hasAttachments &&
-    !hasSystemInstruction &&
-    shouldSkipThinkingForQuery(query)
-  );
-}
-
 export function getStage1RepairUserPrompt(): string {
   return (
     "That output was a user-facing answer (or facts), not internal planning. " +

@@ -101,7 +101,7 @@ test.describe("Thinking mode", () => {
     ).toHaveCount(0);
   });
 
-  test("bypasses the thinking loop for a trivial greeting", async ({
+  test("uses the thinking loop for a greeting when thinking mode is enabled", async ({
     page,
   }) => {
     await page.addInitScript(() => {
@@ -114,6 +114,8 @@ test.describe("Thinking mode", () => {
       }
     });
     await mockThinkingChatStream(page, {
+      notes:
+        "- Request: The user greeted me.\n- Approach: I should greet them briefly and invite their request.",
       answer: "Hi there! How can I help today?",
     });
     await page.goto("/");
@@ -126,7 +128,10 @@ test.describe("Thinking mode", () => {
         timeout: 15_000,
       },
     );
-    expect(chatRequests).toHaveLength(1);
-    expect(chatRequests[0]?.thinkingStage).toBeUndefined();
+    expect(chatRequests.map((request) => request.thinkingStage)).toEqual([
+      "thinking",
+      "final",
+    ]);
+    await expect(page.getByText(/thinking/i).first()).toBeVisible();
   });
 });

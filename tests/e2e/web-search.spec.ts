@@ -9,6 +9,37 @@ import { test, expect } from "@playwright/test";
 import { mockChatStream, mockWebSearchApi } from "./helpers/mock-chat";
 
 test.describe("Web search mode", () => {
+  test("does not search for a greeting when web search is enabled", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("aibot_web_search_enabled", "true");
+    });
+    await mockWebSearchApi(page);
+    await mockChatStream(page, "Hello! How can I help you today?");
+
+    let webSearchRequests = 0;
+    page.on("request", (request) => {
+      if (
+        request.url().includes("/api/web-search") &&
+        request.method() === "POST"
+      ) {
+        webSearchRequests += 1;
+      }
+    });
+
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("hi");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    await expect(
+      page.getByText(/hello! how can i help you today/i),
+    ).toBeVisible({
+      timeout: 15_000,
+    });
+    expect(webSearchRequests).toBe(0);
+  });
+
   test("keeps search evidence in both Thinking stages", async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem("aibot_web_search_enabled", "true");

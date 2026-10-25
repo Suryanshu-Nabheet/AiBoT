@@ -28,9 +28,7 @@ import {
   reconcileTwoStageThinking,
   shouldRetryThinkingNotes,
   shouldRetryThinkingAnswer,
-  shouldSkipThinkingForQuery,
   extractOutlineLabelsFromDraft,
-  shouldSkipThinkingForTurn,
   synthesizePlanningNotesFromDump,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
@@ -532,38 +530,6 @@ describe("stage2 protocol boundary", () => {
       shouldRetryThinkingAnswer(
         "As an AI chat assistant, I am designed to respond to user inquiries accurately and efficiently using cutting-edge language models.",
       ),
-    ).toBe(true);
-  });
-
-  it("skips the planning loop for trivial social turns", () => {
-    expect(shouldSkipThinkingForQuery("hi")).toBe(true);
-    expect(shouldSkipThinkingForQuery("Hello!")).toBe(true);
-    expect(shouldSkipThinkingForQuery("what is reinforcement learning?")).toBe(
-      false,
-    );
-  });
-
-  it("keeps planning when a social caption has an attachment or instruction", () => {
-    expect(
-      shouldSkipThinkingForTurn({
-        query: "hi",
-        hasAttachments: true,
-        hasSystemInstruction: false,
-      }),
-    ).toBe(false);
-    expect(
-      shouldSkipThinkingForTurn({
-        query: "hi",
-        hasAttachments: false,
-        hasSystemInstruction: true,
-      }),
-    ).toBe(false);
-    expect(
-      shouldSkipThinkingForTurn({
-        query: "hi",
-        hasAttachments: false,
-        hasSystemInstruction: false,
-      }),
     ).toBe(true);
   });
 });

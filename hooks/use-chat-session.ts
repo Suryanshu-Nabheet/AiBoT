@@ -60,7 +60,6 @@ import {
   MAX_THINKING_NOTE_RETRIES,
   reconcileTwoStageThinking,
   sanitizeAssistantStreamField,
-  shouldSkipThinkingForTurn,
   resolveThinkingPanelNotes,
   shouldRetryThinkingAnswer,
   shouldRetryThinkingNotes,
@@ -613,13 +612,7 @@ export function useChatSession({
       if (isCurrentRequest()) setIsLoading(false);
     };
 
-    const thinkingRequested =
-      !!isThinking &&
-      !shouldSkipThinkingForTurn({
-        query: inputQuery,
-        hasAttachments: currentAttachments.length > 0,
-        hasSystemInstruction: Boolean(systemInstruction),
-      });
+    const thinkingRequested = !!isThinking;
     thinkingRequestedRef.current = thinkingRequested;
     requestStartedAtRef.current = Date.now();
     streamPersistTickRef.current = 0;
@@ -740,7 +733,7 @@ export function useChatSession({
     const recentUserMessages = searchRecentUserMessages;
 
     let activeWebSearch = Boolean(
-      webSearchEnabled || sendOptions?.forceWebSearch,
+      sendOptions?.forceWebSearch || (sendOptions?.isRetry && webSearchEnabled),
     );
     let promptApproved = false;
     let pendingAssistantId: string | null = null;
@@ -751,7 +744,9 @@ export function useChatSession({
         conversationHistory: searchConversationHistory,
       });
 
-      if (searchIntent.shouldSearch) {
+      if (searchIntent.shouldSearch && webSearchEnabled) {
+        activeWebSearch = true;
+      } else if (searchIntent.shouldSearch) {
         const promptId = newAssistantMessageId();
         pendingAssistantId = promptId;
         const searchTopic = searchIntent.queries[0] ?? currentQuery;
@@ -805,7 +800,7 @@ export function useChatSession({
     if (activeWebSearch && Boolean(currentQuery)) {
       try {
         const forceWebSearch = Boolean(
-          webSearchEnabled || sendOptions?.forceWebSearch || promptApproved,
+          sendOptions?.forceWebSearch || promptApproved,
         );
         const intent = evaluateWebSearchIntent(currentQuery, {
           recentUserMessages,
