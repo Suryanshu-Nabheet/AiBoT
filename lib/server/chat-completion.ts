@@ -146,6 +146,7 @@ export type OpenUpstreamParams = {
   thinkingStage?: ThinkingStage;
   priorReasoning?: string;
   documentWork?: boolean;
+  systemInstruction?: string;
   locale?: Locale;
   customKeys?: Record<string, string | undefined>;
   openRouterKey?: string;
@@ -165,6 +166,7 @@ export async function openChatUpstreamStream(
     thinkingStage,
     priorReasoning,
     documentWork,
+    systemInstruction,
     locale,
     customKeys,
     openRouterKey,
@@ -181,12 +183,12 @@ export async function openChatUpstreamStream(
     const ollamaModelName = targetModel.replace("ollama/", "");
     const targetUrl = normalizeOllamaUrl(ollamaUrl);
     const stage = thinkingStage;
-    const dynamicSystemPrompt = buildSystemPrompt(
-      targetModel,
-      stage,
-      locale,
-      documentWork,
-    );
+    const dynamicSystemPrompt = [
+      buildSystemPrompt(targetModel, stage, locale, documentWork),
+      systemInstruction,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
     const optimized = formatMessagesForProvider(messages);
     const annotated = stage
       ? prepareMessagesForThinking(optimized, stage, priorReasoning)
@@ -287,12 +289,12 @@ export async function openChatUpstreamStream(
 
   const stage = thinkingStage;
   const optimizedMessages = formatMessagesForProvider(messages);
-  const dynamicSystemPrompt = buildSystemPrompt(
-    targetModel,
-    stage,
-    locale,
-    documentWork,
-  );
+  const dynamicSystemPrompt = [
+    buildSystemPrompt(targetModel, stage, locale, documentWork),
+    systemInstruction,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const annotated = stage
     ? prepareMessagesForThinking(optimizedMessages, stage, priorReasoning)
     : optimizedMessages;

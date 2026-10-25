@@ -34,18 +34,12 @@ const customKeysSchema = z
   })
   .optional();
 
-export const webSearchRequestSchema = z.union([
-  z.object({
-    queries: z.array(z.string().trim().min(1).max(500)).min(1).max(3),
-    maxResults: z.number().int().min(1).max(12).optional(),
-  }),
-  z.object({
-    query: z.string().trim().min(1).max(2000),
-    recentUserMessages: z.array(z.string().trim().max(1000)).max(10).optional(),
-    maxResults: z.number().int().min(1).max(12).optional(),
-    force: z.boolean().optional(),
-  }),
-]);
+export const webSearchRequestSchema = z.object({
+  query: z.string().trim().min(1).max(200_000),
+  recentUserMessages: z.array(z.string().trim().max(1000)).max(10).optional(),
+  force: z.boolean().optional(),
+  maxResults: z.number().int().min(1).max(12).optional(),
+});
 
 export const chatRequestSchema = z.object({
   messages: z
@@ -63,6 +57,7 @@ export const chatRequestSchema = z.object({
   model: z.string().trim().min(1).max(200),
   isThinking: z.boolean().optional(),
   documentWork: z.boolean().optional(),
+  contextSummary: z.boolean().optional(),
   thinkingStage: z.enum(["thinking", "final"]).optional(),
   /** Normalized stage-1 reasoning block; required for grounded stage-2 answers. */
   priorReasoning: z.string().max(48_000).optional(),

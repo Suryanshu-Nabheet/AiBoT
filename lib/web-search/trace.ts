@@ -23,6 +23,7 @@ function labelForSearchStep(brand?: WebSearchBrand): string {
 export function buildWebSearchTraceFromResults(
   batches: WebSearchApiResult[],
   status: WebSearchTrace["status"] = "complete",
+  errorMessage?: string,
 ): WebSearchTrace {
   const totalResults = batches.reduce((n, b) => n + b.results.length, 0);
   const searchCount = batches.filter((b) => b.query.trim()).length;
@@ -32,9 +33,10 @@ export function buildWebSearchTraceFromResults(
       kind: "summary",
       label: searchCount === 1 ? "Ran 1 search" : `Ran ${searchCount} searches`,
       meta:
-        totalResults > 0
+        errorMessage ??
+        (totalResults > 0
           ? `${totalResults} source${totalResults === 1 ? "" : "s"}`
-          : undefined,
+          : undefined),
     },
   ];
 
@@ -65,9 +67,11 @@ export function buildWebSearchTraceFromResults(
       query: batch.query,
       brand: stepBrand,
       meta:
-        batch.results.length > 0
-          ? `${batch.results.length} results`
-          : "No results",
+        batch.status === "error"
+          ? (batch.errorMessage ?? "Search unavailable")
+          : batch.results.length > 0
+            ? `${batch.results.length} results`
+            : "No results",
       sources: batch.results.slice(0, 12),
     });
   }
@@ -76,6 +80,7 @@ export function buildWebSearchTraceFromResults(
     status,
     steps,
     queriedAt: new Date().toISOString(),
+    ...(errorMessage ? { errorMessage } : {}),
   };
 }
 

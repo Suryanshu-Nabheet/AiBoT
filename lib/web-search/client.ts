@@ -68,7 +68,12 @@ export async function runWebSearchForTurn(
   const response = await fetch("/api/web-search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ queries: targetQueries, maxResults: 8 }),
+    body: JSON.stringify({
+      query: userQuery,
+      recentUserMessages: options?.recentUserMessages,
+      force: options?.force,
+      maxResults: 8,
+    }),
     signal: options?.signal,
   });
 
@@ -79,12 +84,42 @@ export async function runWebSearchForTurn(
     throw new Error(payload.message ?? "Web search failed");
   }
 
-  const data = (await response.json()) as { batches: WebSearchApiResult[] };
+  const data = (await response.json()) as {
+    batches?: WebSearchApiResult[];
+    skipped?: boolean;
+    reason?: string;
+  };
   const batches = data.batches ?? [];
+  if (data.skipped) {
+    return {
+      skipped: true,
+      reason: data.reason,
+      batches,
+      trace: buildWebSearchTraceFromResults([], "complete"),
+      context: "",
+    };
+  }
+  const errors = batches.filter((batch) => batch.status === "error");
+  const usable = batches.filter((batch) => batch.status !== "error");
+  const status =
+    errors.length === batches.length && batches.length > 0
+      ? "error"
+      : errors.length > 0 || batches.some((batch) => batch.status === "partial")
+        ? "partial"
+        : "complete";
+  const errorMessage =
+    status === "error"
+      ? (errors[0]?.errorMessage ?? "Web search providers are unavailable.")
+      : status === "partial"
+        ? "Some search providers were unavailable."
+        : undefined;
 
   return {
     batches,
-    trace: buildWebSearchTraceFromResults(batches, "complete"),
-    context: formatWebSearchContextForModel(batches, options?.locale ?? "en"),
+    trace: buildWebSearchTraceFromResults(batches, status, errorMessage),
+    context:
+      status === "error"
+        ? `[WEB SEARCH FAILED — ${errorMessage} Do not fabricate current facts or imply that sources were found. Be transparent about the search failure.]`
+        : `${formatWebSearchContextForModel(usable, options?.locale ?? "en")}${status === "partial" ? `\n\n[WEB SEARCH NOTICE — ${errorMessage} Treat available sources as incomplete and mention this limitation when it affects the answer.]` : ""}`,
   };
 }

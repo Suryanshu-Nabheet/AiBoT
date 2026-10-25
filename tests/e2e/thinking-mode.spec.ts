@@ -9,6 +9,107 @@ import { test, expect } from "@playwright/test";
 import { mockThinkingChatStream } from "./helpers/mock-chat";
 
 test.describe("Thinking mode", () => {
+  test("compacts long chat history and includes the saved summary in the next model request", async ({
+    page,
+  }) => {
+    const oldMessages = Array.from({ length: 40 }, (_, index) => ({
+      id: `old-${index}`,
+      role: index % 2 === 0 ? "user" : "assistant",
+      content:
+        index === 0
+          ? "We decided the dashboard accent must be indigo."
+          : `Conversation detail ${index}.`,
+    }));
+    await page.addInitScript((messages) => {
+      localStorage.setItem(
+        "conversations",
+        JSON.stringify({
+          "long-context-chat": {
+            id: "long-context-chat",
+            title: "Long context",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            messages,
+          },
+        }),
+      );
+    }, oldMessages);
+
+    const requests: {
+      contextSummary?: boolean;
+      messages?: { role: string; content: unknown }[];
+    }[] = [];
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      const body = route.request().postDataJSON() as (typeof requests)[number];
+      requests.push(body);
+      const content = body.contextSummary
+        ? "The user is building a dashboard and chose indigo as its accent. The current chat concerns preserving that decision across long sessions."
+        : "The retained dashboard accent is indigo.";
+      const sse = [
+        `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}`,
+        "",
+        "data: [DONE]",
+        "",
+        "",
+      ].join("\n");
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: sse,
+      });
+    });
+
+    await page.goto("/chat/long-context-chat");
+    const composer = page.getByPlaceholder(/send follow-up/i);
+    await composer.fill("What accent did we choose?");
+    await page.getByRole("button", { name: /send message/i }).click();
+    await expect(
+      page.getByText("The retained dashboard accent is indigo.").first(),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          localStorage
+            .getItem("conversations")
+            ?.includes("The user is building a dashboard"),
+        ),
+      )
+      .toBe(true);
+
+    await composer.fill("Remind me of the accent color.");
+    await page.getByRole("button", { name: /send message/i }).click();
+    await expect(
+      page.getByText("The retained dashboard accent is indigo.").last(),
+    ).toBeVisible({
+      timeout: 15_000,
+    });
+
+    expect(requests.some((request) => request.contextSummary)).toBe(true);
+    const finalChatRequest = requests
+      .filter((request) => !request.contextSummary)
+      .at(-1);
+    const finalUserMessage = finalChatRequest?.messages
+      ?.filter((message) => message.role === "user")
+      .at(-1);
+    const serialized =
+      typeof finalUserMessage?.content === "string"
+        ? finalUserMessage.content
+        : JSON.stringify(finalUserMessage?.content ?? "");
+    expect(serialized).toContain("CHAT CONTINUITY SUMMARY");
+    expect(serialized).toContain("chose indigo");
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          localStorage.getItem("conversations")?.includes("contextSummary"),
+        ),
+      )
+      .toBe(true);
+  });
+
   test("includes relevant user context saved from a prior session in the model request", async ({
     page,
   }) => {
@@ -68,7 +169,7 @@ test.describe("Thinking mode", () => {
       typeof userContent === "string"
         ? userContent
         : JSON.stringify(userContent ?? "");
-    expect(serialized).toContain("USER-SHARED CONTEXT FROM OTHER CHATS");
+    expect(serialized).toContain("CONTEXT FROM OTHER CHATS");
     expect(serialized).toContain(
       "I am building a React dashboard with TypeScript and Tailwind.",
     );

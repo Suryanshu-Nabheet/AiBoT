@@ -187,4 +187,23 @@ describe("searchWeb orchestration", () => {
     expect(batch.results[0]?.title).toBe("Next.js 15 Release Announcement");
     expect(batch.results[0]?.domain).toBe("vercel.com");
   });
+
+  it("marks total provider failure separately from a genuine empty result", async () => {
+    for (const provider of [
+      searchTavily,
+      searchDuckDuckGo,
+      searchBrave,
+      searchBing,
+      searchWikipediaEn,
+    ]) {
+      provider.mockRejectedValue(new Error("provider unavailable"));
+    }
+
+    const { searchWeb } = await import("@/lib/server/web-search/search");
+    const result = await searchWeb("react", 5);
+
+    expect(result.results).toEqual([]);
+    expect(result.status).toBe("error");
+    expect(result.errorMessage).toMatch(/unavailable/i);
+  });
 });

@@ -120,12 +120,36 @@ export async function searchWeb(
       durationMs: Date.now() - startedAt,
       candidateCount: merged.length,
       acceptedCount: results.length,
-      partial: settled.some((item) =>
-        ["timeout", "error", "circuit_open"].includes(item.observation.outcome),
+      partial: settled.some(
+        (item) =>
+          item.observation.outcome !== "results" &&
+          item.observation.outcome !== "empty",
       ),
       providers: settled.map((item) => item.observation),
     }),
   );
 
-  return { query: trimmed, results };
+  const failedProviders = settled.filter(
+    (item) =>
+      item.observation.outcome !== "results" &&
+      item.observation.outcome !== "empty",
+  );
+  const successfulProviders = settled.length - failedProviders.length;
+  const status =
+    successfulProviders === 0
+      ? "error"
+      : failedProviders.length > 0
+        ? "partial"
+        : "complete";
+
+  return {
+    query: trimmed,
+    results,
+    status,
+    ...(status === "error"
+      ? { errorMessage: "All web search providers are currently unavailable." }
+      : status === "partial"
+        ? { errorMessage: "Some web search providers were unavailable." }
+        : {}),
+  };
 }

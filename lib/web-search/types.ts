@@ -33,7 +33,7 @@ export type WebSearchStep =
     };
 
 export type WebSearchTrace = {
-  status: "running" | "complete" | "error";
+  status: "running" | "complete" | "partial" | "error";
   steps: WebSearchStep[];
   queriedAt?: string;
   errorMessage?: string;
@@ -42,4 +42,7 @@ export type WebSearchTrace = {
 export type WebSearchApiResult = {
   query: string;
   results: WebSearchSource[];
+  /** Distinguishes an empty result set from provider failures. */
+  status?: "complete" | "partial" | "error";
+  errorMessage?: string;
 };

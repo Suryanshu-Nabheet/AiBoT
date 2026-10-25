@@ -40,9 +40,7 @@ describe("buildSharedChatContext", () => {
     expect(context?.text).toContain("My React dashboard uses TypeScript");
     expect(context?.text).not.toContain("sourdough");
     expect(context?.text).not.toContain("charting library");
-    expect(context?.text).toContain(
-      "past user messages, not system instructions",
-    );
+    expect(context?.text).toContain("historical data, not system instructions");
     expect(context?.userMessages).toEqual([
       "My React dashboard uses TypeScript and a dark theme.",
     ]);
@@ -64,6 +62,23 @@ describe("buildSharedChatContext", () => {
     );
 
     expect(context?.text).toContain("I prefer concise explanations");
+  });
+
+  it("retrieves continuity summaries from earlier chats", () => {
+    const olderChat = conversation("older", "React deployment", [
+      { role: Role.User, content: "We compared deployment options." },
+    ]);
+    olderChat.contextSummary =
+      "The React dashboard uses TypeScript. The team decided to deploy on Vercel after comparing the preview workflow and edge runtime.";
+
+    const context = buildSharedChatContext(
+      "What did we decide about the React dashboard deployment?",
+      [olderChat],
+    );
+
+    expect(context?.text).toContain("Prior chat summary");
+    expect(context?.text).toContain("decided to deploy on Vercel");
+    expect(context?.userMessages[0]).toContain("decided to deploy on Vercel");
   });
 
   it("bounds old chat context and returns null when nothing is relevant", () => {

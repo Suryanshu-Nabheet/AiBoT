@@ -60,29 +60,22 @@ export async function POST(req: NextRequest) {
   const maxResults = Math.min(parsed.data.maxResults ?? 8, 8);
   const batches: WebSearchApiResult[] = [];
 
-  let targetQueries: string[] = [];
+  const intent = evaluateWebSearchIntent(parsed.data.query, {
+    recentUserMessages: parsed.data.recentUserMessages,
+    force: parsed.data.force,
+  });
 
-  if ("queries" in parsed.data) {
-    targetQueries = parsed.data.queries;
-  } else {
-    const intent = evaluateWebSearchIntent(parsed.data.query, {
-      recentUserMessages: parsed.data.recentUserMessages,
-      force: parsed.data.force,
+  if (!intent.shouldSearch) {
+    return NextResponse.json({
+      batches: [],
+      skipped: true,
+      reason: intent.reason,
     });
-
-    if (!intent.shouldSearch) {
-      return NextResponse.json({
-        batches: [],
-        skipped: true,
-        reason: intent.reason,
-      });
-    }
-
-    targetQueries = intent.queries;
   }
-
-  targetQueries = Array.from(
-    new Set(targetQueries.map(normalizeSearchQuery).filter(Boolean)),
+  // Derive search terms from the original request on the server. Do not let a
+  // client-supplied query array turn the entire prompt into a search string.
+  const targetQueries = Array.from(
+    new Set(intent.queries.map(normalizeSearchQuery).filter(Boolean)),
   ).slice(0, 2);
 
   if (targetQueries.length === 0) {
@@ -98,7 +91,12 @@ export async function POST(req: NextRequest) {
       try {
         return await searchWithDeadline(query, maxResults, req.signal);
       } catch {
-        return { query, results: [] };
+        return {
+          query,
+          results: [],
+          status: "error" as const,
+          errorMessage: "This search timed out or its providers failed.",
+        };
       }
     }),
   );

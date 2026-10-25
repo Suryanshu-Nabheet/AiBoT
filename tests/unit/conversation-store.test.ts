@@ -3,6 +3,7 @@ import {
   readConversation,
   resetConversationStoreForTests,
   saveConversation,
+  saveConversationContextSummary,
 } from "@/lib/chat/conversation-store";
 import { Role } from "@/lib/types";
 
@@ -100,5 +101,26 @@ describe("conversation-store", () => {
 
     expect(readConversation("legacy")?.title).toBe("Legacy chat");
     expect(localStorage.getItem("conversations")).toContain("Legacy chat");
+  });
+
+  it("preserves a rolling continuity summary across ordinary message saves", () => {
+    const conversation = {
+      id: "summary-chat",
+      title: "Long chat",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      messages: [{ id: "m1", role: Role.User, content: "A retained detail." }],
+    };
+    saveConversation(conversation);
+    const summary =
+      "The user is building a dashboard. They chose indigo for the accent and require accessible contrast. The API migration is still unresolved.";
+
+    saveConversationContextSummary("summary-chat", summary, 36);
+    saveConversation({ ...conversation, messages: [...conversation.messages] });
+
+    expect(readConversation("summary-chat")).toMatchObject({
+      contextSummary: summary,
+      contextSummaryMessageCount: 36,
+    });
   });
 });

@@ -4,11 +4,13 @@ import { POST } from "@/app/api/web-search/route";
 
 vi.mock("@/lib/server/web-search/search", () => ({
   searchWeb: vi.fn(async (query: string) => {
+    if (query === "provider-failure") throw new Error("provider failed");
     if (query === "empty-query") {
-      return { query, results: [] };
+      return { query, results: [], status: "complete" };
     }
     return {
       query,
+      status: "complete",
       results: [
         {
           title: "Result Title",
@@ -30,7 +32,8 @@ describe("POST /api/web-search route", () => {
         host: "localhost:3000",
       },
       body: JSON.stringify({
-        queries: ["test query"],
+        query: "Search the web for test query",
+        force: true,
         maxResults: 5,
       }),
     });
@@ -42,6 +45,34 @@ describe("POST /api/web-search route", () => {
     expect(data.batches).toHaveLength(1);
     expect(data.batches[0].results).toHaveLength(1);
     expect(data.batches[0].results[0].title).toBe("Result Title");
+    expect(data.batches[0].query).toBe("test query");
+  });
+
+  it("strips answer-formatting instructions before provider queries", async () => {
+    const req = new NextRequest("http://localhost:3000/api/web-search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        host: "localhost:3000",
+      },
+      body: JSON.stringify({
+        query:
+          "Please use web search to research the latest AI agent frameworks and compare Vercel AI SDK with LangGraph, then write a comprehensive recommendation report with code samples, citations, and a conclusion. Focus on the factual differences.",
+        force: true,
+      }),
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+    const submittedQueries = data.batches.map(
+      (batch: { query: string }) => batch.query,
+    );
+    expect(res.status).toBe(200);
+    expect(submittedQueries.join(" ")).toContain("Vercel AI SDK");
+    expect(submittedQueries.join(" ")).toContain("LangGraph");
+    expect(submittedQueries.join(" ")).not.toMatch(
+      /recommendation report|code samples|citations/i,
+    );
   });
 
   it("returns 200 gracefully without 502 error when search produces no results", async () => {
@@ -52,7 +83,8 @@ describe("POST /api/web-search route", () => {
         host: "localhost:3000",
       },
       body: JSON.stringify({
-        queries: ["empty-query"],
+        query: "empty-query",
+        force: true,
       }),
     });
 
@@ -62,6 +94,56 @@ describe("POST /api/web-search route", () => {
     const data = await res.json();
     expect(data.batches).toHaveLength(1);
     expect(data.batches[0].results).toHaveLength(0);
+  });
+
+  it("reports a provider outage instead of presenting it as an empty search", async () => {
+    const req = new NextRequest("http://localhost:3000/api/web-search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        host: "localhost:3000",
+      },
+      body: JSON.stringify({ query: "provider-failure", force: true }),
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.batches[0]).toMatchObject({
+      query: "provider-failure",
+      results: [],
+      status: "error",
+    });
+    expect(data.batches[0].errorMessage).toContain("timed out");
+  });
+
+  it("does not accept client-supplied raw query arrays", async () => {
+    const req = new NextRequest("http://localhost:3000/api/web-search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        host: "localhost:3000",
+      },
+      body: JSON.stringify({ queries: ["the entire user prompt"] }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("skips greetings instead of searching when web search is enabled", async () => {
+    const req = new NextRequest("http://localhost:3000/api/web-search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        host: "localhost:3000",
+      },
+      body: JSON.stringify({ query: "hi" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ batches: [], skipped: true });
   });
 
   it("returns 400 for invalid body schema", async () => {

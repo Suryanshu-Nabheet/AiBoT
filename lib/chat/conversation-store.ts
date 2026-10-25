@@ -12,6 +12,9 @@ export interface Conversation {
   createdAt: string;
   messages: Message[];
   updatedAt: string;
+  /** Rolling, model-generated continuity context for histories beyond the window. */
+  contextSummary?: string;
+  contextSummaryMessageCount?: number;
 }
 
 const STORAGE_KEY = "conversations";
@@ -144,6 +147,11 @@ export function saveConversation(conversation: Conversation, debounceMs = 400) {
   const map = loadCache();
   map[conversation.id] = {
     ...conversation,
+    contextSummary:
+      conversation.contextSummary ?? map[conversation.id]?.contextSummary,
+    contextSummaryMessageCount:
+      conversation.contextSummaryMessageCount ??
+      map[conversation.id]?.contextSummaryMessageCount,
     updatedAt: new Date().toISOString(),
   };
   saveSharedChatMemory(map[conversation.id]);
@@ -181,6 +189,11 @@ export function flushSaveConversation(conversation: Conversation) {
   const map = loadCache();
   map[conversation.id] = {
     ...conversation,
+    contextSummary:
+      conversation.contextSummary ?? map[conversation.id]?.contextSummary,
+    contextSummaryMessageCount:
+      conversation.contextSummaryMessageCount ??
+      map[conversation.id]?.contextSummaryMessageCount,
     updatedAt: new Date().toISOString(),
   };
   saveSharedChatMemory(map[conversation.id]);
@@ -192,6 +205,27 @@ export function flushSaveConversation(conversation: Conversation) {
   }
   persistCacheToSessionStorage();
   flushSharedChatMemory();
+}
+
+/** Persist a compact continuity summary without changing visible chat messages. */
+export function saveConversationContextSummary(
+  id: string,
+  summary: string,
+  messageCount: number,
+): void {
+  if (!id || typeof window === "undefined") return;
+  const conversation = readConversation(id);
+  if (!conversation) return;
+  const normalized = summary.replace(/\s+/g, " ").trim().slice(0, 8_000);
+  if (normalized.length < 80) return;
+  const map = loadCache();
+  map[id] = {
+    ...conversation,
+    contextSummary: normalized,
+    contextSummaryMessageCount: messageCount,
+    updatedAt: new Date().toISOString(),
+  };
+  persistCacheToSessionStorage();
 }
 
 /** Delete one chat and its arena lanes from durable history and context memory. */

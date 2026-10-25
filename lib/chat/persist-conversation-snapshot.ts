@@ -25,6 +25,8 @@ export function persistConversationSnapshot(
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     messages,
     updatedAt: new Date().toISOString(),
+    contextSummary: existing?.contextSummary,
+    contextSummaryMessageCount: existing?.contextSummaryMessageCount,
   });
 }
 

@@ -190,7 +190,9 @@ export function WebSearch({
           {querySteps.map((step, i) => (
             <QueryStepBlock key={`${step.query}-${i}`} step={step} />
           ))}
-          {trace.status === "error" && trace.errorMessage ? (
+          {trace.status !== "complete" &&
+          trace.status !== "running" &&
+          trace.errorMessage ? (
             <p className="text-xs text-destructive">{trace.errorMessage}</p>
           ) : null}
         </div>

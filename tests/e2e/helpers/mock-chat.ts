@@ -40,8 +40,8 @@ export async function mockWebSearchApi(page: Page) {
       await route.continue();
       return;
     }
-    const body = route.request().postDataJSON() as { queries?: string[] };
-    const query = body.queries?.[0] ?? "test";
+    const body = route.request().postDataJSON() as { query?: string };
+    const query = body.query ?? "test";
     await route.fulfill({
       status: 200,
       contentType: "application/json",

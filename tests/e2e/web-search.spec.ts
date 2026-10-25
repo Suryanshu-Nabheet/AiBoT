@@ -190,15 +190,14 @@ test.describe("Web search mode", () => {
         return;
       }
       events.push("search");
-      const body = route.request().postDataJSON() as { queries?: string[] };
+      const body = route.request().postDataJSON() as { query?: string };
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           batches: [
             {
-              query:
-                body.queries?.[0] ?? "Alpha and Beta current documentation",
+              query: body.query ?? "Alpha and Beta current documentation",
               results: [
                 {
                   title: "Official Comparison",
@@ -329,7 +328,7 @@ test.describe("Web search mode", () => {
     expect(content).toContain("no sufficiently relevant sources");
   });
 
-  test("searches a focused topic instead of the user's full answer instructions", async ({
+  test("sends the original request for server-side focused query planning", async ({
     page,
   }) => {
     await page.addInitScript(() => {
@@ -337,7 +336,7 @@ test.describe("Web search mode", () => {
     });
     await mockChatStream(page, "I found the relevant framework details.");
 
-    let searchQueries: string[] = [];
+    let searchRequest = "";
     let submittedUserMessage = "";
     page.on("request", (request) => {
       if (!request.url().includes("/api/chat") || request.method() !== "POST") {
@@ -359,9 +358,8 @@ test.describe("Web search mode", () => {
         await route.continue();
         return;
       }
-      searchQueries =
-        (route.request().postDataJSON() as { queries?: string[] }).queries ??
-        [];
+      searchRequest =
+        (route.request().postDataJSON() as { query?: string }).query ?? "";
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -378,13 +376,7 @@ test.describe("Web search mode", () => {
       page.getByText("I found the relevant framework details."),
     ).toBeVisible({ timeout: 15_000 });
 
-    expect(searchQueries).toHaveLength(2);
-    expect(searchQueries[0]).toContain("AI agent frameworks");
-    expect(searchQueries[0]).toContain("Vercel AI SDK");
-    expect(searchQueries[0]).toContain("LangGraph");
-    expect(searchQueries.join(" ")).not.toMatch(
-      /recommendation report|code samples|citations/i,
-    );
+    expect(searchRequest).toBe(prompt);
     expect(submittedUserMessage).toContain(prompt);
   });
 

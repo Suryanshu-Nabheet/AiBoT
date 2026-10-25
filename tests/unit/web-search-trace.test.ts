@@ -24,4 +24,23 @@ describe("buildWebSearchTraceFromResults", () => {
       meta: "1 source",
     });
   });
+
+  it("shows provider failures separately from searches with no matches", () => {
+    const trace = buildWebSearchTraceFromResults(
+      [
+        {
+          query: "latest React changes",
+          results: [],
+          status: "error",
+          errorMessage: "Providers unavailable.",
+        },
+      ],
+      "error",
+      "Providers unavailable.",
+    );
+
+    expect(trace.status).toBe("error");
+    expect(trace.steps[0]?.meta).toBe("Providers unavailable.");
+    expect(trace.steps[1]?.meta).toBe("Providers unavailable.");
+  });
 });
