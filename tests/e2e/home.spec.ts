@@ -28,13 +28,17 @@ test.describe("Home / empty chat", () => {
     const modelSelector = page.getByRole("combobox").first();
     await expect(modelSelector).toBeVisible();
     await modelSelector.focus();
-    await expect(modelSelector).toHaveClass(
-      /focus-visible:ring-foreground\/10/,
-    );
+    await expect(modelSelector).toHaveClass(/focus-visible:border-transparent/);
+    await expect(modelSelector).toHaveClass(/focus-visible:ring-0/);
     await expect(modelSelector).not.toHaveClass(/focus-visible:ring-\[3px\]/);
     await modelSelector.press("Enter");
     await expect(modelSelector).toHaveAttribute("aria-expanded", "true");
     await modelSelector.press("Escape");
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await page.mouse.move(0, 0);
+    await modelSelector.hover();
+    await expect(page.getByRole("tooltip")).toBeVisible();
+    await page.mouse.move(0, 0);
     await expect(
       page.getByRole("button", { name: /attach files/i }),
     ).toBeVisible();
@@ -53,5 +57,43 @@ test.describe("Home / empty chat", () => {
     await expect(
       page.getByRole("button", { name: /send message/i }),
     ).toBeVisible();
+  });
+
+  test("keeps the last model reachable at short and narrow viewport sizes", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const modelSelector = page.getByRole("combobox").first();
+    const viewports = [
+      { width: 320, height: 280 },
+      { width: 390, height: 360 },
+      { width: 768, height: 420 },
+      { width: 1440, height: 900 },
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await modelSelector.click();
+
+      const menu = page.getByRole("menu");
+      await expect(menu).toBeVisible();
+      const menuBounds = await menu.boundingBox();
+      expect(menuBounds).not.toBeNull();
+      expect(menuBounds!.y).toBeGreaterThanOrEqual(0);
+      expect(menuBounds!.y + menuBounds!.height).toBeLessThanOrEqual(
+        viewport.height,
+      );
+
+      const lastModel = menu.getByText("Elephant 1", { exact: true });
+      await lastModel.scrollIntoViewIfNeeded();
+      await expect(lastModel).toBeInViewport();
+      const lastModelBounds = await lastModel.boundingBox();
+      expect(lastModelBounds).not.toBeNull();
+      expect(lastModelBounds!.y).toBeGreaterThanOrEqual(0);
+      expect(lastModelBounds!.y + lastModelBounds!.height).toBeLessThanOrEqual(
+        viewport.height,
+      );
+      await page.keyboard.press("Escape");
+    }
   });
 });

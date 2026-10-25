@@ -31,7 +31,10 @@ export function buildWebSearchTraceFromResults(
     {
       kind: "summary",
       label: searchCount === 1 ? "Ran 1 search" : `Ran ${searchCount} searches`,
-      meta: totalResults > 0 ? `${totalResults} sources` : undefined,
+      meta:
+        totalResults > 0
+          ? `${totalResults} source${totalResults === 1 ? "" : "s"}`
+          : undefined,
     },
   ];
 

@@ -14,6 +14,7 @@ import {
 import {
   buildChatMessagesForThinkingStage,
   buildStage2PriorReasoning,
+  getStage1RepairUserPrompt,
   cleanAssistantContent,
   cleanThinkingText,
   finalizeStage1Attempts,
@@ -49,7 +50,7 @@ describe("thinking system prompt stack", () => {
     expect(prompt).toContain("Suryanshu Nabheet");
     expect(prompt).toContain("## Active model");
     expect(prompt).toContain("## Thinking");
-    expect(prompt).toContain("concise planning summary");
+    expect(prompt).toContain("user-safe progress summary");
     expect(prompt).not.toContain("## Chat");
     expect(prompt).toContain(THINKING_NOTES_ROLE.slice(0, 20));
   });
@@ -435,20 +436,21 @@ describe("stage2 protocol boundary", () => {
     ).toBe(false);
   });
 
-  it("accepts concise labeled Thinking summaries for the expandable panel", () => {
+  it("accepts concise user-safe progress summaries", () => {
     expect(
       isValidThinkingNotes(
-        "- Request: Compare the available options.\n- Approach: Organize the tradeoffs and note assumptions.",
+        "I’ll compare the options against cost, privacy, and setup time.",
       ),
     ).toBe(true);
   });
 
-  it("defines Thinking as a user-safe concise planning summary", () => {
-    expect(THINKING_NOTES_ROLE).toContain("expandable Thinking panel");
+  it("defines Thinking as a user-safe natural progress summary", () => {
+    expect(THINKING_NOTES_ROLE).toContain("one or two natural sentences");
     expect(THINKING_NOTES_ROLE).toContain("private chain-of-thought");
-    expect(THINKING_NOTES_ROLE).toContain("source URLs");
-    expect(THINKING_NOTES_ROLE).not.toContain(
-      "Speak in third-person planning language",
+    expect(THINKING_NOTES_ROLE).not.toContain('"Request:"');
+    expect(THINKING_NOTES_ROLE).not.toContain("2–4 short labeled bullets");
+    expect(getStage1RepairUserPrompt()).toContain(
+      "user-visible progress summary",
     );
   });
 
@@ -560,6 +562,15 @@ describe("stage2 protocol boundary", () => {
 });
 
 describe("thinkingPanelPreview", () => {
+  it("keeps punctuation clean in request-grounded progress notes", () => {
+    const preview = thinkingPanelPreview(
+      "",
+      "Compare Alpha and Beta using the descriptions I provided.",
+    );
+    expect(preview).not.toMatch(/\.\s+and preserve/i);
+    expect(preview).toContain("Compare Alpha and Beta");
+  });
+
   it("hides answer dumps from the live Thinking panel", () => {
     const essay = [
       "## What is AI?",
@@ -575,41 +586,39 @@ describe("thinkingPanelPreview", () => {
 
   it("keeps real planning notes visible", () => {
     const notes =
-      "I should explain what AI is, cover a plain definition, and give everyday examples.";
-    expect(thinkingPanelPreview(notes, "What is AI?")).toContain(
-      "Request: What is AI?",
-    );
-    expect(thinkingPanelPreview(notes, "What is AI?")).not.toContain(
-      "I should explain",
-    );
+      "I’ll explain what AI is, how it works, and where it is used.";
+    expect(thinkingPanelPreview(notes, "What is AI?")).toBe(notes);
   });
 
   it("replaces an unrelated plan for a personal identity question", () => {
     const drifted =
       'The user asked "who am i". I should lead with "Thinking Panel", then cover how it works, key parts, and one real-world use case in the reply.';
 
-    expect(thinkingPanelPreview(drifted, "who am i")).toMatch(/profile/i);
+    expect(thinkingPanelPreview(drifted, "who am i")).toMatch(
+      /personal details/i,
+    );
     const notes = resolveThinkingPanelNotes(drifted, "who am i");
-    expect(notes).toMatch(/identity|profile/i);
+    expect(notes).toMatch(/personal details/i);
     expect(notes).not.toContain("Thinking Panel");
+    expect(notes).not.toMatch(/how it works|real-world use case/i);
 
     const finalized = finalizeStage1Attempts([drifted], {
       userQuery: "who am i",
     });
     expect(finalized.notes).not.toContain("Thinking Panel");
-    expect(finalized.notes).toMatch(/identity|profile/i);
+    expect(finalized.notes).toMatch(/personal details/i);
+    expect(finalized.notes).not.toMatch(/how it works|real-world use case/i);
   });
 
   it("rejects a correctly formatted summary that is about another topic", () => {
     const unrelated =
-      "- Request: Explain marine biology.\n- Approach: Describe coral reefs and ocean ecosystems.";
+      "I’ll explain marine biology by describing coral reefs and ocean ecosystems.";
     const result = thinkingPanelPreview(
       unrelated,
       "How do I configure TypeScript path aliases?",
     );
-    expect(result).toContain(
-      "Request: How do I configure TypeScript path aliases?",
-    );
+    expect(result).toContain("TypeScript path aliases");
+    expect(result).not.toMatch(/request:|approach:/i);
     expect(result).not.toContain("marine biology");
   });
 });

@@ -35,12 +35,39 @@ export type HistoryMessage =
 
 const SEARCH_QUERY_MAX_CHARS = 220;
 
+/** Strip task orchestration and answer-format requests from research queries. */
+function removeSearchPresentationInstructions(query: string): string {
+  return query
+    .replace(
+      /(?:,?\s+)?(?:and\s+)?then\s+(?:please\s+)?(?:write|draft|prepare|produce|create|generate|format|present|answer)\b[\s\S]*$/i,
+      "",
+    )
+    .replace(
+      /(?:,?\s*(?:and\s+)?then\s+|,\s*)(?:make\s+sure|ensure|be\s+sure)\s+(?:that\s+you\s+)?(?:include|cite|cover|mention|explain|summarize|format)\b[\s\S]*$/i,
+      "",
+    )
+    .replace(
+      /\b(?:keep\s+it|make\s+it|format\s+it)\s+(?:concise|brief|short|to\s+\d+\s+(?:points|bullets|paragraphs))\b[\s\S]*$/i,
+      "",
+    )
+    .replace(/\s+(?:with|including)\s+(?:inline\s+)?citations?\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .replace(/[\s,;:.!?-]+$/g, "")
+    .trim();
+}
+
 /** Remove search wrappers and answer instructions while preserving the topic. */
 export function normalizeSearchQuery(rawQuery: string): string {
-  let query = rawQuery.replace(/\s+/g, " ").trim();
+  let query = removeSearchPresentationInstructions(
+    rawQuery.replace(/\s+/g, " ").trim(),
+  );
   if (!query) return "";
 
   query = query
+    .replace(
+      /^(?:please\s+)?(?:use\s+)?(?:a\s+)?(?:web\s*search|search\s+(?:the\s+)?web|internet\s+search)\s+(?:to\s+)?/i,
+      "",
+    )
     .replace(
       /^(?:please\s+)?(?:can|could)\s+you\s+(?:please\s+)?(?:search(?:\s+the)?\s+(?:web|internet|online)(?:\s+for)?|google(?:\s+(?:this|that|for))?|look\s+up(?:\s+online)?|look\s+online|check\s+online|browse(?:\s+the\s+web)?(?:\s+for)?)(?:\s+(?:for|about|if|whether))?\s*/i,
       "",
@@ -537,6 +564,14 @@ export function extractCleanSearchQueries(
   cleaned = cleaned
     .replace(/^(?:and|so|also|then|but|now|well|okay|ok|hey|actually)\s+/gi, "")
     .replace(
+      /^(?:please\s+)?(?:use\s+)?(?:a\s+)?(?:web\s*search|search\s+(?:the\s+)?web|internet\s+search)\s+(?:to\s+)?/i,
+      "",
+    )
+    .replace(
+      /^(?:please\s+)?(?:research|investigate|look\s+into|find\s+out\s+about)\s+/i,
+      "",
+    )
+    .replace(
       /^(?:can\s+you\s+(?:please\s+)?(?:tell\s+me|find|show\s+me|give\s+me|search|look\s+up)?|could\s+you\s+(?:please\s+)?(?:tell\s+me|find|show\s+me|give\s+me|search|look\s+up)?|please\s+(?:tell\s+me|find|show\s+me|give\s+me|search|look\s+up)?|tell\s+me\s+(?:about|what\s+is|who\s+is)?|find\s+(?:out\s+)?(?:more\s+)?(?:info|information|details|context)?\s*(?:of|about|on)?|i\s+(?:want|need)\s+to\s+know|do\s+you\s+know|what\s+about|how\s+about)\s+/gi,
       "",
     )
@@ -619,7 +654,7 @@ export function extractCleanSearchQueries(
     .trim();
 
   // 4. Strip trailing conversational fluff
-  cleaned = cleaned
+  cleaned = removeSearchPresentationInstructions(cleaned)
     .replace(
       /\s+(?:for\s+me|and\s+tell\s+me|and\s+explain|to\s+me|please)\s*[.?!]*$/gi,
       "",

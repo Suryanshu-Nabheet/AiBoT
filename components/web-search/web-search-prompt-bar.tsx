@@ -7,7 +7,6 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
 import { GlobeIcon, X as XIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-translation";
@@ -18,38 +17,16 @@ export type WebSearchPromptBarProps = {
   query?: string;
   onSearch: () => void;
   onSkip?: () => void;
-  timeoutSeconds?: number;
   className?: string;
-  isSearching?: boolean;
 };
 
 export function WebSearchPromptBar({
   query,
   onSearch,
   onSkip,
-  timeoutSeconds = 5,
   className,
-  isSearching = false,
 }: WebSearchPromptBarProps) {
   const { t } = useTranslation();
-  const [countdown, setCountdown] = useState(timeoutSeconds);
-
-  useEffect(() => {
-    if (timeoutSeconds <= 0 || isSearching) return;
-
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onSkip?.();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timeoutSeconds, onSkip, isSearching]);
 
   return (
     <motion.div
@@ -73,14 +50,6 @@ export function WebSearchPromptBar({
                 &quot;{query}&quot;
               </span>
             )}
-            {countdown > 0 && !isSearching && (
-              <span className="text-xs text-muted-foreground/80 font-normal shrink-0">
-                (
-                {t("chat.webSearch.proceedingIn", { count: countdown }) ||
-                  `proceeding in ${countdown}s...`}
-                )
-              </span>
-            )}
           </div>
         </div>
 
@@ -89,13 +58,12 @@ export function WebSearchPromptBar({
             type="button"
             size="sm"
             onClick={onSearch}
-            disabled={isSearching}
             className="h-7.5 rounded-full bg-foreground text-background hover:bg-foreground/90 px-3.5 text-xs font-medium shadow-xs transition-all cursor-pointer"
           >
             <GlobeIcon className="size-3.5 mr-1.5" />
             {t("chat.webSearch.searchAction") || "Search Web"}
           </Button>
-          {onSkip && !isSearching && (
+          {onSkip && (
             <button
               type="button"
               onClick={onSkip}
@@ -107,16 +75,6 @@ export function WebSearchPromptBar({
           )}
         </div>
       </div>
-
-      {!isSearching && timeoutSeconds > 0 && (
-        <motion.div
-          initial={{ scaleX: 1 }}
-          animate={{ scaleX: 0 }}
-          transition={{ duration: timeoutSeconds, ease: "linear" }}
-          style={{ originX: 0 }}
-          className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary/30"
-        />
-      )}
     </motion.div>
   );
 }

@@ -196,6 +196,20 @@ describe("evaluateWebSearchIntent", () => {
     });
   });
 
+  it("distills long research requests and drops answer-format instructions", () => {
+    const prompt =
+      "Please use web search to research the latest AI agent frameworks and compare Vercel AI SDK with LangGraph, then write a comprehensive recommendation report with code samples, citations, and a conclusion. Focus on the factual differences.";
+    const queries = extractCleanSearchQueries(prompt);
+
+    expect(queries[0]).toContain("AI agent frameworks");
+    expect(queries[0]).toContain("Vercel AI SDK");
+    expect(queries[0]).toContain("LangGraph");
+    expect(queries[0]).not.toMatch(
+      /recommendation report|code samples|citations/i,
+    );
+    expect(queries[0].length).toBeLessThan(prompt.length * 0.7);
+  });
+
   describe("Contextual pronoun and command resolution", () => {
     it("resolves pronouns from previous conversation turn", () => {
       const recent = ["who is Sam Altman?"];

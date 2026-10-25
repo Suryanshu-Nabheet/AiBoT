@@ -259,7 +259,7 @@ export function ModelSelector({
             aria-label={triggerLabel}
             disabled={disabled}
             className={cn(
-              "h-9 min-w-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 focus-visible:border-foreground/20 focus-visible:ring-foreground/10 focus-visible:ring-1 data-[state=open]:bg-muted/40 sm:h-8",
+              "h-9 min-w-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 focus-visible:border-transparent focus-visible:bg-muted/50 focus-visible:ring-0 data-[state=open]:bg-muted/40 sm:h-8",
               triggerVariant === "compact"
                 ? "max-w-[min(62vw,14rem)] shrink-0 justify-start sm:max-w-[12rem]"
                 : "w-fit max-w-none shrink-0 justify-start",
@@ -301,12 +301,12 @@ export function ModelSelector({
         </DropdownMenuTrigger>
       </IconTooltip>
       <DropdownMenuContent
-        className="w-[min(calc(100vw-1.5rem),300px)] overflow-hidden rounded-xl border border-border/80 p-0 shadow-lg"
+        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-[min(calc(100vw-1.5rem),300px)] flex-col overflow-hidden rounded-xl border border-border/80 p-0 shadow-lg"
         align="start"
         sideOffset={8}
       >
         {showModelList ? (
-          <Command className="rounded-none bg-popover">
+          <Command className="max-h-full min-h-0 rounded-none bg-popover">
             <CommandInput
               ref={modelSearchRef}
               placeholder={t("model.search")}
@@ -329,7 +329,7 @@ export function ModelSelector({
                 onCheckedChange={onWebSearchChange}
               />
             )}
-            <CommandList className="max-h-[min(50vh,300px)] scrollbar-thin p-1">
+            <CommandList className="min-h-0 max-h-none flex-1 scrollbar-thin p-1">
               <CommandEmpty className="py-6 text-sm text-muted-foreground">
                 {t("model.empty")}
               </CommandEmpty>

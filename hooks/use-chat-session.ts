@@ -30,8 +30,10 @@ import {
   resolveConversationPersistId,
 } from "@/lib/chat/load-conversation-messages";
 import { runWebSearchForTurn } from "@/lib/web-search/client";
+import { planWebSearchQueries } from "@/lib/web-search/query";
 import { evaluateWebSearchIntent } from "@/lib/web-search/intent";
 import { buildRunningWebSearchTrace } from "@/lib/web-search/trace";
+import { thinkingPlanRequestsResearch } from "@/lib/chat/research-plan";
 import type { WebSearchTrace } from "@/lib/web-search/types";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { postOllamaChat } from "@/lib/chat/ollama-url";
@@ -743,7 +745,187 @@ export function useChatSession({
       sendOptions?.forceWebSearch || (sendOptions?.isRetry && webSearchEnabled),
     );
     let promptApproved = false;
+    let searchApprovalPending = false;
     let pendingAssistantId: string | null = null;
+
+    const awaitWebSearchApproval = (
+      messageId: string,
+      searchTopic: string,
+    ): Promise<boolean> => {
+      setMessages((prev) => {
+        const prompt = {
+          active: true,
+          query: searchTopic,
+        };
+        return prev.some((message) => message.id === messageId)
+          ? prev.map((message) =>
+              message.id === messageId
+                ? { ...message, webSearchPrompt: prompt }
+                : message,
+            )
+          : [
+              ...prev,
+              {
+                id: messageId,
+                role: Role.Assistant,
+                content: "",
+                webSearchPrompt: prompt,
+              },
+            ];
+      });
+
+      return new Promise<boolean>((resolve) => {
+        const settle = (approved: boolean) => {
+          if (webSearchDecisionResolverRef.current === settle) {
+            webSearchDecisionResolverRef.current = null;
+          }
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === messageId
+                ? { ...message, webSearchPrompt: undefined }
+                : message,
+            ),
+          );
+          resolve(approved);
+        };
+        webSearchDecisionResolverRef.current = settle;
+      });
+    };
+
+    const appendSearchContext = (contextBlock: string) => {
+      if (!contextBlock.trim()) return;
+      if (typeof apiContent === "string") {
+        apiContent = `${apiContent}\n\n${contextBlock}`;
+      } else {
+        apiContent = [...apiContent, { type: "text", text: contextBlock }];
+      }
+
+      if (!userMessageId) return;
+      setMessages((prev) => {
+        const next = prev.map((message) =>
+          message.id === userMessageId
+            ? { ...message, webSearchContext: contextBlock }
+            : message,
+        );
+        if (conversationPersistId) {
+          queueConversationPersist(conversationPersistId, next, locale);
+        }
+        return next;
+      });
+    };
+
+    const runThinkingResearch = async (
+      userQuery: string,
+      assistantId: string,
+      plan: string,
+    ): Promise<string | null> => {
+      if (!activeWebSearch && !thinkingPlanRequestsResearch(plan, userQuery))
+        return null;
+      if (!activeWebSearch) {
+        activeWebSearch = true;
+        searchApprovalPending = !webSearchEnabled;
+      }
+
+      if (searchApprovalPending) {
+        const plannedQueries = planWebSearchQueries(
+          userQuery,
+          searchConversationHistory,
+        );
+        const approved = await awaitWebSearchApproval(
+          assistantId,
+          plannedQueries[0] ?? userQuery,
+        );
+        searchApprovalPending = false;
+        if (!approved) {
+          activeWebSearch = false;
+          return "Web search is off, so I’ll answer using the context available here.";
+        }
+        onWebSearchChange?.(true);
+      }
+
+      if (!activeWebSearch || requestController.signal.aborted) return null;
+
+      const planned = evaluateWebSearchIntent(userQuery, {
+        recentUserMessages,
+        conversationHistory: searchConversationHistory,
+        force: true,
+      });
+      const queries =
+        planned.queries.length > 0
+          ? planned.queries
+          : planWebSearchQueries(userQuery, searchConversationHistory);
+      if (queries.length === 0) {
+        return "I couldn’t form a useful search query, so I’ll avoid irrelevant sources.";
+      }
+
+      const displayQuery = queries[0] ?? userQuery;
+      webSearchTrace = buildRunningWebSearchTrace(displayQuery);
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantId
+            ? { ...message, webSearchTrace, webSearchPrompt: undefined }
+            : message,
+        ),
+      );
+
+      try {
+        const result = await runWebSearchForTurn(userQuery, {
+          signal: requestController.signal,
+          locale,
+          recentUserMessages,
+          conversationHistory: searchConversationHistory,
+          queriesOverride: queries,
+          force: true,
+        });
+        if (requestController.signal.aborted) return null;
+        webSearchTrace = result.trace;
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? { ...message, webSearchTrace }
+              : message,
+          ),
+        );
+        appendSearchContext(
+          result.context ||
+            "[WEB SEARCH EVIDENCE — No relevant sources were found. Do not invent facts or imply that search supports the answer.]",
+        );
+        const sourceCount = result.batches.reduce(
+          (count, batch) => count + batch.results.length,
+          0,
+        );
+        return sourceCount > 0
+          ? `I found ${sourceCount} relevant source${sourceCount === 1 ? "" : "s"} and will use the relevant evidence in the answer.`
+          : "The search found no relevant sources, so I’ll avoid unsupported claims.";
+      } catch (error) {
+        if (requestController.signal.aborted) return null;
+        const errorMessage =
+          error instanceof Error ? error.message : "Web search failed";
+        webSearchTrace = {
+          status: "error",
+          queriedAt: new Date().toISOString(),
+          errorMessage,
+          steps: [
+            {
+              kind: "summary",
+              label: "Web search failed",
+              meta: errorMessage,
+            },
+          ],
+        };
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? { ...message, webSearchTrace }
+              : message,
+          ),
+        );
+        appendSearchContext(
+          `[WEB SEARCH FAILED — ${errorMessage}. Do not fabricate current facts or imply that sources were found. Be transparent about the search failure.]`,
+        );
+        return "The web search failed, so I’ll be clear about the missing evidence.";
+      }
+    };
 
     if (!activeWebSearch && Boolean(currentQuery) && !sendOptions?.isRetry) {
       const searchIntent = evaluateWebSearchIntent(currentQuery, {
@@ -753,41 +935,15 @@ export function useChatSession({
 
       if (searchIntent.shouldSearch && webSearchEnabled) {
         activeWebSearch = true;
+      } else if (searchIntent.shouldSearch && thinkingRequested) {
+        // Let Thinking identify the research focus first, then ask and search.
+        activeWebSearch = true;
+        searchApprovalPending = true;
       } else if (searchIntent.shouldSearch) {
         const promptId = newAssistantMessageId();
         pendingAssistantId = promptId;
         const searchTopic = searchIntent.queries[0] ?? currentQuery;
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: promptId,
-            role: Role.Assistant,
-            content: "",
-            webSearchPrompt: {
-              active: true,
-              query: searchTopic,
-            },
-          },
-        ]);
-
-        const decisionPromise = new Promise<boolean>((resolve) => {
-          let timer: NodeJS.Timeout | null = null;
-          const handleResolve = (approved: boolean) => {
-            if (timer) clearTimeout(timer);
-            resolve(approved);
-          };
-          webSearchDecisionResolverRef.current = handleResolve;
-          timer = setTimeout(() => {
-            if (webSearchDecisionResolverRef.current === handleResolve) {
-              webSearchDecisionResolverRef.current = null;
-              resolve(false);
-            }
-          }, 5000);
-        });
-
-        promptApproved = await decisionPromise;
-        webSearchDecisionResolverRef.current = null;
+        promptApproved = await awaitWebSearchApproval(promptId, searchTopic);
 
         if (promptApproved) {
           activeWebSearch = true;
@@ -804,7 +960,7 @@ export function useChatSession({
       }
     }
 
-    if (activeWebSearch && Boolean(currentQuery)) {
+    if (activeWebSearch && Boolean(currentQuery) && !thinkingRequested) {
       try {
         const forceWebSearch = Boolean(
           sendOptions?.forceWebSearch || promptApproved,
@@ -840,36 +996,7 @@ export function useChatSession({
           if (!searchResult.skipped) {
             webSearchTrace = searchResult.trace;
             const contextBlock = searchResult.context;
-            if (contextBlock) {
-              if (typeof apiContent === "string") {
-                apiContent = `${apiContent}\n\n${contextBlock}`;
-              } else {
-                apiContent = [
-                  ...apiContent,
-                  { type: "text", text: contextBlock },
-                ];
-              }
-
-              // Retain the exact bounded evidence block so follow-up turns can
-              // still answer questions about these sources after reload.
-              if (userMessageId) {
-                setMessages((prev) => {
-                  const next = prev.map((message) =>
-                    message.id === userMessageId
-                      ? { ...message, webSearchContext: contextBlock }
-                      : message,
-                  );
-                  if (conversationPersistId) {
-                    queueConversationPersist(
-                      conversationPersistId,
-                      next,
-                      locale,
-                    );
-                  }
-                  return next;
-                });
-              }
-            }
+            appendSearchContext(contextBlock);
           } else {
             webSearchTrace = undefined;
           }
@@ -883,6 +1010,15 @@ export function useChatSession({
           }
         }
       } catch (error) {
+        if (requestController.signal.aborted) {
+          if (pendingAssistantId) {
+            setMessages((prev) =>
+              prev.filter((message) => message.id !== pendingAssistantId),
+            );
+          }
+          finishRequest();
+          return;
+        }
         const message =
           error instanceof Error ? error.message : "Web search failed";
         webSearchTrace = {
@@ -904,6 +1040,9 @@ export function useChatSession({
             ),
           );
         }
+        appendSearchContext(
+          `[WEB SEARCH FAILED — ${message}. Do not fabricate current facts or imply that sources were found. Be transparent about the search failure.]`,
+        );
       }
     }
 
@@ -1091,15 +1230,35 @@ export function useChatSession({
         resolveThinkingPanelNotes(stage1.notes || current, userQuery),
       );
 
+      let finalThinkingNotes = resolveThinkingPanelNotes(
+        stage1.notes || current,
+        userQuery,
+      );
+      const researchProgress = await runThinkingResearch(
+        userQuery,
+        tempId,
+        current || stage1.notes,
+      );
+      if (requestController.signal.aborted || !isCurrentRequest()) {
+        finishRequest();
+        return;
+      }
+      if (researchProgress) {
+        finalThinkingNotes = `${finalThinkingNotes} ${researchProgress}`.trim();
+        applyThinkingPreview(
+          resolveThinkingPanelNotes(finalThinkingNotes, userQuery),
+        );
+      }
+
       const stage2Prior = buildStage2PriorReasoning(
-        stage1.notes,
+        finalThinkingNotes,
         stage1.answerDraft,
         isOllama ? 4_000 : 10_000,
       );
       const res2 = await requestStage("final", stage2Prior);
       if (!res2.ok) {
         if (!isCurrentRequest()) return;
-        const fallback = reconcileTwoStageThinking(stage1.notes, "", {
+        const fallback = reconcileTwoStageThinking(finalThinkingNotes, "", {
           answerDraft: stage1.answerDraft,
         });
         if (fallback.content.trim()) {
@@ -1129,7 +1288,7 @@ export function useChatSession({
         answerRepairs < MAX_THINKING_ANSWER_RETRIES
       ) {
         const repairPrior = buildStage2PriorReasoning(
-          stage1.notes,
+          finalThinkingNotes,
           stage2Raw,
           isOllama ? 4_000 : 10_000,
         );
@@ -1146,7 +1305,7 @@ export function useChatSession({
       }
 
       commitThinkingReconciled(
-        reconcileTwoStageThinking(stage1.notes, stage2Raw, {
+        reconcileTwoStageThinking(finalThinkingNotes, stage2Raw, {
           answerDraft: stage1.answerDraft,
         }),
       );
@@ -1161,7 +1320,6 @@ export function useChatSession({
 
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");
-        const ollamaUser = toOllamaMessage(apiContent);
         const historyForOllama = historyForModel.map((m) => {
           const converted = toOllamaMessage(m.content);
           return {
@@ -1175,6 +1333,7 @@ export function useChatSession({
           stage: ThinkingStage,
           priorReasoning?: string,
         ) => {
+          const ollamaUser = toOllamaMessage(apiContent);
           const systemPrompt = buildChatSystemPrompt({
             modelId: model,
             locale,
@@ -1261,6 +1420,7 @@ export function useChatSession({
         }
 
         // Non-thinking Ollama (single phase)
+        const ollamaUser = toOllamaMessage(apiContent);
         const chatPayload = {
           model: ollamaModelName,
           messages: [
@@ -1327,10 +1487,6 @@ export function useChatSession({
 
       if (thinkingRequested) {
         const tempId = pendingAssistantId ?? newAssistantMessageId();
-        const apiHistory = [
-          ...historyForModel,
-          { role: "user", content: apiContent },
-        ];
 
         setMessages((prev) => {
           if (
@@ -1369,7 +1525,10 @@ export function useChatSession({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              messages: apiHistory,
+              messages: [
+                ...historyForModel,
+                { role: "user", content: apiContent },
+              ],
               model,
               conversationId: conversationPersistId ?? conversationId,
               thinkingStage: stage,

@@ -82,7 +82,7 @@ test.describe("Thinking mode", () => {
     });
     await mockThinkingChatStream(page, {
       notes:
-        "- Request: Explain reinforcement learning.\n- Approach: Define it plainly and give an everyday example.",
+        "I’ll explain reinforcement learning in plain language and use an everyday example.",
       answer:
         "Reinforcement learning is a way for an agent to learn by taking actions, receiving rewards, and improving its strategy over time.",
     });
@@ -100,7 +100,7 @@ test.describe("Thinking mode", () => {
     ).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /thinking/i }).click();
     await expect(
-      page.getByText(/Request: Explain reinforcement learning/i),
+      page.getByText(/explain reinforcement learning in plain language/i),
     ).toBeVisible();
     await expect(page.getByText(/I should/i)).toHaveCount(0);
     await expect(
@@ -216,10 +216,10 @@ test.describe("Thinking mode", () => {
     });
     await expect(page.getByText(/Thinking Panel/)).toHaveCount(0);
     await page.getByRole("button", { name: /thinking/i }).click();
-    await expect(page.getByText(/Request: who am i/i)).toBeVisible();
     await expect(
-      page.getByText(/user's saved or shared profile details/i),
+      page.getByText(/check the personal details you’ve shared/i),
     ).toBeVisible();
+    await expect(page.getByText(/state only what they support/i)).toBeVisible();
     expect(requests.map((request) => request.thinkingStage)).toEqual([
       "thinking",
       "final",

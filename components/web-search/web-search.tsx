@@ -10,7 +10,7 @@ import type {
   WebSearchTrace,
 } from "@/lib/web-search/types";
 import { useTranslation } from "@/hooks/use-translation";
-import { WebSearchBrandMark } from "./web-search-brand-mark";
+import { ExternalSourceLink } from "./external-source-link";
 import { WebSearchBar } from "./web-search-bar";
 
 const INITIAL_SOURCES_VISIBLE = 4;
@@ -57,24 +57,7 @@ function QueryChip({ query }: { query: string }) {
 function SourceRow({ source }: { source: WebSearchSource }) {
   return (
     <li className="min-w-0">
-      <a
-        href={source.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group flex items-center gap-2.5 rounded-md py-1.5 transition-colors hover:bg-muted/35"
-      >
-        <WebSearchBrandMark
-          brand={source.brand}
-          domain={source.domain}
-          className="size-[18px] shrink-0 ring-1 ring-border/25"
-        />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground/90 group-hover:text-foreground">
-          {source.title}
-        </span>
-        <span className="hidden max-w-[38%] shrink-0 truncate text-[11px] text-muted-foreground sm:block">
-          {source.domain}
-        </span>
-      </a>
+      <ExternalSourceLink source={source} variant="row" />
     </li>
   );
 }

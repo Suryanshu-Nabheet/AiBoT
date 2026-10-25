@@ -173,10 +173,24 @@ export const MODELS: ModelFull[] = [
     logo: "/icons/ai.svg",
   },
   {
-    id: "stealth/space-bunny-alpha",
-    name: "Alpha Space Bunny",
+    id: "recursive/flint-v1.0:free",
+    name: "Flint V1.0",
     isPremium: false,
-    summary: "Alpha Model for Space Bunny",
+    summary: "Recursive Flint V1.0",
+    logo: "/icons/ai.svg",
+  },
+  {
+    id: "baseten/mammoth-1:free",
+    name: "Mammoth 1",
+    isPremium: false,
+    summary: "Baseten Mammoth 1",
+    logo: "/icons/ai.svg",
+  },
+  {
+    id: "baseten/elephant-1:free",
+    name: "Elephant 1",
+    isPremium: false,
+    summary: "Baseten Elephant 1",
     logo: "/icons/ai.svg",
   },
 ];

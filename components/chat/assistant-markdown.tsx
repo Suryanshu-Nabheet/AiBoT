@@ -7,6 +7,7 @@
 
 "use client";
 
+import React, { isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components, Options } from "react-markdown";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ import {
   thinkingMarkdownClass,
 } from "@/lib/chat/message-prose";
 import type { WebSearchSource } from "@/lib/web-search/types";
-import { WebSearchBrandMark } from "@/components/web-search/web-search-brand-mark";
+import { ExternalSourceLink } from "@/components/web-search/external-source-link";
 
 type AssistantMarkdownProps = {
   content: string;
@@ -48,12 +49,32 @@ export function AssistantMarkdown({
   );
   const markdownComponents: Components = {
     ...components,
+    p: ({ children, node, ...props }) => {
+      void node;
+      const Paragraph = components.p as
+        | React.ComponentType<
+            React.HTMLAttributes<HTMLParagraphElement> & {
+              children?: ReactNode;
+            }
+          >
+        | undefined;
+      const cleanChildren = removeLinkWrappingParentheses(children);
+      return Paragraph ? (
+        <Paragraph {...props}>{cleanChildren}</Paragraph>
+      ) : (
+        <p {...props}>{cleanChildren}</p>
+      );
+    },
     a: ({ href, children, node, ...props }) => {
       void node;
-      const result = href ? sourceByHref.get(normalizeHref(href)) : undefined;
-      if (!result) {
+      const normalizedHref = href ? normalizeHref(href) : "";
+      if (!normalizedHref) {
         const Anchor = components.a as
-          | React.ComponentType<React.ComponentProps<"a">>
+          | React.ComponentType<
+              React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+                children?: ReactNode;
+              }
+            >
           | undefined;
         return Anchor ? (
           <Anchor href={href} {...props}>
@@ -65,26 +86,12 @@ export function AssistantMarkdown({
           </a>
         );
       }
+      const result = sourceByHref.get(normalizedHref);
+      void props;
       return (
-        <a
-          href={result.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={`${result.title} · ${result.domain}`}
-          className="my-0.5 inline-flex max-w-full items-center gap-1.5 rounded-md border border-border/60 bg-muted/35 px-1.5 py-0.5 align-baseline text-sm text-foreground no-underline transition-colors hover:bg-muted/70 hover:underline"
-        >
-          <WebSearchBrandMark
-            brand={result.brand}
-            domain={result.domain}
-            className="size-4"
-          />
-          <span className="max-w-[24rem] truncate">
-            {children || result.title}
-          </span>
-          <span className="max-w-[9rem] shrink-0 truncate text-xs text-muted-foreground">
-            {result.domain}
-          </span>
-        </a>
+        <ExternalSourceLink href={normalizedHref} source={result}>
+          {children}
+        </ExternalSourceLink>
       );
     },
   };
@@ -106,6 +113,30 @@ export function AssistantMarkdown({
       </ReactMarkdown>
     </div>
   );
+}
+
+function removeLinkWrappingParentheses(children: ReactNode): ReactNode {
+  const nodes = React.Children.toArray(children);
+  for (let index = 0; index < nodes.length; index += 1) {
+    const current = nodes[index];
+    if (!isValidElement(current)) continue;
+    const props = current.props as { href?: unknown };
+    const linkElement =
+      current.type === "a" ||
+      current.type === ExternalSourceLink ||
+      (typeof props.href === "string" && Boolean(normalizeHref(props.href)));
+    if (!linkElement) continue;
+
+    const previous = nodes[index - 1];
+    const next = nodes[index + 1];
+    if (typeof previous === "string" && /\(\s*$/.test(previous)) {
+      nodes[index - 1] = previous.replace(/\(\s*$/, "");
+    }
+    if (typeof next === "string" && /^\s*\)/.test(next)) {
+      nodes[index + 1] = next.replace(/^\s*\)/, "");
+    }
+  }
+  return nodes;
 }
 
 function normalizeHref(href: string): string {

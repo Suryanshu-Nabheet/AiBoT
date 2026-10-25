@@ -76,6 +76,7 @@ flowchart TD
     await page.goto("/");
     await page.getByPlaceholder(/message aibot/i).fill("what is agi");
     await page.getByRole("button", { name: /send message/i }).click();
+    await page.getByRole("button", { name: "Skip" }).click();
 
     await expect(page.locator(".mermaid-fit svg.flowchart")).toBeVisible({
       timeout: 15_000,
