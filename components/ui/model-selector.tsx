@@ -247,6 +247,7 @@ export function ModelSelector({
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <IconTooltip
         label={enablePickerShortcut ? t("shortcut.toggleModel") : triggerLabel}
+        interactionActive={open}
       >
         <DropdownMenuTrigger asChild>
           <Button

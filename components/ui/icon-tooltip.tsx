@@ -3,6 +3,8 @@
 import {
   cloneElement,
   isValidElement,
+  useEffect,
+  useRef,
   useState,
   type MouseEventHandler,
   type PointerEventHandler,
@@ -18,6 +20,7 @@ type TooltipTriggerInteractionProps = {
   onPointerEnter?: PointerEventHandler<HTMLElement>;
   onPointerLeave?: PointerEventHandler<HTMLElement>;
   onPointerDown?: PointerEventHandler<HTMLElement>;
+  onPointerMove?: PointerEventHandler<HTMLElement>;
   onClick?: MouseEventHandler<HTMLElement>;
 };
 
@@ -27,31 +30,47 @@ export function IconTooltip({
   side = "top",
   align = "center",
   sideOffset = 6,
+  interactionActive = false,
 }: {
   label: string;
   children: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
   sideOffset?: number;
+  /** Hide the tooltip during popovers, then until the pointer exits the trigger. */
+  interactionActive?: boolean;
 }) {
   const [pointerInside, setPointerInside] = useState(false);
   const [suppressed, setSuppressed] = useState(false);
+  const interactionWasActiveRef = useRef(interactionActive);
+
+  useEffect(() => {
+    if (interactionActive) {
+      setSuppressed(true);
+    } else if (!interactionWasActiveRef.current && !pointerInside) {
+      setSuppressed(false);
+    }
+    interactionWasActiveRef.current = interactionActive;
+  }, [interactionActive, pointerInside]);
 
   const trigger = isValidElement<TooltipTriggerInteractionProps>(children)
     ? cloneElement(children, {
         onPointerEnter: (event) => {
           children.props.onPointerEnter?.(event);
           setPointerInside(true);
-          setSuppressed(false);
         },
         onPointerLeave: (event) => {
           children.props.onPointerLeave?.(event);
           setPointerInside(false);
-          setSuppressed(false);
+          if (!interactionActive) setSuppressed(false);
         },
         onPointerDown: (event) => {
           children.props.onPointerDown?.(event);
           setSuppressed(true);
+        },
+        onPointerMove: (event) => {
+          children.props.onPointerMove?.(event);
+          if (!interactionActive) setSuppressed(false);
         },
         onClick: (event) => {
           children.props.onClick?.(event);

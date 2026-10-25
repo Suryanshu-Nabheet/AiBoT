@@ -31,6 +31,15 @@ test.describe("Home / empty chat", () => {
     await expect(modelSelector).toHaveClass(/focus-visible:border-transparent/);
     await expect(modelSelector).toHaveClass(/focus-visible:ring-0/);
     await expect(modelSelector).not.toHaveClass(/focus-visible:ring-\[3px\]/);
+    const selectorFocusStyle = await modelSelector.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        borderWidth: style.borderWidth,
+        outlineStyle: style.outlineStyle,
+      };
+    });
+    expect(selectorFocusStyle.borderWidth).toBe("0px");
+    expect(selectorFocusStyle.outlineStyle).toBe("none");
     await modelSelector.press("Enter");
     await expect(modelSelector).toHaveAttribute("aria-expanded", "true");
     await modelSelector.press("Escape");
@@ -38,6 +47,13 @@ test.describe("Home / empty chat", () => {
     await page.mouse.move(0, 0);
     await modelSelector.hover();
     await expect(page.getByRole("tooltip")).toBeVisible();
+    await modelSelector.click();
+    await expect(page.getByRole("menu")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await page.waitForTimeout(200);
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
     await page.mouse.move(0, 0);
     await expect(
       page.getByRole("button", { name: /attach files/i }),
@@ -47,8 +63,17 @@ test.describe("Home / empty chat", () => {
     ).toBeVisible();
 
     const composer = page.getByPlaceholder(/message aibot/i);
-    await composer.focus();
     const composerForm = page.getByTestId("chat-composer-form");
+    const composerRestStyle = await composerForm.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { borderColor: style.borderColor, boxShadow: style.boxShadow };
+    });
+    await composer.focus();
+    const composerFocusedStyle = await composerForm.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { borderColor: style.borderColor, boxShadow: style.boxShadow };
+    });
+    expect(composerFocusedStyle).toEqual(composerRestStyle);
     await expect(composerForm).not.toHaveClass(/focus-within:ring-2/);
     await expect(composerForm).not.toHaveClass(
       /focus-within:border-foreground\/20/,
@@ -115,8 +140,12 @@ test.describe("Home / empty chat", () => {
       const menuBounds = await menu.boundingBox();
       expect(menuBounds).not.toBeNull();
       expect(menuBounds!.y).toBeGreaterThanOrEqual(0);
+      expect(menuBounds!.x).toBeGreaterThanOrEqual(0);
       expect(menuBounds!.height).toBeLessThanOrEqual(
         Math.min(viewport.height, 600),
+      );
+      expect(menuBounds!.x + menuBounds!.width).toBeLessThanOrEqual(
+        viewport.width,
       );
       expect(menuBounds!.y + menuBounds!.height).toBeLessThanOrEqual(
         viewport.height,

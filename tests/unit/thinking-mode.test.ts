@@ -108,6 +108,9 @@ describe("thinking system prompt stack", () => {
     expect(prompt).toContain("## Chat");
     expect(prompt).toContain("## Answer");
     expect(prompt).toContain("## Language");
+    expect(prompt).toContain(
+      "exact sentence, bullet, section, and language requests",
+    );
     expect(prompt).not.toContain("## Thinking");
   });
 });
@@ -447,6 +450,7 @@ describe("stage2 protocol boundary", () => {
     });
     expect(msgs[1]?.content).toContain("<aibot-untrusted-draft>");
     expect(msgs[2]?.content).toContain("user-facing answer");
+    expect(msgs[2]?.content).toContain("format constraints exactly");
   });
 
   it("rejects short clarification answers that escaped from planning", () => {
@@ -565,7 +569,7 @@ describe("stage2 protocol boundary", () => {
       "Common uses",
     ]);
     const notes = synthesizePlanningNotesFromDump(dump, "what is webrtc");
-    expect(notes).toContain("what is webrtc");
+    expect(notes.toLowerCase()).toContain("webrtc");
     expect(notes).toContain("Core pieces");
     expect(notes).not.toContain("substantive request");
   });
@@ -612,7 +616,7 @@ describe("thinkingPanelPreview", () => {
       "Compare Alpha and Beta using the descriptions I provided.",
     );
     expect(preview).not.toMatch(/\.\s+and preserve/i);
-    expect(preview).toContain("Compare Alpha and Beta");
+    expect(preview).toContain("Alpha and Beta");
   });
 
   it("hides answer dumps from the live Thinking panel", () => {
@@ -632,6 +636,34 @@ describe("thinkingPanelPreview", () => {
     const notes =
       "I’ll explain what AI is, how it works, and where it is used.";
     expect(thinkingPanelPreview(notes, "What is AI?")).toBe(notes);
+  });
+
+  it("replaces model notes that repeat the full request with a concise plan", () => {
+    const query =
+      "Explain photosynthesis simply. Give one useful analogy and one limitation, then summarize in two sentences.";
+    const echoed =
+      "I’ll explain Explain photosynthesis simply. Give one useful analogy and one limitation, then summarize in two sentences by clarifying what it means and how it applies.";
+    const preview = thinkingPanelPreview(echoed, query);
+
+    expect(preview).toBe(
+      "I’ll explain photosynthesis in plain language, include an analogy, note a limitation, and add a two-sentence summary.",
+    );
+    expect(preview).not.toContain("Give one useful analogy and one limitation");
+  });
+
+  it("distinguishes a total answer length from the length of a requested summary", () => {
+    expect(
+      thinkingPanelPreview(
+        "",
+        "Explain photosynthesis in two sentences with one analogy and one limitation.",
+      ),
+    ).toContain("keep the answer to two sentences");
+    expect(
+      thinkingPanelPreview(
+        "",
+        "Explain photosynthesis and then summarize in two sentences.",
+      ),
+    ).toContain("add a two-sentence summary");
   });
 
   it("replaces an unrelated plan for a personal identity question", () => {

@@ -409,13 +409,6 @@ export function formatUserRequestForPlanning(userQuery: string): string {
   return `"${q.slice(0, 137)}..."`;
 }
 
-function planningTopic(userQuery: string): string {
-  return formatUserRequestForPlanning(userQuery)
-    .replace(/^["']|["']$/g, "")
-    .replace(/[.!?]+$/, "")
-    .trim();
-}
-
 function planningIntentFromUserQuery(userQuery: string): string | null {
   const q = userQuery.trim().toLowerCase();
   if (
@@ -432,13 +425,97 @@ function planningIntentFromUserQuery(userQuery: string): string | null {
   ) {
     return "I’ll add more depth to the current topic and use concrete examples where they clarify the explanation.";
   }
-  if (/\b(?:what is|what's|define|explain)\b/.test(q)) {
-    return `I’ll explain ${planningTopic(userQuery)} by clarifying what it means and how it applies.`;
+  const topic = getPlanningTopic(userQuery);
+  if (/\b(?:what is|what's|define|explain|describe)\b/.test(q)) {
+    const details = getRequestedAnswerDetails(q);
+    const suffix = details.length
+      ? `, ${joinPlanningDetails(details)}`
+      : " and give a useful example where it helps";
+    return `I’ll explain ${topic || "the topic"} in plain language${suffix}.`;
+  }
+  if (/\b(?:compare|evaluate|assess)\b/.test(q)) {
+    const recommendation = /\b(?:recommend|choose|pick|which one)\b/.test(q)
+      ? " and make a recommendation"
+      : "";
+    return `I’ll compare ${topic || "the relevant options"} against the stated criteria and explain the tradeoffs${recommendation}.`;
+  }
+  if (
+    /\b(?:analy[sz]e|audit|architect|design|debug|diagnos\w*|investigat\w*|research|plan|prioriti[sz]e|migrat\w*|refactor|integrat\w*|review|fix|improv\w*|optimi[sz]e|implement|build|create|write|draft|generate|troubleshoot|solve|verify|test)\b/.test(
+      q,
+    )
+  ) {
+    const focus = topic ? ` ${topic}` : " the requested changes";
+    return `I’ll trace${focus} through the relevant steps and check the result against your requirements.`;
   }
   if (q.length > 48 || /\b(?:want you to|can you|please)\b/.test(q)) {
-    return `I’ll focus on ${planningTopic(userQuery)} and preserve the constraints you specified.`;
+    return "I’ll focus on the requested outcome and carry its key constraints into the response.";
   }
   return null;
+}
+
+function getPlanningTopic(userQuery: string): string {
+  let topic = userQuery
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(/[.!?;]/, 1)[0]
+    .replace(/^(?:please\s+)?(?:(?:can|could)\s+you\s+)?/i, "")
+    .replace(
+      /^(?:explain|describe|define|summari[sz]e|compare|evaluate|assess|analy[sz]e|review|research|investigate|fix|debug|design|build|create|write|draft|generate|implement|test|verify)\s+/i,
+      "",
+    )
+    .replace(/^(?:what is|what's|who is|tell me about)\s+/i, "")
+    .replace(
+      /\s+(?:in|within)\s+(?:one|two|three|four|five|\d+)\s+sentences?\b[\s\S]*$/i,
+      "",
+    )
+    .replace(/\s+(?:using|across|based on|with)\b[\s\S]*$/i, "")
+    .replace(
+      /\b(?:simply|briefly|concisely|plainly|in simple terms|in plain language|in detail|thoroughly)\b/gi,
+      "",
+    )
+    .replace(/\s+/g, " ")
+    .replace(/^[,\s]+|[,\s]+$/g, "")
+    .trim();
+  if (topic.length > 90) topic = `${topic.slice(0, 87).trimEnd()}…`;
+  return topic;
+}
+
+function getRequestedAnswerDetails(query: string): string[] {
+  const details: string[] = [];
+  if (/\banalog(?:y|ies)\b/.test(query)) details.push("include an analogy");
+  else if (/\bexamples?\b/.test(query)) details.push("include an example");
+  if (/\b(?:limitations?|caveats?)\b/.test(query)) {
+    details.push("note a limitation");
+  }
+  const summaryLength = query.match(
+    /\b(?:summari[sz]e|summary)\b[^.!?]{0,60}\b(?:in|within)\s+(one|two|three|four|five|\d+)\s+sentences?\b/i,
+  );
+  if (summaryLength?.[1]) {
+    details.push(`add a ${summaryLength[1]}-sentence summary`);
+  } else {
+    const answerLength = query.match(
+      /\b(?:exactly|only|no more than|at most)\s+(one|two|three|four|five|\d+)\s+sentences?\b|\b(?:answer|response|reply|explanation|explain|define|describe|write|provide)\b[^.!?]{0,40}\b(?:in|within)\s+(one|two|three|four|five|\d+)\s+sentences?\b/i,
+    );
+    const count = answerLength?.[1] ?? answerLength?.[2];
+    if (count) details.push(`keep the answer to ${count} sentences`);
+  }
+  return details;
+}
+
+function joinPlanningDetails(details: string[]): string {
+  if (details.length < 2) return details[0] ?? "";
+  return `${details.slice(0, -1).join(", ")}, and ${details.at(-1)}`;
+}
+
+function isVerbatimPromptEcho(notes: string, userQuery: string): boolean {
+  const normalize = (value: string) =>
+    value
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  const query = normalize(userQuery);
+  if (query.split(/\s+/).length < 7) return false;
+  return normalize(notes).includes(query);
 }
 
 /** Section titles from an early answer dump — used to build readable planning notes. */
@@ -757,7 +834,9 @@ export function thinkingPanelPreview(
   }
   return (
     planningIntentFromUserQuery(request) ??
-    `I’ll focus on ${formatUserRequestForPlanning(excerpt).replace(/^\"|\"$/g, "")} and follow the constraints you gave.`
+    (request.length > 140
+      ? "I’ll focus on the requested outcome and reflect its key constraints in the response."
+      : `I’ll focus on ${formatUserRequestForPlanning(excerpt).replace(/^\"|\"$/g, "")} and follow the constraints you gave.`)
   );
 }
 
@@ -765,6 +844,7 @@ function isThinkingNotesRelevantToQuery(
   notes: string,
   userQuery: string,
 ): boolean {
+  if (isVerbatimPromptEcho(notes, userQuery)) return false;
   const identityQuery =
     /\b(?:who am i|what(?:'s| is) my name|what do you know about me|tell me about me)\b/i.test(
       userQuery,
@@ -847,7 +927,10 @@ export function wrapThinkingForContext(notes: string): string {
 export function getStage2ContinuationUserPrompt(): string {
   return (
     "Write your complete user-facing answer now. Include every fact, number, definition, " +
-    "and choice the user asked for. Do not mention planning, thinking, drafts, or this instruction."
+    "and choice the user asked for. Re-read the original request and follow its explicit " +
+    "scope and format constraints exactly, including requested sentence or item counts. " +
+    "Do not add optional sections or summaries that violate those constraints. Do not mention " +
+    "planning, thinking, drafts, or this instruction."
   );
 }
 
