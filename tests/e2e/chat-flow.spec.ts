@@ -10,6 +10,26 @@ import JSZip from "jszip";
 import { deflateSync } from "node:zlib";
 import { mockChatStream } from "./helpers/mock-chat";
 
+async function ensureChatIsVisibleInSidebar(
+  page: import("@playwright/test").Page,
+  title: string,
+) {
+  const chat = page
+    .locator('[data-sidebar="menu-button"]')
+    .filter({ hasText: title })
+    .first();
+
+  if (!(await chat.isVisible())) {
+    const sidebarToggle = page.getByRole("button", {
+      name: /toggle sidebar/i,
+    });
+    if (await sidebarToggle.isVisible()) await sidebarToggle.click();
+  }
+
+  await expect(chat).toBeVisible({ timeout: 10_000 });
+  return chat;
+}
+
 test.describe("Chat layout after first message", () => {
   test("repairs a packed Mermaid response and renders the diagram", async ({
     page,
@@ -147,19 +167,14 @@ flowchart TD
     await expect(
       page.getByText("This answer should survive a reload."),
     ).toBeVisible({ timeout: 15_000 });
-    await expect(
-      page.locator('[data-sidebar="menu-button"]').filter({
-        hasText: "Keep this chat",
-      }),
-    ).toBeVisible();
+    await ensureChatIsVisibleInSidebar(page, "Keep this chat");
     await page.waitForTimeout(500);
     await page.reload();
 
-    const savedChat = page
-      .locator('[data-sidebar="menu-button"]')
-      .filter({ hasText: "Keep this chat" })
-      .first();
-    await expect(savedChat).toBeVisible({ timeout: 10_000 });
+    const savedChat = await ensureChatIsVisibleInSidebar(
+      page,
+      "Keep this chat",
+    );
     await savedChat.click();
     await expect(page).toHaveURL(/\/chat\//);
     await expect(
