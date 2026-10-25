@@ -80,6 +80,9 @@ test.describe("Home / empty chat", () => {
       const menuBounds = await menu.boundingBox();
       expect(menuBounds).not.toBeNull();
       expect(menuBounds!.y).toBeGreaterThanOrEqual(0);
+      expect(menuBounds!.height).toBeLessThanOrEqual(
+        Math.min(viewport.height, 600),
+      );
       expect(menuBounds!.y + menuBounds!.height).toBeLessThanOrEqual(
         viewport.height,
       );

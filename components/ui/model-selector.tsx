@@ -329,7 +329,7 @@ export function ModelSelector({
                 onCheckedChange={onWebSearchChange}
               />
             )}
-            <CommandList className="min-h-0 max-h-none flex-1 scrollbar-thin p-1">
+            <CommandList className="min-h-0 max-h-[min(320px,40vh)] flex-1 scrollbar-thin p-1">
               <CommandEmpty className="py-6 text-sm text-muted-foreground">
                 {t("model.empty")}
               </CommandEmpty>
