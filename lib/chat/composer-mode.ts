@@ -34,16 +34,16 @@ export function composerFormClassName(
 ) {
   const isThread = density === "thread";
   return cn(
-    "relative flex w-full max-w-full min-w-0 overflow-hidden",
+    "relative flex w-full max-w-full min-w-0 overflow-hidden border transition-[border-radius,border-color,background-color,box-shadow] duration-200",
     isThread
       ? cn(
-          "flex-col transition-[border-radius] duration-200",
+          "flex-col",
           hasQueuedInThread
             ? "rounded-none border-0 bg-transparent"
-            : "rounded-full border border-border/50 bg-muted/40",
+            : "rounded-full border-border/60 bg-muted/40 shadow-sm",
           hasAttachments && "rounded-3xl",
         )
-      : "flex-col gap-0 rounded-2xl border border-border/50 bg-muted/40 sm:rounded-3xl",
+      : "flex-col gap-0 rounded-2xl border-border/60 bg-muted/40 shadow-sm sm:rounded-3xl",
   );
 }
 

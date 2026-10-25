@@ -32,6 +32,7 @@ interface ComposerPrimaryActionProps {
   onSendWhileLoading?: (prompt: string, attachments: ChatAttachment[]) => void;
   attachments: ChatAttachment[];
   onClearDraft: () => void;
+  onRefocus?: () => void;
 }
 
 function actionButtonSize(density: "hero" | "thread") {
@@ -53,6 +54,7 @@ export function ComposerPrimaryAction({
   onSendWhileLoading,
   attachments,
   onClearDraft,
+  onRefocus,
 }: ComposerPrimaryActionProps) {
   const sizeClass = actionButtonSize(density);
 
@@ -100,6 +102,7 @@ export function ComposerPrimaryAction({
           onClick={() => {
             onSendWhileLoading(query, attachments);
             onClearDraft();
+            onRefocus?.();
           }}
           aria-label={t("composer.sendNow")}
           title={t("composer.sendNow")}

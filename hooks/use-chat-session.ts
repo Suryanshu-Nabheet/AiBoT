@@ -221,6 +221,7 @@ export function useChatSession({
   /** Avoid re-applying stored messages after every request (was wiping new replies). */
   const hydratedConversationIdRef = useRef<string | null>(null);
   const messagesRef = useRef(messages);
+  const persistedMessagesRef = useRef(messages);
   const streamPersistTickRef = useRef(0);
   const webSearchDecisionResolverRef = useRef<
     ((approved: boolean) => void) | null
@@ -245,6 +246,14 @@ export function useChatSession({
   useLayoutEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    if (persistedMessagesRef.current === messages) return;
+    persistedMessagesRef.current = messages;
+    if (conversationPersistId && messages.length > 0) {
+      queueConversationPersist(conversationPersistId, messages, locale);
+    }
+  }, [conversationPersistId, locale, messages]);
 
   useEffect(() => {
     return () => {
@@ -291,6 +300,7 @@ export function useChatSession({
       allowEmptyContent?: boolean;
       requestId?: number;
       webSearchTrace?: WebSearchTrace;
+      userQuery?: string;
     },
   ) => {
     const finalize = options?.finalize ?? true;
@@ -368,10 +378,11 @@ export function useChatSession({
 
     const pushContentToUi = () => {
       if (!isCurrentRequest()) return;
-      let live = sanitizeAssistantStreamField(streamField, accumulated, false);
+      let live = sanitizeAssistantStreamField(streamField, accumulated, false, {
+        thinkingMode: isThinkingRequested,
+      });
       if (streamField === "thinkingText") {
-        const preview = thinkingPanelPreview(live);
-        live = preview || (live.length > 0 && live.length < 280 ? live : "");
+        live = thinkingPanelPreview(live, options?.userQuery);
       }
       setMessages((prev) => {
         if (!isCurrentRequest()) return prev;
@@ -412,66 +423,58 @@ export function useChatSession({
 
       const hasRawText = accumulated.trim().length > 0;
       const sanitized = hasRawText
-        ? sanitizeAssistantStreamField(streamField, accumulated, true)
+        ? sanitizeAssistantStreamField(streamField, accumulated, true, {
+            thinkingMode: isThinkingRequested,
+          })
         : "";
       const hasText = sanitized.trim().length > 0;
 
-      let messagesToPersist: Message[] | null = null;
-      setMessages((prev) => {
-        if (!isCurrentRequest()) return prev;
-        const updatedMessages = prev.map((m) => {
-          if (m.id !== tempId) return m;
-          if (
-            !hasText &&
-            streamField === "content" &&
-            !options?.allowEmptyContent
-          ) {
-            const err = assistantErrorFields(
-              locale,
-              0,
-              model,
-              apiKeys,
-              undefined,
-              "network",
-            );
-            return {
-              ...m,
-              content: err.content,
-              errorTitle: err.errorTitle,
-              errorType: err.errorType,
-              isThinkingRequested,
-              isError: true,
-            };
-          }
+      const finalizeMessage = (message: Message): Message => {
+        if (message.id !== tempId) return message;
+        if (
+          !hasText &&
+          streamField === "content" &&
+          !options?.allowEmptyContent
+        ) {
+          const err = assistantErrorFields(
+            locale,
+            0,
+            model,
+            apiKeys,
+            undefined,
+            "network",
+          );
           return {
-            ...m,
-            [streamField]: hasText
-              ? sanitized
-              : streamField === "thinkingText"
-                ? (m.thinkingText ?? "")
-                : m.content,
+            ...message,
+            content: err.content,
+            errorTitle: err.errorTitle,
+            errorType: err.errorType,
             isThinkingRequested,
+            isError: true,
           };
-        });
-
-        if (finalize && conversationPersistId) {
-          messagesToPersist = updatedMessages;
         }
-        return updatedMessages;
-      });
-      if (messagesToPersist && conversationPersistId) {
-        queueConversationPersist(
-          conversationPersistId,
-          messagesToPersist,
-          locale,
-        );
-      }
+        return {
+          ...message,
+          [streamField]: hasText
+            ? sanitized
+            : streamField === "thinkingText"
+              ? (message.thinkingText ?? "")
+              : message.content,
+          isThinkingRequested,
+        };
+      };
+
+      setMessages((prev) =>
+        isCurrentRequest() ? prev.map(finalizeMessage) : prev,
+      );
       return sanitized;
     } catch (e) {
       if ((e as Error).name === "AbortError") {
         const partial = accumulated;
         const sanitizedPartial = partial.trim()
-          ? sanitizeAssistantStreamField(streamField, partial, true)
+          ? sanitizeAssistantStreamField(streamField, partial, true, {
+              thinkingMode: isThinkingRequested,
+            })
           : "";
         if (options?.tempId) {
           setMessages((prev) => {
@@ -630,8 +633,12 @@ export function useChatSession({
     const userGuidanceContext = buildUserGuidanceContext(
       undefined,
       guidanceUpdate,
+      currentQuery,
     );
-    if (guidanceUpdate) {
+    if (
+      guidanceUpdate &&
+      ["added", "updated", "removed"].includes(guidanceUpdate.action)
+    ) {
       const toastKey =
         guidanceUpdate.action === "added"
           ? "general.guidance.commandAdded"
@@ -977,51 +984,40 @@ export function useChatSession({
         content: string;
       }) => {
         if (!isCurrentRequest()) return;
-        let messagesToPersist: Message[] | null = null;
-        setMessages((prev) => {
-          const updatedMessages = prev.map((m) => {
-            if (m.id !== tempId) return m;
-            if (!reconciled.content.trim()) {
-              const err = assistantErrorFields(
-                locale,
-                0,
-                model,
-                apiKeys,
-                undefined,
-                "network",
-              );
-              return {
-                ...m,
-                thinkingText: reconciled.thinkingText,
-                content: err.content,
-                errorTitle: err.errorTitle,
-                errorType: err.errorType,
-                isThinkingRequested: true,
-                isError: true,
-              };
-            }
+        const safeThinkingText = resolveThinkingPanelNotes(
+          reconciled.thinkingText,
+          userQuery,
+        );
+        const reconcileMessage = (message: Message): Message => {
+          if (message.id !== tempId) return message;
+          if (!reconciled.content.trim()) {
+            const err = assistantErrorFields(
+              locale,
+              0,
+              model,
+              apiKeys,
+              undefined,
+              "network",
+            );
             return {
-              ...m,
-              thinkingText: reconciled.thinkingText,
-              content: reconciled.content,
+              ...message,
+              thinkingText: safeThinkingText,
+              content: err.content,
+              errorTitle: err.errorTitle,
+              errorType: err.errorType,
               isThinkingRequested: true,
-              isError: false,
+              isError: true,
             };
-          });
-
-          if (conversationPersistId) {
-            messagesToPersist = updatedMessages;
           }
-          return updatedMessages;
-        });
-        if (messagesToPersist && conversationPersistId) {
-          queueConversationPersist(
-            conversationPersistId,
-            messagesToPersist,
-            locale,
-          );
-        }
-
+          return {
+            ...message,
+            thinkingText: safeThinkingText,
+            content: reconciled.content,
+            isThinkingRequested: true,
+            isError: false,
+          };
+        };
+        setMessages((prev) => prev.map(reconcileMessage));
         finishRequest();
         refreshExecutions();
 
@@ -1066,6 +1062,7 @@ export function useChatSession({
           tempId,
           streamField: "thinkingText",
           requestId,
+          userQuery,
         });
         return cleanThinkingText(raw);
       };
@@ -1091,12 +1088,13 @@ export function useChatSession({
 
       const stage1 = finalizeStage1Attempts(attempts, { userQuery });
       applyThinkingPreview(
-        stage1.notes || resolveThinkingPanelNotes(current, userQuery),
+        resolveThinkingPanelNotes(stage1.notes || current, userQuery),
       );
 
       const stage2Prior = buildStage2PriorReasoning(
         stage1.notes,
         stage1.answerDraft,
+        isOllama ? 4_000 : 10_000,
       );
       const res2 = await requestStage("final", stage2Prior);
       if (!res2.ok) {
@@ -1130,7 +1128,11 @@ export function useChatSession({
         shouldRetryThinkingAnswer(stage2Raw) &&
         answerRepairs < MAX_THINKING_ANSWER_RETRIES
       ) {
-        const repairPrior = buildStage2PriorReasoning(stage1.notes, stage2Raw);
+        const repairPrior = buildStage2PriorReasoning(
+          stage1.notes,
+          stage2Raw,
+          isOllama ? 4_000 : 10_000,
+        );
         const repairResponse = await requestStage("final", repairPrior);
         if (!repairResponse.ok) break;
         stage2Raw = await processStream(repairResponse, true, isOllama, {
@@ -1152,7 +1154,10 @@ export function useChatSession({
 
     try {
       const isOllama = model.startsWith("ollama/");
-      const historyForModel = mapMessagesForModelHistory(messages);
+      const historyForModel = mapMessagesForModelHistory(messages, {
+        query: currentQuery,
+        maxTextChars: isOllama ? 8_000 : 20_000,
+      });
 
       if (isOllama) {
         const ollamaModelName = model.replace("ollama/", "");

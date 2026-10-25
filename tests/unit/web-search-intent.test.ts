@@ -132,6 +132,9 @@ describe("evaluateWebSearchIntent", () => {
         "explain photosynthesis",
         "how do airplanes fly",
         "what is the speed of light",
+        "what is reinforcement learning?",
+        "explain machine learning",
+        "what is artificial intelligence",
       ];
       for (const query of cases) {
         const result = evaluateWebSearchIntent(query);

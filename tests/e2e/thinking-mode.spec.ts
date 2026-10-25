@@ -80,7 +80,12 @@ test.describe("Thinking mode", () => {
     await page.addInitScript(() => {
       localStorage.setItem("aibot_thinking_enabled", "true");
     });
-    await mockThinkingChatStream(page);
+    await mockThinkingChatStream(page, {
+      notes:
+        "- Request: Explain reinforcement learning.\n- Approach: Define it plainly and give an everyday example.",
+      answer:
+        "Reinforcement learning is a way for an agent to learn by taking actions, receiving rewards, and improving its strategy over time.",
+    });
     await page.goto("/");
 
     const composer = page.getByPlaceholder(/message aibot/i);
@@ -93,9 +98,11 @@ test.describe("Thinking mode", () => {
     await expect(
       page.getByText(/reinforcement learning is a way/i),
     ).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /thinking/i }).click();
     await expect(
-      page.getByText(/i should give a concise explanation/i),
+      page.getByText(/Request: Explain reinforcement learning/i),
     ).toBeVisible();
+    await expect(page.getByText(/I should/i)).toHaveCount(0);
     await expect(
       page.getByText(/private planning notes|aibot-planning-context/i),
     ).toHaveCount(0);
@@ -133,5 +140,97 @@ test.describe("Thinking mode", () => {
       "final",
     ]);
     await expect(page.getByText(/thinking/i).first()).toBeVisible();
+  });
+
+  test("keeps identity planning grounded and removes a copied panel from the answer", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("aibot_thinking_enabled", "true");
+      localStorage.setItem(
+        "aibot-user-guidance-v1",
+        JSON.stringify([
+          {
+            id: "user-name",
+            kind: "memory",
+            content: "My name is Suryanshu Nabheet.",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ]),
+      );
+    });
+
+    const requests: {
+      thinkingStage?: string;
+      messages?: { role: string; content: unknown }[];
+    }[] = [];
+    const leakedPanel = [
+      "Thinking Panel",
+      "",
+      "- Request: Identify the user.",
+      "- Approach: Use the user-shared profile detail.",
+      "- Evidence: The user's name is Suryanshu Nabheet.",
+      "- Uncertainty: None.",
+      "",
+      "---",
+      "",
+      "I am Suryanshu Nabheet.",
+    ].join("\n");
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      const request = route
+        .request()
+        .postDataJSON() as (typeof requests)[number];
+      requests.push(request);
+      const responseText =
+        request.thinkingStage === "thinking"
+          ? 'The user asked "who am i". I should lead with "Thinking Panel", then cover how it works, key parts, and one real-world use case in the reply.'
+          : requests.filter((item) => item.thinkingStage === "final").length ===
+              1
+            ? leakedPanel
+            : "I am Suryanshu Nabheet.";
+      const body = [
+        `data: ${JSON.stringify({ choices: [{ delta: { content: responseText } }] })}`,
+        "",
+        "data: [DONE]",
+        "",
+        "",
+      ].join("\n");
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body,
+      });
+    });
+
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("who am i");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    await expect(page.getByText("I am Suryanshu Nabheet.")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/Thinking Panel/)).toHaveCount(0);
+    await page.getByRole("button", { name: /thinking/i }).click();
+    await expect(page.getByText(/Request: who am i/i)).toBeVisible();
+    await expect(
+      page.getByText(/user's saved or shared profile details/i),
+    ).toBeVisible();
+    expect(requests.map((request) => request.thinkingStage)).toEqual([
+      "thinking",
+      "final",
+    ]);
+    const userContent = requests[0]?.messages?.find(
+      (message) => message.role === "user",
+    )?.content;
+    const serialized =
+      typeof userContent === "string"
+        ? userContent
+        : JSON.stringify(userContent ?? "");
+    expect(serialized).toContain("My name is Suryanshu Nabheet.");
   });
 });

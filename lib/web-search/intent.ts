@@ -137,7 +137,7 @@ const BASIC_CODE_TASK_REGEX =
 
 /** Universal static knowledge, historical events, scientific definitions with unchanging facts. */
 const STATIC_SCIENCE_REGEX =
-  /\b(?:why\s+is\s+the\s+sky\s+blue|explain\s+photosynthesis|properties\s+of\s+(?:a\s+)?triangle|what\s+is\s+(?:gravity|mitosis|osmosis|dna|rna|an\s+atom|quantum\s+entanglement|the\s+speed\s+of\s+light|entropy|thermodynamics)|how\s+do\s+airplanes\s+fly|theory\s+of\s+relativity|who\s+was\s+(?:albert\s+einstein|isaac\s+newton|william\s+shakespeare|abraham\s+lincoln|leonardo\s+da\s+vinci|george\s+washington|aristotle|plato)|capital\s+of\s+[a-z]+)\b/i;
+  /\b(?:why\s+is\s+the\s+sky\s+blue|explain\s+photosynthesis|properties\s+of\s+(?:a\s+)?triangle|what\s+is\s+(?:gravity|mitosis|osmosis|dna|rna|an\s+atom|quantum\s+entanglement|the\s+speed\s+of\s+light|entropy|thermodynamics|reinforcement\s+learning|machine\s+learning|deep\s+learning|artificial\s+intelligence|a\s+neural\s+network)|explain\s+(?:reinforcement\s+learning|machine\s+learning|deep\s+learning|artificial\s+intelligence)|how\s+do\s+airplanes\s+fly|theory\s+of\s+relativity|who\s+was\s+(?:albert\s+einstein|isaac\s+newton|william\s+shakespeare|abraham\s+lincoln|leonardo\s+da\s+vinci|george\s+washington|aristotle|plato)|capital\s+of\s+[a-z]+)\b/i;
 
 /**
  * Evaluates whether a query genuinely requires real-time web search.

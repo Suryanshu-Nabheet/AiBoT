@@ -57,6 +57,16 @@ export function clearSharedChatMemory(): void {
   }
 }
 
+/** Remove a conversation's cross-chat context when the user deletes that chat. */
+export function removeSharedChatMemory(conversationId: string): void {
+  if (!conversationId) return;
+  const next = readRecords(true).filter(
+    (record) => record.id !== conversationId,
+  );
+  memoryCache = next;
+  schedulePersist();
+}
+
 export function getSharedChatMemorySummary(): {
   conversationCount: number;
   messageCount: number;

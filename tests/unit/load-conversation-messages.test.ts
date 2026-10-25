@@ -10,7 +10,7 @@ import { Role } from "@/lib/types";
 function installSessionStorageMock() {
   vi.stubGlobal("window", globalThis);
   const store = new Map<string, string>();
-  vi.stubGlobal("sessionStorage", {
+  const storage = {
     getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => {
       store.set(key, value);
@@ -21,7 +21,9 @@ function installSessionStorageMock() {
     clear: () => store.clear(),
     key: () => null,
     length: store.size,
-  });
+  };
+  vi.stubGlobal("sessionStorage", storage);
+  vi.stubGlobal("localStorage", storage);
 }
 
 describe("loadConversationMessages", () => {

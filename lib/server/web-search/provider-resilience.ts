@@ -111,6 +111,18 @@ export async function runProviderWithResilience(
 
       attempts += 1;
       let timer: ReturnType<typeof setTimeout> | undefined;
+      let removeAbortListener = () => {};
+      const aborted = new Promise<{ kind: "aborted" }>((resolve) => {
+        if (!externalSignal) return;
+        const onAbort = () => resolve({ kind: "aborted" });
+        if (externalSignal.aborted) {
+          onAbort();
+          return;
+        }
+        externalSignal.addEventListener("abort", onAbort, { once: true });
+        removeAbortListener = () =>
+          externalSignal.removeEventListener("abort", onAbort);
+      });
       const result = await Promise.race([
         Promise.resolve()
           .then(() => search(query, maxResults, signal))
@@ -124,8 +136,10 @@ export async function runProviderWithResilience(
             resolve({ kind: "timeout" });
           }, remaining);
         }),
+        aborted,
       ]);
       if (timer) clearTimeout(timer);
+      removeAbortListener();
 
       if (externalSignal?.aborted) {
         finalOutcome = "aborted";

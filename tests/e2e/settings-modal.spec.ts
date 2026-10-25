@@ -144,6 +144,11 @@ test.describe("Settings modal", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
+    await expect
+      .poll(() =>
+        dialog.evaluate((element) => getComputedStyle(element).outlineStyle),
+      )
+      .toBe("none");
     await expect(
       dialog.getByRole("heading", { name: /^general$/i }),
     ).toBeVisible();

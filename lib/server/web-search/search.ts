@@ -12,6 +12,9 @@ import { runProviderWithResilience } from "@/lib/server/web-search/provider-resi
 import { mergeWebSearchBatches } from "@/lib/web-search/merge";
 import type { WebSearchApiResult } from "@/lib/web-search/types";
 
+/** Bound total provider fan-out latency while retaining any sources already found. */
+const SEARCH_BUDGET_MS = 6_500;
+
 /**
  * Available keyless providers. The orchestrator selects providers by query
  * type, then runs the selected providers concurrently:
@@ -66,17 +69,28 @@ export async function searchWeb(
     return true;
   });
 
-  const settled = await Promise.all(
-    providers.map(({ name, search }) =>
-      runProviderWithResilience(
-        name,
-        trimmed,
-        maxResults,
-        search,
-        options?.signal,
+  const searchController = new AbortController();
+  const searchSignal = options?.signal
+    ? AbortSignal.any([options.signal, searchController.signal])
+    : searchController.signal;
+  const deadline = setTimeout(() => searchController.abort(), SEARCH_BUDGET_MS);
+  let settled: Awaited<ReturnType<typeof runProviderWithResilience>>[];
+  try {
+    settled = await Promise.all(
+      providers.map(({ name, search }) =>
+        runProviderWithResilience(
+          name,
+          trimmed,
+          maxResults,
+          search,
+          searchSignal,
+        ),
       ),
-    ),
-  );
+    );
+  } finally {
+    clearTimeout(deadline);
+    if (!searchController.signal.aborted) searchController.abort();
+  }
   const batches = settled
     .map((result) => result.batch)
     .filter(

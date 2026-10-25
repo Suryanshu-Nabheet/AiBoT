@@ -95,12 +95,28 @@ flowchart TD
     const send = page.getByRole("button", { name: /send message/i });
     await expect(send).toBeEnabled({ timeout: 5_000 });
     await send.click();
+    await expect(page.getByPlaceholder(/send follow-up/i)).toBeFocused();
 
     await expect(
       page.locator("main").getByText("ping", { exact: true }),
     ).toBeVisible({
       timeout: 15_000,
     });
+    const followupComposer = page.getByPlaceholder(/send follow-up/i);
+    await expect(
+      page.locator("main").getByText("pong", { exact: true }),
+    ).toBeVisible();
+    await expect(followupComposer).toBeFocused();
+    await followupComposer.fill("second prompt without another click");
+    await page.getByRole("button", { name: /send message/i }).click();
+    await expect(
+      page
+        .locator("main")
+        .getByText("second prompt without another click", { exact: true }),
+    ).toBeVisible();
+    await expect(followupComposer).toBeFocused();
+    await page.keyboard.type("ready for the next prompt");
+    await expect(followupComposer).toHaveValue("ready for the next prompt");
 
     const recentChat = page
       .locator('[data-sidebar="menu-button"]')
@@ -114,10 +130,44 @@ flowchart TD
     const recentChatBox = await recentChat.boundingBox();
     expect(recentChatBox?.height).toBeLessThanOrEqual(36);
 
-    await expect(page.getByPlaceholder(/send follow-up/i)).toBeVisible();
+    await expect(followupComposer).toBeVisible();
     await expect(page.getByText(/what can i help you with today/i)).toHaveCount(
       0,
     );
+  });
+
+  test("reopens a saved conversation after a full page reload", async ({
+    page,
+  }) => {
+    await mockChatStream(page, "This answer should survive a reload.");
+    await page.goto("/");
+    await page.getByPlaceholder(/message aibot/i).fill("Keep this chat");
+    await page.getByRole("button", { name: /send message/i }).click();
+
+    await expect(
+      page.getByText("This answer should survive a reload."),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.locator('[data-sidebar="menu-button"]').filter({
+        hasText: "Keep this chat",
+      }),
+    ).toBeVisible();
+    await page.waitForTimeout(500);
+    await page.reload();
+
+    const savedChat = page
+      .locator('[data-sidebar="menu-button"]')
+      .filter({ hasText: "Keep this chat" })
+      .first();
+    await expect(savedChat).toBeVisible({ timeout: 10_000 });
+    await savedChat.click();
+    await expect(page).toHaveURL(/\/chat\//);
+    await expect(
+      page.locator("main").getByText("Keep this chat", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("This answer should survive a reload."),
+    ).toBeVisible();
   });
 
   test("collapses multiple queued prompts and reveals per-prompt actions on hover", async ({
@@ -237,6 +287,7 @@ flowchart TD
     await expect(
       page.locator("main").getByText("urgent follow-up", { exact: true }),
     ).toBeVisible();
+    await expect(composer).toBeFocused();
     await expect.poll(() => requestCount).toBe(2);
   });
 

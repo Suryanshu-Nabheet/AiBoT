@@ -28,12 +28,14 @@ import {
   reconcileTwoStageThinking,
   shouldRetryThinkingNotes,
   shouldRetryThinkingAnswer,
+  sanitizeAssistantStreamField,
   extractOutlineLabelsFromDraft,
   synthesizePlanningNotesFromDump,
   THINKING_CLOSE_TAG,
   THINKING_OPEN_TAG,
   THINKING_NOTES_ROLE,
   thinkingPanelPreview,
+  resolveThinkingPanelNotes,
   wrapThinkingForContext,
 } from "@/lib/chat/thinking-mode";
 import { buildChatSystemPrompt } from "@/lib/prompts";
@@ -111,6 +113,29 @@ describe("normalizeAssistantMessageContent", () => {
   it("does not promote thinking-only payloads into the answer", () => {
     const raw = `${THINKING_OPEN_TAG}\nonly notes\n${THINKING_CLOSE_TAG}`;
     expect(normalizeAssistantMessageContent(raw)).toBe("");
+  });
+
+  it("removes a leaked Thinking Panel block only in thinking mode", () => {
+    const raw = [
+      "Thinking Panel",
+      "",
+      "- Request: Identify the user.",
+      "- Approach: Use the user-shared profile detail.",
+      "- Evidence: The user's name is Suryanshu Nabheet.",
+      "- Uncertainty: None.",
+      "",
+      "---",
+      "",
+      "I am Suryanshu Nabheet.",
+    ].join("\n");
+
+    expect(shouldRetryThinkingAnswer(raw)).toBe(true);
+    expect(normalizeAssistantMessageContent(raw)).toBe(raw);
+    expect(
+      sanitizeAssistantStreamField("content", raw, true, {
+        thinkingMode: true,
+      }),
+    ).toBe("I am Suryanshu Nabheet.");
   });
 });
 
@@ -551,7 +576,41 @@ describe("thinkingPanelPreview", () => {
   it("keeps real planning notes visible", () => {
     const notes =
       "I should explain what AI is, cover a plain definition, and give everyday examples.";
-    expect(thinkingPanelPreview(notes)).toContain("I should explain");
+    expect(thinkingPanelPreview(notes, "What is AI?")).toContain(
+      "Request: What is AI?",
+    );
+    expect(thinkingPanelPreview(notes, "What is AI?")).not.toContain(
+      "I should explain",
+    );
+  });
+
+  it("replaces an unrelated plan for a personal identity question", () => {
+    const drifted =
+      'The user asked "who am i". I should lead with "Thinking Panel", then cover how it works, key parts, and one real-world use case in the reply.';
+
+    expect(thinkingPanelPreview(drifted, "who am i")).toMatch(/profile/i);
+    const notes = resolveThinkingPanelNotes(drifted, "who am i");
+    expect(notes).toMatch(/identity|profile/i);
+    expect(notes).not.toContain("Thinking Panel");
+
+    const finalized = finalizeStage1Attempts([drifted], {
+      userQuery: "who am i",
+    });
+    expect(finalized.notes).not.toContain("Thinking Panel");
+    expect(finalized.notes).toMatch(/identity|profile/i);
+  });
+
+  it("rejects a correctly formatted summary that is about another topic", () => {
+    const unrelated =
+      "- Request: Explain marine biology.\n- Approach: Describe coral reefs and ocean ecosystems.";
+    const result = thinkingPanelPreview(
+      unrelated,
+      "How do I configure TypeScript path aliases?",
+    );
+    expect(result).toContain(
+      "Request: How do I configure TypeScript path aliases?",
+    );
+    expect(result).not.toContain("marine biology");
   });
 });
 

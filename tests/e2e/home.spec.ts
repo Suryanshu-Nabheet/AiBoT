@@ -25,7 +25,16 @@ test.describe("Home / empty chat", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("combobox").first()).toBeVisible();
+    const modelSelector = page.getByRole("combobox").first();
+    await expect(modelSelector).toBeVisible();
+    await modelSelector.focus();
+    await expect(modelSelector).toHaveClass(
+      /focus-visible:ring-foreground\/10/,
+    );
+    await expect(modelSelector).not.toHaveClass(/focus-visible:ring-\[3px\]/);
+    await modelSelector.press("Enter");
+    await expect(modelSelector).toHaveAttribute("aria-expanded", "true");
+    await modelSelector.press("Escape");
     await expect(
       page.getByRole("button", { name: /attach files/i }),
     ).toBeVisible();
@@ -34,6 +43,12 @@ test.describe("Home / empty chat", () => {
     ).toBeVisible();
 
     const composer = page.getByPlaceholder(/message aibot/i);
+    await composer.focus();
+    const composerForm = page.getByTestId("chat-composer-form");
+    await expect(composerForm).not.toHaveClass(/focus-within:ring-2/);
+    await expect(composerForm).not.toHaveClass(
+      /focus-within:border-foreground\/20/,
+    );
     await composer.fill("A draft message");
     await expect(
       page.getByRole("button", { name: /send message/i }),

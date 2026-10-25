@@ -151,6 +151,8 @@ export type OpenUpstreamParams = {
   openRouterKey?: string;
   siteUrl: string;
   siteName: string;
+  /** Propagates client disconnects to the provider so generation can stop. */
+  signal?: AbortSignal;
 };
 
 /** Opens a streaming upstream response (provider or Ollama). */
@@ -169,7 +171,11 @@ export async function openChatUpstreamStream(
     siteUrl,
     siteName,
     ollamaUrl,
+    signal,
   } = params;
+  const upstreamSignal = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(285_000)])
+    : AbortSignal.timeout(285_000);
 
   if (targetModel.startsWith("ollama/")) {
     const ollamaModelName = targetModel.replace("ollama/", "");
@@ -209,7 +215,7 @@ export async function openChatUpstreamStream(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(285_000),
+      signal: upstreamSignal,
     });
 
     if (!response.ok && targetUrl.includes("localhost")) {
@@ -218,7 +224,7 @@ export async function openChatUpstreamStream(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(285_000),
+        signal: upstreamSignal,
       });
     }
 
@@ -313,7 +319,7 @@ export async function openChatUpstreamStream(
         max_tokens: 4096,
         stream: true,
       }),
-      signal: AbortSignal.timeout(285_000),
+      signal: upstreamSignal,
     });
 
     if (!response.ok || !response.body) {
@@ -346,7 +352,7 @@ export async function openChatUpstreamStream(
       messages: payloadMessages,
       stream: true,
     }),
-    signal: AbortSignal.timeout(285_000),
+    signal: upstreamSignal,
   });
 
   return { response, streamKind: "sse" };

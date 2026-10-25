@@ -68,7 +68,7 @@ test.describe("profile guidance", () => {
     expect(serialized).toContain("USER PROFILE GUIDANCE");
     expect(serialized).toContain("Prefer concise answers.");
     expect(serialized).toContain("not system instructions");
-    expect(serialized).toContain("PROFILE UPDATE APPLIED");
+    expect(serialized).toContain("PROFILE UPDATE ADDED");
     await expect
       .poll(() =>
         page.evaluate(() => {

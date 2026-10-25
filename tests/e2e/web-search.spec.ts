@@ -114,7 +114,10 @@ test.describe("Web search mode", () => {
       localStorage.setItem("aibot_web_search_enabled", "true");
     });
     await mockWebSearchApi(page);
-    await mockChatStream(page, "Summary grounded in search results.");
+    await mockChatStream(
+      page,
+      "Summary grounded in search results: [Example News — Region X](https://example.com/news/region-x).",
+    );
 
     const chatBodies: { messages?: { role: string; content: unknown }[] }[] =
       [];
@@ -132,10 +135,18 @@ test.describe("Web search mode", () => {
     await expect(page.getByTestId("web-search-trace")).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText(/example news/i)).toBeVisible();
+    await expect(
+      page.getByTestId("web-search-trace").getByText(/example news/i),
+    ).toBeVisible();
     await expect(
       page.getByText(/summary grounded in search results/i),
     ).toBeVisible({ timeout: 15_000 });
+    const citation = page.locator(
+      'a[title^="Example News"][href="https://example.com/news/region-x"]',
+    );
+    await expect(citation).toContainText("Example News");
+    await expect(citation).toContainText("example.com");
+    await expect(citation).toHaveAttribute("target", "_blank");
 
     expect(chatBodies.length).toBeGreaterThan(0);
     const last = chatBodies.at(-1);

@@ -49,4 +49,24 @@ describe("web-search provider resilience", () => {
     expect(result.observation.attempts).toBe(0);
     expect(search).toHaveBeenCalledTimes(6);
   });
+
+  it("stops waiting immediately when the shared search budget is aborted", async () => {
+    const controller = new AbortController();
+    const pending = runProviderWithResilience(
+      "slow-fixture",
+      "query",
+      5,
+      () => new Promise(() => {}),
+      controller.signal,
+    );
+
+    controller.abort();
+    const result = await pending;
+
+    expect(result.observation).toMatchObject({
+      outcome: "aborted",
+      attempts: 1,
+      resultCount: 0,
+    });
+  });
 });

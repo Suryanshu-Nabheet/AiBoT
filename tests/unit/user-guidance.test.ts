@@ -46,11 +46,11 @@ describe("user profile memories and rules", () => {
     expect(listUserGuidance()).toEqual([]);
   });
 
-  it("applies only explicit add, update, and forget instructions", () => {
+  it("learns stated preferences and applies explicit add, update, and forget instructions", () => {
     installStorage();
-    expect(applyExplicitUserGuidanceCommand("I like concise answers.")).toBe(
-      null,
-    );
+    expect(
+      applyExplicitUserGuidanceCommand("I like concise answers."),
+    ).toMatchObject({ action: "added", kind: "rule" });
     const added = applyExplicitUserGuidanceCommand(
       "Remember that I am a UX designer.",
     );
@@ -74,6 +74,61 @@ describe("user profile memories and rules", () => {
     });
   });
 
+  it("updates a name memory in place and ranks relevant context for the current request", () => {
+    installStorage();
+    const first = applyExplicitUserGuidanceCommand("My name is Alex Example.");
+    const renamed = applyExplicitUserGuidanceCommand("Call me Sam Example.");
+    saveUserGuidance("memory", "I am planning a trip to Kyoto.");
+    expect(first).toMatchObject({ action: "added", kind: "memory" });
+    expect(renamed).toMatchObject({ action: "updated", kind: "memory" });
+    expect(
+      listUserGuidance().filter((entry) => /name/i.test(entry.content)),
+    ).toHaveLength(1);
+    const context = buildUserGuidanceContext(undefined, undefined, "Who am I?");
+    expect(context?.indexOf("Sam Example")).toBeLessThan(
+      context?.indexOf("Kyoto") ?? -1,
+    );
+  });
+
+  it("never deletes ambiguous matches and reports missing or disabled changes", () => {
+    installStorage();
+    saveUserGuidance("rule", "Prefer concise technical answers.");
+    saveUserGuidance("rule", "Prefer concise examples.");
+    expect(
+      applyExplicitUserGuidanceCommand("forget my rule about concise"),
+    ).toMatchObject({ action: "ambiguous", kind: "rule" });
+    expect(listUserGuidance()).toHaveLength(2);
+    expect(
+      applyExplicitUserGuidanceCommand("forget my memory about a dog"),
+    ).toMatchObject({ action: "not_found", kind: "memory" });
+    setUserGuidanceEnabled(false);
+    expect(
+      applyExplicitUserGuidanceCommand("Remember that I like short answers."),
+    ).toMatchObject({ action: "disabled" });
+  });
+
+  it("supports explicit bulk removal without deleting the other category", () => {
+    installStorage();
+    saveUserGuidance("memory", "I am a designer.");
+    saveUserGuidance("rule", "Prefer concise answers.");
+    expect(
+      applyExplicitUserGuidanceCommand("forget all my memories"),
+    ).toMatchObject({
+      action: "removed",
+      kind: "memory",
+      count: 1,
+    });
+    expect(listUserGuidance().map((entry) => entry.kind)).toEqual(["rule"]);
+    expect(
+      applyExplicitUserGuidanceCommand("delete all profile guidance"),
+    ).toMatchObject({
+      action: "removed",
+      kind: "all",
+      count: 1,
+    });
+    expect(listUserGuidance()).toEqual([]);
+  });
+
   it("keeps profile data out of context when disabled and labels it as guidance", () => {
     installStorage();
     saveUserGuidance("rule", "Always answer in plain language.");
@@ -82,7 +137,7 @@ describe("user profile memories and rules", () => {
     expect(isUserGuidanceEnabled()).toBe(false);
     expect(
       applyExplicitUserGuidanceCommand("Remember that I like short answers."),
-    ).toBeNull();
+    ).toMatchObject({ action: "disabled" });
     expect(buildUserGuidanceContext()).toContain("PROFILE GUIDANCE DISABLED");
     expect(buildUserGuidanceContext()).not.toContain(
       "Always answer in plain language.",

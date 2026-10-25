@@ -6,7 +6,12 @@
  */
 
 import { useState, useCallback, useLayoutEffect } from "react";
-import { readConversation } from "@/lib/chat/conversation-store";
+import {
+  deleteConversation,
+  listConversations,
+  readConversation,
+  saveConversation,
+} from "@/lib/chat/conversation-store";
 
 export interface Execution {
   id: string;
@@ -22,17 +27,76 @@ export enum ExecutionType {
   ARENA = "ARENA",
 }
 
-// Initial load from sessionStorage if available (client-side only)
+// Rebuild the sidebar index from durable conversation snapshots when available.
 const getInitialExecutions = (): Execution[] => {
+  const saved: Execution[] = [];
   if (typeof window !== "undefined") {
     try {
-      const stored = sessionStorage.getItem("chat-sessions");
-      return stored ? JSON.parse(stored) : [];
+      let stored: string | null = null;
+      try {
+        stored = window.localStorage.getItem("chat-sessions");
+      } catch {
+        // Fall back to the session-only index below.
+      }
+      if (!stored) {
+        try {
+          stored = window.sessionStorage.getItem("chat-sessions");
+        } catch {
+          // Conversation snapshots can still rebuild the sidebar index.
+        }
+      }
+      const parsed: unknown = stored ? JSON.parse(stored) : [];
+      if (Array.isArray(parsed)) {
+        saved.push(
+          ...parsed.filter(
+            (item): item is Execution =>
+              Boolean(item) &&
+              typeof item.id === "string" &&
+              typeof item.title === "string" &&
+              typeof item.updatedAt === "string" &&
+              (item.type === ExecutionType.CONVERSATION ||
+                item.type === ExecutionType.ARENA),
+          ),
+        );
+      }
     } catch (e) {
       console.error("Failed to parse chat sessions", e);
     }
   }
-  return [];
+
+  const indexed = new Map(saved.map((execution) => [execution.id, execution]));
+  for (const conversation of listConversations()) {
+    const arenaMatch = conversation.id.match(/^(.*)::arena-(?:a|b)$/);
+    const id = arenaMatch?.[1] || conversation.id;
+    const stored = indexed.get(id);
+    const type = arenaMatch ? ExecutionType.ARENA : ExecutionType.CONVERSATION;
+    const current = indexed.get(id);
+    indexed.set(id, {
+      id,
+      title: stored?.title || conversation.title,
+      createdAt: stored?.createdAt || conversation.createdAt,
+      updatedAt:
+        !current ||
+        Date.parse(conversation.updatedAt) > Date.parse(current.updatedAt)
+          ? conversation.updatedAt
+          : current.updatedAt,
+      type: stored?.type ?? type,
+      mode: stored?.mode,
+    });
+  }
+
+  return Array.from(indexed.values())
+    .filter((execution) => {
+      if (execution.type === ExecutionType.ARENA) {
+        return Boolean(
+          readConversation(`${execution.id}::arena-a`)?.messages?.length ||
+          readConversation(`${execution.id}::arena-b`)?.messages?.length ||
+          readConversation(execution.id)?.messages?.length,
+        );
+      }
+      return Boolean(readConversation(execution.id)?.messages?.length);
+    })
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 };
 
 export const useExecution = () => {
@@ -40,22 +104,9 @@ export const useExecution = () => {
   const [hydrated, setHydrated] = useState(false);
 
   useLayoutEffect(() => {
-    const stored = getInitialExecutions();
-    const withHistory = stored.filter((execution) => {
-      const direct = readConversation(execution.id);
-      if (direct?.messages?.length) return true;
-      if (execution.type === ExecutionType.ARENA) {
-        return Boolean(
-          readConversation(`${execution.id}::arena-a`)?.messages?.length ||
-          readConversation(`${execution.id}::arena-b`)?.messages?.length,
-        );
-      }
-      return false;
-    });
+    const withHistory = getInitialExecutions();
     setExecutions(withHistory);
-    if (withHistory.length !== stored.length) {
-      saveToStorage(withHistory);
-    }
+    saveToStorage(withHistory);
     setHydrated(true);
   }, []);
 
@@ -63,7 +114,18 @@ export const useExecution = () => {
 
   const saveToStorage = (newExecutions: Execution[]) => {
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("chat-sessions", JSON.stringify(newExecutions));
+      const serialized = JSON.stringify(newExecutions);
+      try {
+        window.localStorage.setItem("chat-sessions", serialized);
+      } catch {
+        // Keep the sidebar usable for the current session if durable storage
+        // is unavailable; full conversations are persisted independently.
+      }
+      try {
+        window.sessionStorage.setItem("chat-sessions", serialized);
+      } catch {
+        // The persistent index remains authoritative when session storage fails.
+      }
     }
   };
 
@@ -78,6 +140,7 @@ export const useExecution = () => {
   }, []);
 
   const removeExecution = useCallback((id: string) => {
+    deleteConversation(id);
     setExecutions((prev) => {
       const newExecutions = prev.filter((e) => e.id !== id);
       saveToStorage(newExecutions);
@@ -87,6 +150,10 @@ export const useExecution = () => {
 
   const updateExecution = useCallback(
     (id: string, updates: Partial<Execution>) => {
+      const savedConversation = readConversation(id);
+      if (savedConversation && updates.title) {
+        saveConversation({ ...savedConversation, title: updates.title });
+      }
       setExecutions((prev) => {
         const newExecutions = prev.map((e) =>
           e.id === id ? { ...e, ...updates } : e,

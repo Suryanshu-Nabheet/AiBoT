@@ -138,4 +138,62 @@ describe("messageContentForModelHistory", () => {
     expect(JSON.stringify(history)).toContain("message-49");
     expect(JSON.stringify(history)).not.toContain("message-0 ");
   });
+
+  it("retrieves a relevant older user and assistant turn for follow-up questions", () => {
+    const messages = [
+      {
+        role: Role.User,
+        content:
+          "We chose indigo as the dashboard accent. Remember this for Settings.",
+      },
+      {
+        role: Role.Assistant,
+        content: "I will use indigo for the dashboard and Settings.",
+      },
+      ...Array.from({ length: 40 }, (_, index) => ({
+        role: index % 2 ? Role.Assistant : Role.User,
+        content:
+          index % 2 ? `General reply ${index}` : `Unrelated topic ${index}`,
+      })),
+    ];
+
+    const history = mapMessagesForModelHistory(messages, {
+      query: "What accent color did we choose for the dashboard Settings?",
+    });
+    const serialized = JSON.stringify(history);
+
+    expect(serialized).toContain("We chose indigo");
+    expect(serialized).toContain("I will use indigo");
+    expect(serialized.length).toBeLessThan(25_000);
+  });
+
+  it("reserves context for retrieved facts when recent turns are very long", () => {
+    const messages = [
+      {
+        role: Role.User,
+        content:
+          "We chose indigo as the dashboard accent. Remember this for Settings.",
+      },
+      {
+        role: Role.Assistant,
+        content: "The dashboard and Settings should use indigo.",
+      },
+      ...Array.from({ length: 40 }, (_, index) => ({
+        role: index % 2 ? Role.Assistant : Role.User,
+        content: `${index % 2 ? "Long reply" : "Long unrelated prompt"} ${index} ${"x".repeat(2_000)}`,
+      })),
+    ];
+
+    const history = mapMessagesForModelHistory(messages, {
+      query: "What accent color did we choose for the dashboard Settings?",
+      maxTextChars: 8_000,
+    });
+    const serialized = JSON.stringify(history);
+
+    expect(serialized).toContain("We chose indigo");
+    expect(serialized).toContain(
+      "The dashboard and Settings should use indigo.",
+    );
+    expect(serialized.length).toBeLessThan(9_000);
+  });
 });

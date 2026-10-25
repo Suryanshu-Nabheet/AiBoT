@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
       openRouterKey: OPENROUTER_KEY,
       siteUrl: SITE_URL,
       siteName: SITE_NAME,
+      signal: req.signal,
     });
 
     if (response.ok && response.body) {

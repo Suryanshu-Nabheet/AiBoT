@@ -160,6 +160,7 @@ export function ChatInput({
           setAttachments([]);
         }
       }
+      refocusTextarea();
       return;
     }
     if (isProcessingFiles) {
@@ -167,6 +168,7 @@ export function ChatInput({
       return;
     }
     onSubmit(event);
+    refocusTextarea();
   };
 
   const requestFormSubmit = () => {
@@ -226,6 +228,16 @@ export function ChatInput({
 
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const refocusTextarea = () => {
+    window.setTimeout(() => {
+      const textarea = textareaRef.current;
+      if (!textarea || textarea.disabled) return;
+      textarea.focus({ preventScroll: true });
+      const cursor = textarea.value.length;
+      textarea.setSelectionRange(cursor, cursor);
+    }, 50);
   };
 
   return (
@@ -443,6 +455,7 @@ export function ChatInput({
                     setQuery("");
                     setAttachments([]);
                   }}
+                  onRefocus={refocusTextarea}
                 />
               </div>
             </div>

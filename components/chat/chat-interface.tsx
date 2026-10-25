@@ -194,6 +194,7 @@ export default function ChatInterface({
   const chatInputProps = {
     query,
     setQuery,
+    textareaRef,
     onSubmit: handleCreateChat,
     isLoading,
     onStop: stopHelpers.stop,

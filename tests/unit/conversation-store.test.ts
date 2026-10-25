@@ -9,7 +9,7 @@ import { Role } from "@/lib/types";
 function installSessionStorageMock() {
   vi.stubGlobal("window", globalThis);
   const store = new Map<string, string>();
-  vi.stubGlobal("sessionStorage", {
+  const storage = {
     getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => {
       store.set(key, value);
@@ -20,7 +20,9 @@ function installSessionStorageMock() {
     clear: () => store.clear(),
     key: () => null,
     length: store.size,
-  });
+  };
+  vi.stubGlobal("sessionStorage", storage);
+  vi.stubGlobal("localStorage", storage);
 }
 
 describe("conversation-store", () => {
@@ -63,7 +65,7 @@ describe("conversation-store", () => {
     expect(second?.messages).toHaveLength(1);
   });
 
-  it("debounces sessionStorage writes", async () => {
+  it("debounces durable conversation writes", async () => {
     vi.useFakeTimers();
 
     saveConversation({
@@ -75,10 +77,28 @@ describe("conversation-store", () => {
     });
 
     expect(readConversation("b")?.title).toBe("Saved");
-    expect(sessionStorage.getItem("conversations")).toBeNull();
+    expect(localStorage.getItem("conversations")).toBeNull();
 
     await vi.advanceTimersByTimeAsync(500);
     await Promise.resolve();
-    expect(sessionStorage.getItem("conversations")).toContain("Saved");
+    expect(localStorage.getItem("conversations")).toContain("Saved");
+  });
+
+  it("migrates old session-only chats into durable storage", () => {
+    sessionStorage.setItem(
+      "conversations",
+      JSON.stringify({
+        legacy: {
+          id: "legacy",
+          title: "Legacy chat",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          messages: [{ id: "m1", role: Role.User, content: "hello" }],
+        },
+      }),
+    );
+
+    expect(readConversation("legacy")?.title).toBe("Legacy chat");
+    expect(localStorage.getItem("conversations")).toContain("Legacy chat");
   });
 });

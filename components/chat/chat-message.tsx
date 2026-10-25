@@ -370,6 +370,12 @@ export const ChatMessage = memo(
                             rehypePlugins={rehypePlugins}
                             components={markdownComponents}
                             preprocess={preprocessMarkdown}
+                            sources={message.webSearchTrace?.steps.flatMap(
+                              (step) =>
+                                step.kind === "query"
+                                  ? (step.sources ?? [])
+                                  : [],
+                            )}
                           />
                         );
 

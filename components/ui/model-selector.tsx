@@ -259,7 +259,7 @@ export function ModelSelector({
             aria-label={triggerLabel}
             disabled={disabled}
             className={cn(
-              "h-9 min-w-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 sm:h-8",
+              "h-9 min-w-0 gap-1.5 rounded-lg border-0 bg-transparent px-2 font-medium hover:bg-muted/50 focus:ring-0 focus-visible:border-foreground/20 focus-visible:ring-foreground/10 focus-visible:ring-1 data-[state=open]:bg-muted/40 sm:h-8",
               triggerVariant === "compact"
                 ? "max-w-[min(62vw,14rem)] shrink-0 justify-start sm:max-w-[12rem]"
                 : "w-fit max-w-none shrink-0 justify-start",
