@@ -29,6 +29,7 @@ import {
 import { buildSharedChatContext } from "@/lib/chat/shared-chat-context";
 import { isSharedChatMemoryEnabled } from "@/lib/chat/shared-chat-memory";
 import { thinkingPlanRequestsResearch } from "@/lib/chat/research-plan";
+import { getThinkingNeed } from "@/lib/chat/thinking-intent";
 import {
   getConversationInitialState,
   loadConversationMessages,
@@ -41,6 +42,7 @@ import { buildRunningWebSearchTrace } from "@/lib/web-search/trace";
 import type { WebSearchTrace } from "@/lib/web-search/types";
 import { sanitizeCustomKeysForRequest } from "@/lib/chat/sanitize-custom-keys";
 import { postOllamaChat } from "@/lib/chat/ollama-url";
+import { getOllamaGenerationControls } from "@/lib/chat/ollama-generation-controls";
 import { deltaFromOllamaLine, deltaFromSseLine } from "@/lib/chat/stream-delta";
 import { useExecutionContext } from "@/contexts/execution-context";
 import { ExecutionType } from "@/hooks/useExecution";
@@ -165,6 +167,7 @@ export interface UseChatSessionOptions {
   viewMode?: "direct" | "side-by-side";
   webSearchEnabled?: boolean;
   onWebSearchChange?: (enabled: boolean) => void;
+  onThinkingChange?: (enabled: boolean) => void;
 }
 
 export function useChatSession({
@@ -175,6 +178,7 @@ export function useChatSession({
   viewMode,
   webSearchEnabled = false,
   onWebSearchChange,
+  onThinkingChange,
 }: UseChatSessionOptions = {}) {
   // --- State ---
   const { modelId: persistedModelId, setModelId } = useModel({
@@ -267,8 +271,15 @@ export function useChatSession({
   const persistedMessagesRef = useRef(messages);
   const streamPersistTickRef = useRef(0);
   const webSearchDecisionResolverRef = useRef<
-    ((approved: boolean) => void) | null
+    ((approved: boolean, discardPrompt?: boolean) => void) | null
   >(null);
+  const thinkingDecisionResolverRef = useRef<
+    ((approved: boolean, discardPrompt?: boolean) => void) | null
+  >(null);
+
+  const confirmThinkingPrompt = useCallback((approved: boolean) => {
+    thinkingDecisionResolverRef.current?.(approved);
+  }, []);
 
   const confirmWebSearchPrompt = useCallback((approved: boolean) => {
     if (webSearchDecisionResolverRef.current) {
@@ -300,10 +311,8 @@ export function useChatSession({
 
   useEffect(() => {
     return () => {
-      if (webSearchDecisionResolverRef.current) {
-        webSearchDecisionResolverRef.current(false);
-        webSearchDecisionResolverRef.current = null;
-      }
+      webSearchDecisionResolverRef.current?.(false, true);
+      thinkingDecisionResolverRef.current?.(false, true);
       abortControllerRef.current?.abort();
       if (conversationPersistId && messagesRef.current.length > 0) {
         flushPersistConversationSnapshot(
@@ -649,6 +658,8 @@ export function useChatSession({
     )
       return;
 
+    webSearchDecisionResolverRef.current?.(false, true);
+    thinkingDecisionResolverRef.current?.(false, true);
     abortControllerRef.current?.abort();
     const requestId = ++requestSequenceRef.current;
     const requestController = new AbortController();
@@ -658,7 +669,7 @@ export function useChatSession({
       if (isCurrentRequest()) setIsLoading(false);
     };
 
-    const thinkingRequested = !!isThinking;
+    let thinkingRequested = !!isThinking;
     thinkingRequestedRef.current = thinkingRequested;
     requestStartedAtRef.current = Date.now();
     streamPersistTickRef.current = 0;
@@ -879,6 +890,48 @@ export function useChatSession({
     const newAssistantMessageId = () =>
       `ai-${sessionId ?? "chat"}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
+    const awaitThinkingApproval = (
+      messageId: string,
+      reason: string,
+    ): Promise<boolean> => {
+      setMessages((prev) =>
+        prev.some((message) => message.id === messageId)
+          ? prev.map((message) =>
+              message.id === messageId
+                ? { ...message, thinkingPrompt: { active: true, reason } }
+                : message,
+            )
+          : [
+              ...prev,
+              {
+                id: messageId,
+                role: Role.Assistant,
+                content: "",
+                thinkingPrompt: { active: true, reason },
+              },
+            ],
+      );
+
+      return new Promise<boolean>((resolve) => {
+        const settle = (approved: boolean, discardPrompt = false) => {
+          if (thinkingDecisionResolverRef.current === settle) {
+            thinkingDecisionResolverRef.current = null;
+          }
+          setMessages((prev) =>
+            discardPrompt
+              ? prev.filter((message) => message.id !== messageId)
+              : prev.map((message) =>
+                  message.id === messageId
+                    ? { ...message, thinkingPrompt: undefined }
+                    : message,
+                ),
+          );
+          resolve(approved);
+        };
+        thinkingDecisionResolverRef.current = settle;
+      });
+    };
+
     let webSearchTrace: WebSearchTrace | undefined;
     const recentUserMessages = searchRecentUserMessages;
 
@@ -916,16 +969,24 @@ export function useChatSession({
       });
 
       return new Promise<boolean>((resolve) => {
-        const settle = (approved: boolean) => {
+        const settle = (approved: boolean, discardPrompt = false) => {
           if (webSearchDecisionResolverRef.current === settle) {
             webSearchDecisionResolverRef.current = null;
           }
           setMessages((prev) =>
-            prev.map((message) =>
-              message.id === messageId
-                ? { ...message, webSearchPrompt: undefined }
-                : message,
-            ),
+            discardPrompt
+              ? prev.filter(
+                  (message) =>
+                    message.id !== messageId ||
+                    Boolean(message.content.trim()) ||
+                    Boolean(message.thinkingText?.trim()) ||
+                    Boolean(message.webSearchTrace),
+                )
+              : prev.map((message) =>
+                  message.id === messageId
+                    ? { ...message, webSearchPrompt: undefined }
+                    : message,
+                ),
           );
           resolve(approved);
         };
@@ -1088,6 +1149,26 @@ export function useChatSession({
       }
     };
 
+    if (!thinkingRequested && Boolean(currentQuery) && !sendOptions?.isRetry) {
+      const thinkingReason = getThinkingNeed(currentQuery);
+      if (thinkingReason) {
+        const promptId = newAssistantMessageId();
+        pendingAssistantId = promptId;
+        const approved = await awaitThinkingApproval(promptId, thinkingReason);
+        if (!isCurrentRequest()) return;
+        if (requestController.signal.aborted) {
+          finishRequest();
+          return;
+        }
+        if (approved) {
+          thinkingRequested = true;
+          thinkingRequestedRef.current = true;
+          requestStartedAtRef.current = Date.now();
+          onThinkingChange?.(true);
+        }
+      }
+    }
+
     if (!activeWebSearch && Boolean(currentQuery) && !sendOptions?.isRetry) {
       const searchIntent = evaluateWebSearchIntent(currentQuery, {
         recentUserMessages,
@@ -1106,12 +1187,16 @@ export function useChatSession({
         const searchTopic = searchIntent.queries[0] ?? currentQuery;
         promptApproved = await awaitWebSearchApproval(promptId, searchTopic);
 
+        if (!isCurrentRequest()) return;
+        if (requestController.signal.aborted) {
+          finishRequest();
+          return;
+        }
+
         if (promptApproved) {
           activeWebSearch = true;
           onWebSearchChange?.(true);
         }
-
-        if (!isCurrentRequest()) return;
 
         setMessages((prev) =>
           prev.map((m) =>
@@ -1510,6 +1595,7 @@ export function useChatSession({
             stage,
             priorReasoning,
           });
+          const generationControls = getOllamaGenerationControls(stage);
           return {
             model: ollamaModelName,
             messages: [
@@ -1526,9 +1612,7 @@ export function useChatSession({
               }),
             ],
             stream: true,
-            options: {
-              num_ctx: 8192,
-            },
+            ...generationControls,
           };
         };
 
@@ -1582,6 +1666,7 @@ export function useChatSession({
 
         // Non-thinking Ollama (single phase)
         const ollamaUser = toOllamaMessage(apiContent);
+        const generationControls = getOllamaGenerationControls(null);
         const chatPayload = {
           model: ollamaModelName,
           messages: [
@@ -1601,9 +1686,7 @@ export function useChatSession({
             },
           ],
           stream: true,
-          options: {
-            num_ctx: 8192,
-          },
+          ...generationControls,
         };
 
         const res = await postOllamaChat(
@@ -1788,10 +1871,8 @@ export function useChatSession({
 
   const stopHelpers = {
     stop: () => {
-      if (webSearchDecisionResolverRef.current) {
-        webSearchDecisionResolverRef.current(false);
-        webSearchDecisionResolverRef.current = null;
-      }
+      webSearchDecisionResolverRef.current?.(false, true);
+      thinkingDecisionResolverRef.current?.(false, true);
       abortControllerRef.current?.abort();
     },
   };
@@ -1853,6 +1934,7 @@ export function useChatSession({
     handleSend,
     retryWithWebSearch,
     confirmWebSearchPrompt,
+    confirmThinkingPrompt,
     stopHelpers,
     conversationId,
   };

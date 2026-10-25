@@ -98,6 +98,7 @@ export function normalizeStoredMessages(messages: unknown[]): Message[] {
           ? raw.webSearchContext.slice(0, 12_000)
           : undefined,
       webSearchPrompt: undefined,
+      thinkingPrompt: undefined,
     };
 
     if (isEmptyAssistant(message)) continue;

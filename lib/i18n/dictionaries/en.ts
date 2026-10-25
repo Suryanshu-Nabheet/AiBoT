@@ -234,6 +234,10 @@ export const en = {
   "chat.message.listen": "Listen to response",
   "chat.message.stopListening": "Stop listening",
   "chat.thinking.label": "Thinking",
+  "chat.thinking.promptLabel":
+    "This request may benefit from deeper reasoning.",
+  "chat.thinking.enableAction": "Enable Thinking",
+  "chat.thinking.continueWithoutAction": "Continue without",
   "chat.thinking.inProgress": "Thinking…",
   "chat.webSearch.label": "Web search",
   "chat.webSearch.sources": "Sources",

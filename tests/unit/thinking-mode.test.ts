@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { getThinkingNeed } from "@/lib/chat/thinking-intent";
 import {
   STAGE1_AND_ANSWER,
   STAGE1_ONLY,
@@ -39,6 +40,49 @@ import {
   resolveThinkingPanelNotes,
   wrapThinkingForContext,
 } from "@/lib/chat/thinking-mode";
+
+describe("getThinkingNeed", () => {
+  it("recognizes explicit requests for multi-step reasoning", () => {
+    expect(
+      getThinkingNeed("Please think carefully about this choice."),
+    ).toMatch(/careful/i);
+  });
+
+  it("recognizes complex comparison requests", () => {
+    expect(
+      getThinkingNeed(
+        "Compare these four architectures across security, cost, latency and maintenance; assess tradeoffs and recommend one.",
+      ),
+    ).toMatch(/several steps/i);
+  });
+
+  it("recognizes broad end-to-end fix requests", () => {
+    expect(
+      getThinkingNeed(
+        "Fix search and memory behavior across chats end to end, and verify the session context is retained.",
+      ),
+    ).toMatch(/several steps/i);
+  });
+
+  it("recognizes plans that combine independent quality constraints", () => {
+    expect(
+      getThinkingNeed(
+        "Design a migration plan that meets cost, performance, security, and rollback constraints.",
+      ),
+    ).toMatch(/several steps/i);
+  });
+
+  it("keeps simple writing requests on the fast path", () => {
+    expect(
+      getThinkingNeed("Write a short thank-you email to my team."),
+    ).toBeNull();
+  });
+
+  it("does not interrupt simple requests or greetings", () => {
+    expect(getThinkingNeed("Hi, how are you?")).toBeNull();
+    expect(getThinkingNeed("What is a closure in JavaScript?")).toBeNull();
+  });
+});
 import { buildChatSystemPrompt } from "@/lib/prompts";
 
 describe("thinking system prompt stack", () => {

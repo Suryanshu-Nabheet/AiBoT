@@ -65,6 +65,56 @@ test.describe("Web search mode", () => {
     expect(webSearchRequests).toBe(0);
   });
 
+  test("cancels a pending Web search approval without sending a chat request", async ({
+    page,
+  }) => {
+    let chatRequests = 0;
+    let webSearchRequests = 0;
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() === "POST") chatRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: [
+          `data: ${JSON.stringify({ choices: [{ delta: { content: "Hello!" } }] })}`,
+          "",
+          "data: [DONE]",
+          "",
+          "",
+        ].join("\n"),
+      });
+    });
+    await page.route("**/api/web-search", async (route) => {
+      if (route.request().method() === "POST") webSearchRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ batches: [] }),
+      });
+    });
+
+    await page.goto("/");
+    await page
+      .getByPlaceholder(/message aibot/i)
+      .fill("What are the latest OpenAI Sora updates?");
+    await page.getByRole("button", { name: /send message/i }).click();
+    await expect(
+      page.getByRole("button", { name: /search web/i }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: /stop generating/i }).click();
+    await expect(page.getByRole("button", { name: /search web/i })).toHaveCount(
+      0,
+    );
+    await expect(page.getByText(/web search requested/i)).toHaveCount(0);
+
+    await page.getByPlaceholder(/send follow-up/i).fill("hi");
+    await page.getByRole("button", { name: /send message/i }).click();
+    await expect(page.getByText("Hello!")).toBeVisible({ timeout: 15_000 });
+    expect(chatRequests).toBe(1);
+    expect(webSearchRequests).toBe(0);
+  });
+
   test("keeps search evidence in both Thinking stages", async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem("aibot_web_search_enabled", "true");
@@ -372,6 +422,7 @@ test.describe("Web search mode", () => {
     await page.goto("/");
     await page.getByPlaceholder(/message aibot/i).fill(prompt);
     await page.getByRole("button", { name: /send message/i }).click();
+    await page.getByRole("button", { name: /continue without/i }).click();
     await expect(
       page.getByText("I found the relevant framework details."),
     ).toBeVisible({ timeout: 15_000 });

@@ -58,6 +58,7 @@ export default function ChatInterface({
     handleSend,
     retryWithWebSearch,
     confirmWebSearchPrompt,
+    confirmThinkingPrompt,
     stopHelpers,
   } = useChatSession({
     conversationId: initialConversationId,
@@ -65,6 +66,7 @@ export default function ChatInterface({
     viewMode: "direct",
     webSearchEnabled: webSearchOn,
     onWebSearchChange: setWebSearchOn,
+    onThinkingChange: setIsThinking,
   });
 
   const handleRetryWithWebSearch = useCallback(
@@ -262,6 +264,7 @@ export default function ChatInterface({
                 endRef={messagesEndRef}
                 onRetryWithWebSearch={handleRetryWithWebSearch}
                 onConfirmWebSearchPrompt={confirmWebSearchPrompt}
+                onConfirmThinkingPrompt={confirmThinkingPrompt}
               />
             </div>
           </ChatThreadViewport>

@@ -32,6 +32,7 @@ import { ChatErrorBanner } from "@/components/chat/chat-error-banner";
 import { ThinkingPanel } from "@/components/chat/thinking-panel";
 import { WebSearch } from "@/components/web-search/web-search";
 import { WebSearchPromptBar } from "@/components/web-search/web-search-prompt-bar";
+import { ThinkingModePromptBar } from "@/components/chat/thinking-mode-prompt-bar";
 import { AssistantMarkdown } from "@/components/chat/assistant-markdown";
 import { useMarkdown } from "@/hooks/useMarkdown";
 import { useSmoothTyping } from "@/hooks/use-smooth-typing";
@@ -69,6 +70,7 @@ export const ChatMessage = memo(
     pdfFileName = "ai-response.pdf",
     pdfTitle = "AI Response",
     onConfirmWebSearchPrompt,
+    onConfirmThinkingPrompt,
   }: {
     message: Message;
     onCopy: (content: string) => void;
@@ -82,6 +84,7 @@ export const ChatMessage = memo(
     onRetryWithWebSearch?: (messageId: string, userQuery: string) => void;
     previousUserMessage?: string;
     onConfirmWebSearchPrompt?: (approved: boolean) => void;
+    onConfirmThinkingPrompt?: (approved: boolean) => void;
   }) => {
     const { t } = useTranslation();
     const [isCopied, setIsCopied] = useState(false);
@@ -253,6 +256,10 @@ export const ChatMessage = memo(
       !isUser &&
       Boolean(message.webSearchPrompt?.active) &&
       !message.content?.trim();
+    const isThinkingPromptActive =
+      !isUser &&
+      Boolean(message.thinkingPrompt?.active) &&
+      !message.content?.trim();
 
     return (
       <div className="w-full">
@@ -311,6 +318,15 @@ export const ChatMessage = memo(
                     query={message.webSearchPrompt?.query}
                     onSearch={() => onConfirmWebSearchPrompt?.(true)}
                     onSkip={() => onConfirmWebSearchPrompt?.(false)}
+                    className="mb-2"
+                  />
+                )}
+
+                {isThinkingPromptActive && (
+                  <ThinkingModePromptBar
+                    reason={message.thinkingPrompt?.reason}
+                    onEnable={() => onConfirmThinkingPrompt?.(true)}
+                    onContinue={() => onConfirmThinkingPrompt?.(false)}
                     className="mb-2"
                   />
                 )}

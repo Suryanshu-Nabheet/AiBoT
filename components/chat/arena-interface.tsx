@@ -47,6 +47,7 @@ function ArenaPanel({
   onCopy,
   onRetryWithWebSearch,
   onConfirmWebSearchPrompt,
+  onConfirmThinkingPrompt,
 }: {
   model: string;
   onModelChange: (model: string) => void;
@@ -62,6 +63,7 @@ function ArenaPanel({
   onCopy: (content: string) => void;
   onRetryWithWebSearch?: (messageId: string, userQuery: string) => void;
   onConfirmWebSearchPrompt?: (approved: boolean) => void;
+  onConfirmThinkingPrompt?: (approved: boolean) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -98,6 +100,7 @@ function ArenaPanel({
           endRef={endRef}
           onRetryWithWebSearch={onRetryWithWebSearch}
           onConfirmWebSearchPrompt={onConfirmWebSearchPrompt}
+          onConfirmThinkingPrompt={onConfirmThinkingPrompt}
         />
       </ChatThreadViewport>
     </div>
@@ -114,6 +117,8 @@ export default function ArenaInterface({
   const { t, locale } = useTranslation();
   const { webSearchEnabled: webSearchOn, setWebSearchEnabled: setWebSearchOn } =
     useWebSearchMode();
+  const leftThinking = useThinkingMode("aibot_arena_a_thinking_enabled");
+  const rightThinking = useThinkingMode("aibot_arena_b_thinking_enabled");
   // Shared conversation ID for both panels to keep history unified
   const [arenaConversationId] = useState(() => initialConversationId || v4());
 
@@ -126,6 +131,7 @@ export default function ArenaInterface({
     viewMode: "side-by-side",
     webSearchEnabled: webSearchOn,
     onWebSearchChange: setWebSearchOn,
+    onThinkingChange: leftThinking.setThinkingEnabled,
   });
   const rightChat = useChatSession({
     storageKey: "arena-b",
@@ -135,6 +141,7 @@ export default function ArenaInterface({
     viewMode: "side-by-side",
     webSearchEnabled: webSearchOn,
     onWebSearchChange: setWebSearchOn,
+    onThinkingChange: rightThinking.setThinkingEnabled,
   });
 
   // --- Shared Input State ---
@@ -142,8 +149,6 @@ export default function ArenaInterface({
   const [attachments, setAttachments] = useState<
     import("@/lib/chat/attachments").ChatAttachment[]
   >([]);
-  const leftThinking = useThinkingMode("aibot_arena_a_thinking_enabled");
-  const rightThinking = useThinkingMode("aibot_arena_b_thinking_enabled");
   const isEmptyArena =
     leftChat.messages.length === 0 && rightChat.messages.length === 0;
 
@@ -429,6 +434,7 @@ export default function ArenaInterface({
           onCopy={handleCopy}
           onRetryWithWebSearch={handleLeftRetryWithWebSearch}
           onConfirmWebSearchPrompt={leftChat.confirmWebSearchPrompt}
+          onConfirmThinkingPrompt={leftChat.confirmThinkingPrompt}
         />
         <ArenaPanel
           model={rightChat.model}
@@ -445,6 +451,7 @@ export default function ArenaInterface({
           onCopy={handleCopy}
           onRetryWithWebSearch={handleRightRetryWithWebSearch}
           onConfirmWebSearchPrompt={rightChat.confirmWebSearchPrompt}
+          onConfirmThinkingPrompt={rightChat.confirmThinkingPrompt}
         />
       </div>
 

@@ -32,6 +32,7 @@ export const ChatThread = memo(
     endRef,
     onRetryWithWebSearch,
     onConfirmWebSearchPrompt,
+    onConfirmThinkingPrompt,
   }: {
     messages: Message[];
     isLoading: boolean;
@@ -45,6 +46,7 @@ export const ChatThread = memo(
     endRef?: React.Ref<HTMLDivElement>;
     onRetryWithWebSearch?: (messageId: string, userQuery: string) => void;
     onConfirmWebSearchPrompt?: (approved: boolean) => void;
+    onConfirmThinkingPrompt?: (approved: boolean) => void;
   }) => {
     const statusPadding = CHAT_THREAD_HORIZONTAL_INSET;
     let latestUserRequestedDocument = false;
@@ -90,6 +92,7 @@ export const ChatThread = memo(
                 isDocumentRequest={documentRequestMessages.has(i)}
                 onRetryWithWebSearch={onRetryWithWebSearch}
                 onConfirmWebSearchPrompt={onConfirmWebSearchPrompt}
+                onConfirmThinkingPrompt={onConfirmThinkingPrompt}
                 previousUserMessage={
                   i > 0 && messages[i - 1]?.role === Role.User
                     ? messages[i - 1].content

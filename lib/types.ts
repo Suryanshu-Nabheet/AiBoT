@@ -245,6 +245,11 @@ export type Message = {
     active: boolean;
     query?: string;
   };
+  /** Ask before switching a fast response to the optional two-stage Thinking flow. */
+  thinkingPrompt?: {
+    active: boolean;
+    reason?: string;
+  };
 };
 
 export type Messages = Message[];

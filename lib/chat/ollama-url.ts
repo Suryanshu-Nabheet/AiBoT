@@ -6,8 +6,47 @@
  */
 
 type LocalNetworkRequestInit = RequestInit & {
-  targetAddressSpace?: "local" | "private" | "public";
+  targetAddressSpace?: "local" | "loopback" | "public";
 };
+
+export function getOllamaTargetAddressSpace(
+  targetUrl: string,
+  pageProtocol: string,
+): "local" | "loopback" | undefined {
+  if (pageProtocol !== "https:") return undefined;
+
+  let hostname: string;
+  try {
+    hostname = new URL(targetUrl).hostname
+      .replace(/^\[/, "")
+      .replace(/\]$/, "")
+      .toLowerCase();
+  } catch {
+    return undefined;
+  }
+
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    /^127(?:\.\d{1,3}){3}$/.test(hostname) ||
+    hostname === "::1"
+  ) {
+    return "loopback";
+  }
+
+  if (
+    hostname.endsWith(".local") ||
+    /^10(?:\.\d{1,3}){3}$/.test(hostname) ||
+    /^192\.168(?:\.\d{1,3}){2}$/.test(hostname) ||
+    /^172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}$/.test(hostname) ||
+    /^169\.254(?:\.\d{1,3}){2}$/.test(hostname) ||
+    /^(?:fc|fd|fe80):/i.test(hostname)
+  ) {
+    return "local";
+  }
+
+  return undefined;
+}
 
 export function normalizeOllamaUrl(raw: string | undefined): string {
   let targetUrl = (raw ?? "").trim();
@@ -43,7 +82,7 @@ export function ollamaBaseCandidates(preferredRaw: string): string[] {
   });
 }
 
-/** Browser fetch to the user's machine (HTTPS may need local address space). */
+/** Browser fetch to the user's machine (HTTPS may need a network-space hint). */
 export function fetchOllama(
   url: string,
   init?: RequestInit,
@@ -54,12 +93,14 @@ export function fetchOllama(
     mode: init?.mode ?? "cors",
     cache: init?.cache ?? "no-store",
   };
-  if (
-    useLocalAddressSpace &&
-    typeof window !== "undefined" &&
-    window.isSecureContext
-  ) {
-    requestInit.targetAddressSpace = "local";
+  if (useLocalAddressSpace && typeof window !== "undefined") {
+    const targetAddressSpace = getOllamaTargetAddressSpace(
+      url,
+      window.location.protocol,
+    );
+    if (targetAddressSpace) {
+      requestInit.targetAddressSpace = targetAddressSpace;
+    }
   }
   return fetch(url, requestInit);
 }
